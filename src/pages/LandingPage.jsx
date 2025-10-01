@@ -1,187 +1,158 @@
+import { motion } from "framer-motion";
+import Header from "../components/Header";
+import Accordion from "../components/Accordion";
+
 export default function LandingPage() {
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* ====== HEADER ====== */}
-      <header className="flex justify-between items-center px-8 py-4 bg-white shadow sticky top-0 z-50">
-        {/* Logo */}
-        <h1 className="text-xl font-bold text-blue-600">Donation Tracker</h1>
+    <div className="font-sans text-gray-900">
+      <Header />
 
-        {/* Navigation */}
-        <nav className="hidden md:flex gap-6">
-          <a href="#home" className="text-gray-700 hover:text-blue-600">Home</a>
-          <a href="#about" className="text-gray-700 hover:text-blue-600">About</a>
-          <a href="#services" className="text-gray-700 hover:text-blue-600">Services</a>
-          <a href="#progress" className="text-gray-700 hover:text-blue-600">Progress</a>
-          <a href="#faqs" className="text-gray-700 hover:text-blue-600">FAQs</a>
-          <a href="#contact" className="text-gray-700 hover:text-blue-600">Contact</a>
-        </nav>
+      {/* ensure content starts below header */}
+      <main className="pt-16">
+        {/* HERO */}
+        <section id="home" className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+          <div className="container flex flex-col md:flex-row items-center gap-10 py-20">
+            <div className="md:w-1/2 text-center md:text-left">
+              <motion.h1 initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }} className="text-3xl md:text-5xl font-extrabold leading-tight">
+                Make Every Donation Count
+              </motion.h1>
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="mt-4 text-lg md:text-xl text-blue-100 max-w-xl">
+                Track donations in real time, support verified recipients, and keep everything transparent and secure.
+              </motion.p>
 
-        {/* Auth Buttons */}
-        {/* In your Header component (React + Tailwind)*/}
-        <div className="flex items-center space-x-3">
-          {/* Login Button */}
-          <a
-            href="#login"
-            className="px-3 py-1.5 text-sm font-semibold text-black bg-gray-100 border border-gray-300 rounded-lg shadow-md hover:bg-gray-200 active:bg-gray-200 disabled:opacity-40"
-          >
-            Login
-          </a>
+              <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
+                <a href="#donate" className="rounded-full px-6 py-2 bg-white text-blue-700 font-semibold shadow-sm hover:bg-gray-100 transition">Donate Now</a>
+                <a href="#recipient" className="rounded-full px-6 py-2 border border-white text-white hover:bg-blue-700 transition">Become a Recipient</a>
+              </div>
+            </div>
 
-          {/* Sign Up Button */}
-          <a
-            href="#signup"
-            className="px-3 py-1.5 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 active:bg-gray-700 disabled:opacity-40"
-          >
-            Sign Up
-          </a>
-        </div>
-      </header>
-
-      {/* ====== HERO ====== */}
-      <section
-        id="home"
-        className="flex flex-col items-center justify-center text-center py-20 px-6 bg-blue-600 text-white"
-      >
-        <h2 className="text-4xl md:text-5xl font-bold mb-6">
-          Make Every Donation Count
-        </h2>
-        <p className="max-w-2xl mb-8">
-          Track donations in real time, support verified recipients, and keep
-          everything transparent and secure.
-        </p>
-        <div className="flex gap-4">
-          <a
-            href="#donate"
-            className="bg-white text-blue-600 px-6 py-3 rounded-md font-semibold hover:bg-gray-200"
-          >
-            Donate Now
-          </a>
-          <a
-            href="#recipient"
-            className="border border-white px-6 py-3 rounded-md font-semibold hover:bg-blue-500"
-          >
-            Become a recipient
-          </a>
-        </div>
-      </section>
-
-      {/* ====== INFO SECTION ====== */}
-      <section id="about" className="w-full grid gap-12 md:grid-cols-2 px-8 py-20">
-        <div className="bg-white shadow p-6 rounded">
-          <h3 className="text-xl font-bold mb-4">Why We Built This Platform</h3>
-          <p>
-            Our mission is to create a transparent and reliable platform where
-            donors can directly support those in need. Every rupee is tracked
-            and every story is verified.
-          </p>
-        </div>
-        <div className="bg-gray-200 shadow flex items-center justify-center p-6 rounded">
-          <p>📷 Placeholder for image</p>
-        </div>
-        <div className="bg-white shadow p-6 rounded text-center">
-          <h3 className="text-xl font-bold mb-4">For Donors ❤️</h3>
-          <p>View recipient needs, donate securely, and track your impact.</p>
-        </div>
-        <div className="bg-white shadow p-6 rounded text-center">
-          <h3 className="text-xl font-bold mb-4">For Recipients 👤</h3>
-          <p>Register, verify your documents, and receive donations.</p>
-        </div>
-      </section>
-
-      {/* ====== IMPACT SECTION ====== */}
-      <section id="progress" className="bg-gray-100 px-8 py-20">
-        <h2 className="text-3xl font-bold text-center mb-12">Our Impact</h2>
-        <div className="grid gap-8 md:grid-cols-2">
-          <div className="bg-white shadow rounded p-6">
-            <h3 className="font-bold mb-4">Donations by Category</h3>
-            <div className="h-48 flex items-center justify-center text-gray-500">
-              [Pie Chart Placeholder]
+            <div className="md:w-1/2">
+              {/* Illustration placeholder - replace with image/video as required */}
+              <div className="w-full rounded-lg overflow-hidden shadow-lg bg-gradient-to-tr from-white/10 to-white/5 p-8 flex items-center justify-center">
+                <img src="/hero-image.png" alt="hero" className="w-full max-w-md object-contain" />
+              </div>
             </div>
           </div>
-          <div className="bg-white shadow rounded p-6">
-            <h3 className="font-bold mb-4">Monthly Donation Trend</h3>
-            <div className="h-48 flex items-center justify-center text-gray-500">
-              [Line Chart Placeholder]
+        </section>
+
+        {/* INFO / CARDS */}
+        <section id="about" className="py-16">
+          <div className="container grid gap-8 md:grid-cols-2">
+            <motion.div initial={{ y: 20, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} transition={{ duration: 0.45 }} className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-xl font-bold mb-3">Why We Built This Platform</h3>
+              <p className="text-gray-600">Our mission is to create a transparent and reliable platform where donors can directly support those in need. Every rupee is tracked and every story is verified.</p>
+            </motion.div>
+
+            <motion.div initial={{ y: 20, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} transition={{ duration: 0.45, delay: 0.1 }} className="bg-gray-100 rounded-lg shadow p-6 flex items-center justify-center">
+              <div className="text-gray-500">📷 Placeholder for image</div>
+            </motion.div>
+
+            <motion.div initial={{ y: 20, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} transition={{ duration: 0.45, delay: 0.2 }} className="bg-white rounded-lg shadow p-6 text-center">
+              <h4 className="text-lg font-semibold mb-2">For Donors ❤️</h4>
+              <p className="text-gray-600">View recipient needs, donate securely, and track your impact.</p>
+            </motion.div>
+
+            <motion.div initial={{ y: 20, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} transition={{ duration: 0.45, delay: 0.3 }} className="bg-white rounded-lg shadow p-6 text-center">
+              <h4 className="text-lg font-semibold mb-2">For Recipients 👤</h4>
+              <p className="text-gray-600">Register, verify your documents, and receive donations.</p>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* IMPACT */}
+        <section id="progress" className="bg-gray-50 py-16">
+          <div className="container">
+            <h2 className="text-3xl font-bold text-center mb-8">Our Impact</h2>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="bg-white rounded-lg shadow p-6">
+                <h4 className="font-semibold mb-3">Donations by Category</h4>
+                <div className="h-52 flex items-center justify-center text-gray-400">[Pie Chart Placeholder]</div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <h4 className="font-semibold mb-3">Monthly Donation Trend</h4>
+                <div className="h-52 flex items-center justify-center text-gray-400">[Line Chart Placeholder]</div>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ====== FAQ SECTION ====== */}
-      <section id="faqs" className="px-8 py-20">
-        <h2 className="text-3xl font-bold text-center mb-12">FAQs</h2>
-        <div className="max-w-2xl mx-auto space-y-6">
-          <div>
-            <h4 className="font-semibold">How do I become a recipient?</h4>
-            <p className="text-gray-600">
-              Register on our platform and submit required documents for
-              verification.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold">Can I donate anonymously?</h4>
-            <p className="text-gray-600">
-              Yes, we allow donors to choose anonymous donations.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold">Is my data safe?</h4>
-            <p className="text-gray-600">
-              We use secure encryption to protect all your data.
-            </p>
-          </div>
-        </div>
-      </section>
+        {/* FAQ */}
+        <section id="faqs" className="py-16">
+          <div className="container max-w-3xl">
+            <h2 className="text-3xl font-bold text-center mb-6">FAQs</h2>
 
-      {/* ====== CONTACT SECTION ====== */}
-      <section
-        id="contact"
-        className="bg-blue-50 px-8 py-20 grid md:grid-cols-2 gap-12"
-      >
-        <div>
-          <h2 className="text-3xl font-bold mb-6">Contact Us</h2>
-          <p className="mb-6">
-            We would love to hear from you. Fill out the form and we will get
-            back to you soon.
-          </p>
-          <form className="space-y-4">
-            <input
-              type="text"
-              placeholder="Name"
-              className="w-full p-3 border rounded"
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              className="w-full p-3 border rounded"
-            />
-            <input
-              type="tel"
-              placeholder="Phone"
-              className="w-full p-3 border rounded"
-            />
-            <textarea
-              placeholder="Message"
-              className="w-full p-3 border rounded h-32"
-            ></textarea>
-            <button
-              type="submit"
-              className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Send Message
-            </button>
-          </form>
-        </div>
-        <div className="bg-gray-200 flex items-center justify-center rounded">
-          <p>🗺️ Map location placeholder</p>
-        </div>
-      </section>
+            <div className="space-y-4">
+              <Accordion title="How do I become a recipient?">
+                Register on our platform and submit required documents for verification.
+              </Accordion>
 
-      {/* ====== FOOTER ====== */}
-      <footer className="bg-gray-800 text-white py-6 text-center">
-        <p>© 2025 Donation Tracker. All rights reserved.</p>
-        <p className="text-gray-400 text-sm mt-2">Made with Vercel / Visily</p>
-      </footer>
+              <Accordion title="Can I donate anonymously?">
+                Yes, we allow donors to choose anonymous donations.
+              </Accordion>
+
+              <Accordion title="Is my data safe?">
+                We use secure encryption to protect all your data.
+              </Accordion>
+            </div>
+          </div>
+        </section>
+
+        {/* CONTACT */}
+        <section id="contact" className="bg-blue-50 py-16">
+          <div className="container grid gap-8 md:grid-cols-2">
+            <div>
+              <h2 className="text-2xl font-bold mb-4">Contact Us</h2>
+              <p className="text-gray-700 mb-4">We would love to hear from you. Fill out the form and we will get back to you soon.</p>
+
+              <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+                <input className="w-full p-3 rounded border" placeholder="Name" />
+                <input className="w-full p-3 rounded border" placeholder="Email" />
+                <input className="w-full p-3 rounded border" placeholder="Phone" />
+                <textarea className="w-full p-3 rounded border h-36" placeholder="Message" />
+                <button className="rounded-full px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 transition">Send Message</button>
+              </form>
+            </div>
+
+            <div className="rounded-lg overflow-hidden bg-white shadow p-6 flex items-center justify-center">
+              🗺️ Map placeholder
+            </div>
+          </div>
+        </section>
+
+        {/* FOOTER */}
+        <footer className="bg-gray-900 text-white py-8">
+          <div className="container grid gap-8 md:grid-cols-4">
+            <div>
+              <div className="text-xl font-bold">Donation Tracker</div>
+              <p className="text-gray-400 mt-2">Making donation tracking transparent and easy.</p>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-3">Links</h4>
+              <ul className="text-gray-400 space-y-2">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#services">Services</a></li>
+                <li><a href="#faqs">FAQs</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-3">Contact</h4>
+              <p className="text-gray-400 text-sm">support@donationtracker.example</p>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-3">Follow</h4>
+              <p className="text-gray-400 text-sm">Social links</p>
+            </div>
+          </div>
+
+          <div className="mt-8 text-center text-gray-500 text-sm">
+            © 2025 Donation Tracker. All rights reserved.
+          </div>
+        </footer>
+      </main>
     </div>
   );
 }
