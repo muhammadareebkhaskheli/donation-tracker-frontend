@@ -14,25 +14,44 @@ export default function Header() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-          <a href="#home" className="text-gray-700 hover:text-black transition">Home</a>
-          <a href="#about" className="text-gray-700 hover:text-black transition">About</a>
-          <a href="#services" className="text-gray-700 hover:text-black transition">Services</a>
-          <a href="#progress" className="text-gray-700 hover:text-black transition">Progress</a>
-          <a href="#faqs" className="text-gray-700 hover:text-black transition">FAQs</a>
-          <a href="#contact" className="text-gray-700 hover:text-black transition">Contact</a>
+          {[
+            { href: "#home", label: "Home" },
+            { href: "#about", label: "About" },
+            { href: "#services", label: "Services" },
+            { href: "#progress", label: "Progress" },
+            { href: "#faqs", label: "FAQs" },
+            { href: "#contact", label: "Contact" },
+          ].map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="relative text-gray-700 hover:text-blue-700 transition-colors duration-200
+                 after:absolute after:left-0 after:bottom-[-4px] after:h-[2px] after:w-0 
+                 after:bg-blue-600 after:transition-all after:duration-300 hover:after:w-full
+                 hover:scale-105 active:scale-95"
+            >
+              {link.label}
+            </a>
+          ))}
         </nav>
 
         {/* Auth buttons (desktop) */}
         <div className="hidden md:flex items-center gap-3">
+          {/* Login */}
           <a
             href="#login"
-            className="px-3 py-1.5 text-sm font-semibold text-black bg-gray-100 border border-gray-300 rounded-full shadow-sm hover:bg-gray-200 transition"
+            className="px-5 py-2 text-sm font-semibold text-gray-800 bg-white border border-gray-300 rounded-full shadow-sm 
+               hover:bg-gray-100 hover:scale-105 hover:shadow-md active:scale-95 transition-transform duration-200"
           >
             Login
           </a>
+
+          {/* Sign Up */}
           <a
             href="#signup"
-            className="px-3 py-1.5 text-sm font-medium text-white bg-black rounded-full hover:bg-gray-800 transition"
+            className="px-5 py-2 text-sm font-semibold text-white rounded-full 
+               bg-gradient-to-r from-blue-600 to-blue-800 shadow-md 
+               hover:from-blue-700 hover:to-blue-900 hover:scale-105 hover:shadow-lg active:scale-95 transition-transform duration-200"
           >
             Sign Up
           </a>
