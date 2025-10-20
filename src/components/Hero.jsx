@@ -1,4 +1,13 @@
+// components/Hero.jsx
 export default function Hero() {
+    const handleNavigation = (type) => {
+        if (type === 'donor') {
+            window.location.href = '/signup?type=donor';
+        } else if (type === 'recipient') {
+            window.location.href = '/signup?type=recipient';
+        }
+    };
+
     return (
         <section id="home" className="relative w-full h-[80vh] md:h-[90vh] scroll-mt-16">
             {/* Background Image */}
@@ -22,20 +31,20 @@ export default function Hero() {
 
                 {/* Buttons */}
                 <div className="mt-6 flex flex-col sm:flex-row gap-4">
-                    <a
-                        href="#donate"
+                    <button
+                        onClick={() => handleNavigation('donor')}
                         className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg 
   transition-transform duration-200 hover:scale-105 active:scale-95 text-center"
                     >
                         Donate Now
-                    </a>
-                    <a
-                        href="#recipient"
+                    </button>
+                    <button
+                        onClick={() => handleNavigation('recipient')}
                         className="bg-white hover:bg-gray-100 text-red-600 px-6 py-3 rounded-xl font-semibold shadow-lg 
   transition-transform duration-200 hover:scale-105 active:scale-95 text-center"
                     >
                         Become a Recipient
-                    </a>
+                    </button>
                 </div>
             </div>
         </section>

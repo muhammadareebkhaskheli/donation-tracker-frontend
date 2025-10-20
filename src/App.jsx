@@ -1,5 +1,19 @@
-import LandingPage from "./pages/LandingPage";
+// App.jsx
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
+import Signup from './pages/Signup';
+import Login from './pages/Login';
 
-export default function App() {
-  return <LandingPage />;
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<Login />} />
+      </Routes>
+    </Router>
+  );
 }
+
+export default App;

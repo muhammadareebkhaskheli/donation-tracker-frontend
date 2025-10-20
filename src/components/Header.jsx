@@ -39,7 +39,7 @@ export default function Header() {
         <div className="hidden md:flex items-center gap-3">
           {/* Login */}
           <a
-            href="#login"
+            href="/login"
             className="px-5 py-2 text-sm font-semibold text-gray-800 bg-white border border-gray-300 rounded-full shadow-sm 
                hover:bg-gray-100 hover:scale-105 hover:shadow-md active:scale-95 transition-transform duration-200"
           >
@@ -48,7 +48,7 @@ export default function Header() {
 
           {/* Sign Up */}
           <a
-            href="#signup"
+            href="/signup"
             className="px-5 py-2 text-sm font-semibold text-white rounded-full 
                bg-gradient-to-r from-blue-600 to-blue-800 shadow-md 
                hover:from-blue-700 hover:to-blue-900 hover:scale-105 hover:shadow-lg active:scale-95 transition-transform duration-200"

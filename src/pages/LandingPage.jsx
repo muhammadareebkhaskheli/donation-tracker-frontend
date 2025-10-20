@@ -193,7 +193,7 @@ export default function LandingPage() {
               <motion.div
                 variants={fadeInLeft}
                 transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="flex flex-col relative" // ✅ ADDED 'relative' BACK HERE
+                className="flex flex-col relative"
               >
                 {/* Premium decorative elements */}
                 <div className="absolute -top-4 -left-4 w-4 h-20 bg-gradient-to-b from-blue-500 to-cyan-400 rounded-full z-10"></div>
@@ -437,6 +437,7 @@ export default function LandingPage() {
 
                       {/* CTA Button */}
                       <motion.button
+                        onClick={() => window.location.href = `/signup?type=${service.title.toLowerCase().includes('donor') ? 'donor' : 'recipient'}`}
                         className={`
                           inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-semibold transition-all duration-300
                           ${service.color === 'blue'
@@ -809,7 +810,7 @@ export default function LandingPage() {
                     }}
                     style={{ width: "100%", height: "100%" }}
                     mapStyle="mapbox://styles/mapbox/light-v11"
-                    mapboxAccessToken="pk.eyJ1IjoibWFyZWVia2hhcyIsImEiOiJjbWc5Y3o3MzcwMG9lMmlzYWtuMmM1Z3JzIn0.YrZjHOwQcKc6kbwXBn-v6w" // Enter your Token here please
+                    mapboxAccessToken="" // Enter your Token here please
                   >
                     <Marker longitude={67.0011} latitude={24.8607} color="#3B82F6" />
                     <Popup longitude={67.0011} latitude={24.8607} anchor="top">
