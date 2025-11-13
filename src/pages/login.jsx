@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { authAPI } from "../services/api";
 import {
   Eye, EyeOff, Mail, Lock, ArrowRight, HeartHandshake,
   ShieldCheck, TrendingUp, Star, Zap, Target, Globe,
@@ -27,15 +28,100 @@ export default function Login() {
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [showTwoFactor, setShowTwoFactor] = useState(false);
   const [isTwoFactorLoading, setIsTwoFactorLoading] = useState(false);
+  const [verificationMethod, setVerificationMethod] = useState("email"); // email, phone, or authenticator
+
+  // NEW: Remember me state
+  const [rememberMe, setRememberMe] = useState(false);
 
   const dropdownRef = useRef(null);
 
-  // Fixed credentials for testing
-  const FIXED_CREDENTIALS = {
-    email: "makhaskheli911@gmail.com",
-    phone: "+923001234567",
-    password: "Areeb@911"
-  };
+  const [currentUserIdentifier, setCurrentUserIdentifier] = useState("");
+
+  // Add these with your other state variables
+  const [timer, setTimer] = useState(60);
+  const [isTimerActive, setIsTimerActive] = useState(false);
+
+  // Timer effect - ONLY for resend cooldown
+  useEffect(() => {
+    let interval;
+    if (isTimerActive && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prevTimer) => prevTimer - 1);
+      }, 1000);
+    } else if (timer === 0) {
+      setIsTimerActive(false);
+    }
+    return () => clearInterval(interval);
+  }, [isTimerActive, timer]);
+
+  // Start timer when moving to 2FA step
+  useEffect(() => {
+    if (showTwoFactor && verificationMethod !== 'authenticator') {
+      setTimer(60); // 60 seconds cooldown for resend
+      setIsTimerActive(true);
+    }
+  }, [showTwoFactor, verificationMethod]);
+
+  // Fix for browser back button scroll position
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+      if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'auto';
+      }
+    };
+  }, []);
+
+  // Handle browser back button when in 2FA mode
+  useEffect(() => {
+    const handleBackButton = (event) => {
+      if (showTwoFactor) {
+        setShowTwoFactor(false);
+        setTwoFactorCode("");
+        setFieldErrors({});
+        scrollToTop();
+        window.history.pushState(null, '', window.location.pathname);
+      }
+    };
+
+    window.addEventListener('popstate', handleBackButton);
+
+    return () => {
+      window.removeEventListener('popstate', handleBackButton);
+    };
+  }, [showTwoFactor]);
+
+  // Load remembered credentials on component mount
+  useEffect(() => {
+    const rememberedCredentials = localStorage.getItem('rememberedCredentials');
+    if (rememberedCredentials) {
+      try {
+        const credentials = JSON.parse(rememberedCredentials);
+        setFormData({
+          email: credentials.email || "",
+          phone: credentials.phone || "",
+          password: ""
+        });
+        setRememberMe(true);
+      } catch (error) {
+        console.error('Error loading remembered credentials:', error);
+      }
+    }
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -67,7 +153,7 @@ export default function Login() {
     { code: "+65", country: "Singapore", flag: "🇸🇬" }
   ];
 
-  // Enhanced Animation Variants
+  // Animation Variants
   const fadeInUp = {
     initial: { y: 40, opacity: 0 },
     animate: {
@@ -110,7 +196,6 @@ export default function Login() {
     }
   };
 
-  // Premium Button Animations
   const buttonAnimation = {
     initial: { scale: 1 },
     hover: {
@@ -164,7 +249,6 @@ export default function Login() {
     tap: { scale: 0.98 }
   };
 
-  // Back to login animation - FIXED to match other links
   const backLinkAnimation = {
     initial: { scale: 1 },
     hover: {
@@ -179,7 +263,6 @@ export default function Login() {
     tap: { scale: 0.98 }
   };
 
-  // Icon animation for 2FA heading
   const iconAnimation = {
     initial: { scale: 0, rotate: -180 },
     animate: {
@@ -203,7 +286,6 @@ export default function Login() {
     }
   };
 
-  // Pulse animation for primary buttons
   const pulseAnimation = {
     initial: { boxShadow: "0 0 0 0 rgba(59, 130, 246, 0.7)" },
     hover: {
@@ -256,7 +338,7 @@ export default function Login() {
   };
 
   const validatePassword = (password) => {
-    return password.length >= 8;
+    return password.length > 0;
   };
 
   const handleChange = (e) => {
@@ -274,104 +356,162 @@ export default function Login() {
     }
   };
 
+  const handleRememberMeChange = (e) => {
+    setRememberMe(e.target.checked);
+  };
+
   const triggerShake = (fieldNames) => {
     setShakeFields(fieldNames);
     setTimeout(() => setShakeFields([]), 500);
   };
 
-  // Check if credentials match our fixed ones
-  const checkCredentials = () => {
-    if (loginType === 'email') {
-      return formData.email === FIXED_CREDENTIALS.email &&
-        formData.password === FIXED_CREDENTIALS.password;
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const saveCredentialsToStorage = () => {
+    if (rememberMe) {
+      const credentialsToSave = {
+        email: formData.email,
+        phone: formData.phone,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('rememberedCredentials', JSON.stringify(credentialsToSave));
     } else {
-      const fullPhone = phoneCode + formData.phone.replace(/\D/g, '');
-      return fullPhone === FIXED_CREDENTIALS.phone &&
-        formData.password === FIXED_CREDENTIALS.password;
+      localStorage.removeItem('rememberedCredentials');
     }
   };
 
-  // Simulate 2FA code sending
-  const sendTwoFactorCode = async () => {
-    return new Promise(resolve => {
-      setTimeout(() => {
-        resolve(true);
-      }, 1000);
-    });
+  const clearRememberedCredentials = () => {
+    localStorage.removeItem('rememberedCredentials');
+    setRememberMe(false);
   };
 
-  // Verify 2FA code - Accept "123456" for testing
-  const verifyTwoFactorCode = async (code) => {
-    return new Promise(resolve => {
-      setTimeout(() => {
-        const isValid = code === "123456";
-        resolve(isValid);
-      }, 1000);
+  // 🔄 FIXED: First step login handler with better error handling
+const handleFirstStepSubmit = async (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  console.log("🔄 Login form submitted");
+
+  if (loginAttempts >= 5) {
+    setFieldErrors({
+      submit: "Too many login attempts. Please try again in 15 minutes."
     });
-  };
+    return;
+  }
 
-  const handleFirstStepSubmit = async (e) => {
-    e.preventDefault();
+  const errors = {};
 
-    if (loginAttempts >= 5) {
-      setFieldErrors({
-        submit: "Too many login attempts. Please try again in 15 minutes."
-      });
-      return;
+  if (loginType === 'email') {
+    if (!formData.email) {
+      errors.email = "Email is required";
+    } else if (!validateEmail(formData.email)) {
+      errors.email = "Please enter a valid email address";
     }
+  } else {
+    if (!formData.phone) {
+      errors.phone = "Phone number is required";
+    } else if (!validatePhone(phoneCode + formData.phone)) {
+      errors.phone = "Please enter a valid phone number with country code";
+    }
+  }
 
-    const errors = {};
+  if (!formData.password) {
+    errors.password = "Password is required";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    console.log("❌ Form validation errors:", errors);
+    setFieldErrors(errors);
+    triggerShake(Object.keys(errors));
+    setLoginAttempts(prev => prev + 1);
+    return;
+  }
+
+  setIsLoading(true);
+  console.log("🔄 Starting API call...");
+
+  try {
+    const loginData = {
+      password: formData.password,
+    };
 
     if (loginType === 'email') {
-      if (!formData.email) {
-        errors.email = "Email is required";
-      } else if (!validateEmail(formData.email)) {
-        errors.email = "Please enter a valid email address";
-      }
+      loginData.email = formData.email;
     } else {
-      if (!formData.phone) {
-        errors.phone = "Phone number is required";
-      } else if (!validatePhone(phoneCode + formData.phone)) {
-        errors.phone = "Please enter a valid phone number with country code";
-      }
+      loginData.phone = phoneCode + formData.phone;
     }
 
-    if (!formData.password) {
-      errors.password = "Password is required";
-    } else if (!validatePassword(formData.password)) {
-      errors.password = "Password must be at least 8 characters";
+    console.log("📤 Sending login data:", { ...loginData, password: '***' });
+
+    const response = await authAPI.login(loginData);
+    console.log("📥 Login API response:", response);
+
+    if (response.data.success) {
+      console.log("✅ Login successful, moving to 2FA");
+      saveCredentialsToStorage();
+
+      const identifier = loginType === 'email' ? formData.email : phoneCode + formData.phone;
+      setCurrentUserIdentifier(identifier);
+
+      const verificationMethod = response.data.verificationMethod || 'email';
+      setVerificationMethod(verificationMethod);
+
+      setShowTwoFactor(true);
+      setFieldErrors({});
+      scrollToTop();
+
+      window.history.pushState({ showTwoFactor: true }, '', window.location.pathname);
+
+    } else {
+      console.log("❌ Login failed in response:", response.data);
+      throw new Error(response.data.message || "Login failed");
     }
 
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
-      triggerShake(Object.keys(errors));
-      setLoginAttempts(prev => prev + 1);
-      return;
-    }
+  } catch (error) {
+    console.error("🔥 CATCH BLOCK - Login error:", {
+      name: error.name,
+      message: error.message,
+      response: error.response,
+      stack: error.stack
+    });
 
-    setIsLoading(true);
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      if (checkCredentials()) {
-        await sendTwoFactorCode();
-        setShowTwoFactor(true);
-        setFieldErrors({});
-      } else {
-        throw new Error("Invalid email/phone or password");
-      }
-
-    } catch (error) {
+    // Check if this is a network error or actual API error
+    if (!error.response) {
+      console.log("🌐 Network error - no response received");
       setFieldErrors({
-        submit: "Invalid email/phone or password. Please try again."
+        submit: "Network error. Please check your connection and try again."
       });
-      setLoginAttempts(prev => prev + 1);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    } else {
+      console.log("📡 API error with response:", {
+        status: error.response.status,
+        data: error.response.data,
+        headers: error.response.headers
+      });
 
+      let errorMessage = "Invalid email/phone or password. Please try again.";
+      
+      if (error.response.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response.status === 401) {
+        errorMessage = "Invalid credentials. Please check your email/phone and password.";
+      } else if (error.response.status === 404) {
+        errorMessage = "No account found with this email/phone. Please sign up first.";
+      } else if (error.response.status >= 500) {
+        errorMessage = "Server error. Please try again later.";
+      }
+
+      setFieldErrors({ submit: errorMessage });
+    }
+    
+    setLoginAttempts(prev => prev + 1);
+  } finally {
+    console.log("🏁 Login process completed");
+    setIsLoading(false);
+  }
+};
+
+  // 🔄 COMPLETELY FIXED: 2FA verification handler
   const handleTwoFactorSubmit = async (e) => {
     e.preventDefault();
 
@@ -381,24 +521,219 @@ export default function Login() {
     }
 
     setIsTwoFactorLoading(true);
+    setFieldErrors({});
 
     try {
-      const isValid = await verifyTwoFactorCode(twoFactorCode);
+      let response;
+      const verificationData = {
+        code: twoFactorCode
+      };
 
-      if (isValid) {
-        console.log("Secure login successful with 2FA");
-        navigate('/dashboard');
-      } else {
-        setFieldErrors({ twoFactor: "Invalid verification code" });
+      console.log("Starting 2FA verification with method:", verificationMethod);
+
+      // 🔄 FIXED: Use the correct verification method determined from login response
+      switch (verificationMethod) {
+        case 'email':
+          verificationData.email = currentUserIdentifier;
+          response = await authAPI.verifyLoginEmail(verificationData);
+          break;
+
+        case 'phone':
+          verificationData.phone = currentUserIdentifier;
+          response = await authAPI.verifyLoginPhone(verificationData);
+          break;
+
+        case 'authenticator':
+          // For authenticator, we need to use the authenticator-specific endpoint
+          verificationData.email = loginType === 'email' ? currentUserIdentifier : undefined;
+          verificationData.phone = loginType === 'phone' ? currentUserIdentifier : undefined;
+          response = await authAPI.verifyAuthenticatorLogin(verificationData);
+          break;
+
+        default:
+          // Fallback to email if method not specified
+          verificationData.email = currentUserIdentifier;
+          response = await authAPI.verifyLoginEmail(verificationData);
       }
+
+      console.log("2FA verification response:", response.data);
+
+      if (response.data.success) {
+        // 🔄 FIXED: Handle successful verification
+        handleSuccessfulLogin(response.data);
+      } else {
+        // 🔄 FIXED: Handle backend error messages properly
+        const errorMessage = response.data.message || "Invalid verification code";
+
+        if (errorMessage.includes('authenticator') || errorMessage.includes('Authenticator')) {
+          setFieldErrors({
+            twoFactor: "This account uses authenticator. Please use your authenticator app code."
+          });
+          setVerificationMethod('authenticator');
+        } else if (errorMessage.includes('expired') || errorMessage.includes('Expired')) {
+          setFieldErrors({
+            twoFactor: "Verification code has expired. Please request a new one."
+          });
+        } else if (errorMessage.includes('attempts') || errorMessage.includes('Attempts')) {
+          setFieldErrors({
+            twoFactor: "Too many failed attempts. Please request a new code."
+          });
+        } else {
+          setFieldErrors({ twoFactor: errorMessage });
+        }
+      }
+
     } catch (error) {
-      setFieldErrors({ twoFactor: "Verification failed. Please try again." });
+      console.error("2FA verification error:", error);
+
+      // 🔄 FIXED: Enhanced error handling with specific messages
+      if (error.response?.status === 401) {
+        setFieldErrors({
+          twoFactor: "Invalid verification code. Please check the code and try again."
+        });
+      } else if (error.response?.status === 410) {
+        setFieldErrors({
+          twoFactor: "Verification code has expired. Please request a new code."
+        });
+      } else if (error.response?.status === 429) {
+        setFieldErrors({
+          twoFactor: "Too many verification attempts. Please wait before trying again."
+        });
+      } else if (error.response?.status === 400) {
+        setFieldErrors({
+          twoFactor: error.response.data?.message || "Invalid request. Please check your input."
+        });
+      } else if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
+        setFieldErrors({
+          twoFactor: "Network error. Please check your connection and try again."
+        });
+      } else if (error.response?.data?.message) {
+        setFieldErrors({
+          twoFactor: error.response.data.message
+        });
+      } else {
+        setFieldErrors({
+          twoFactor: "Verification failed. Please try again."
+        });
+      }
     } finally {
       setIsTwoFactorLoading(false);
     }
   };
 
+  // Handle successful login
+  const handleSuccessfulLogin = (responseData) => {
+    console.log("Secure login successful with 2FA");
+
+    const loginSession = {
+      isLoggedIn: true,
+      loginTime: Date.now(),
+      rememberMe: rememberMe,
+      userType: responseData.user?.userType || 'authenticated',
+      userData: responseData.user || {},
+      token: responseData.token
+    };
+
+    localStorage.setItem('userSession', JSON.stringify(loginSession));
+
+    if (responseData.token) {
+      localStorage.setItem('authToken', responseData.token);
+    }
+
+    scrollToTop();
+    setTimeout(() => {
+      navigate('/AdminDashboard');
+    }, 100);
+  };
+
+  // 🔄 FIXED: Resend verification functionality with timer
+  const handleResendVerification = async () => {
+    // Check if timer is active
+    if (isTimerActive && timer > 0) {
+      setFieldErrors({
+        twoFactor: `Please wait ${timer} seconds before resending`
+      });
+      return;
+    }
+
+    try {
+      setFieldErrors({});
+
+      const resendData = {
+        type: 'login'
+      };
+
+      // Add identifier based on login type
+      if (loginType === 'email') {
+        resendData.email = currentUserIdentifier;
+      } else {
+        resendData.phone = currentUserIdentifier;
+      }
+
+      console.log("Resending verification to:", currentUserIdentifier);
+
+      const response = await authAPI.resendVerification(resendData);
+
+      if (response.data.success) {
+        console.log("Verification code resent successfully");
+
+        // Start the timer
+        setTimer(60);
+        setIsTimerActive(true);
+
+        setFieldErrors({
+          success: "New verification code sent successfully!"
+        });
+
+        setTimeout(() => {
+          setFieldErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.success;
+            return newErrors;
+          });
+        }, 3000);
+
+      } else {
+        throw new Error(response.data.message || "Failed to resend verification code");
+      }
+    } catch (error) {
+      console.error("Resend verification error:", error);
+      setFieldErrors({
+        twoFactor: error.response?.data?.message ||
+          "Failed to resend verification code. Please try again."
+      });
+    }
+  };
+
+  const handleForgotPasswordClick = () => {
+    scrollToTop();
+    navigate('/forgot-password');
+  };
+
+  const handleClearRememberedData = () => {
+    clearRememberedCredentials();
+    setFormData({
+      email: "",
+      phone: "",
+      password: ""
+    });
+  };
+
   const selectedCountry = countryCodes.find(country => country.code === phoneCode);
+
+  // 🔄 FIXED: Get display text for verification method
+  const getVerificationMethodText = () => {
+    switch (verificationMethod) {
+      case 'email':
+        return 'email';
+      case 'phone':
+        return 'phone';
+      case 'authenticator':
+        return 'authenticator app';
+      default:
+        return 'email';
+    }
+  };
 
   return (
     <motion.div
@@ -504,7 +839,7 @@ export default function Login() {
           </div>
         </motion.div>
 
-        {/* Right Side - Login Form - RESTORED ORIGINAL WIDTH */}
+        {/* Right Side - Login Form */}
         <motion.div
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
@@ -715,8 +1050,9 @@ export default function Login() {
                       <label className="block text-sm font-medium text-gray-700">
                         Password *
                       </label>
-                      <motion.a
-                        href="#forgot"
+                      <motion.button
+                        type="button"
+                        onClick={handleForgotPasswordClick}
                         variants={linkAnimation}
                         whileHover="hover"
                         whileTap="tap"
@@ -724,7 +1060,7 @@ export default function Login() {
                       >
                         Forgot password?
                         <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
-                      </motion.a>
+                      </motion.button>
                     </div>
                     <motion.div
                       variants={shakeFields.includes('password') ? shakeAnimation : {}}
@@ -762,7 +1098,7 @@ export default function Login() {
                         </motion.button>
                       </div>
 
-                      {formData.password && formData.password.length >= 8 && (
+                      {formData.password && formData.password.length >= 1 && (
                         <CheckCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 z-10" />
                       )}
                       {fieldErrors.password && (
@@ -784,12 +1120,44 @@ export default function Login() {
                     <input
                       type="checkbox"
                       id="remember"
-                      className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:border-blue-400 transition-all duration-300"
+                      checked={rememberMe}
+                      onChange={handleRememberMeChange}
+                      className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:border-blue-400 transition-all duration-300 cursor-pointer"
                     />
-                    <label htmlFor="remember" className="text-sm text-gray-700 font-medium">
+                    <label htmlFor="remember" className="text-sm text-gray-700 font-medium cursor-pointer flex-1">
                       Remember this device for 30 days
                     </label>
+
+                    {/* Clear remembered data button - only show if there are remembered credentials */}
+                    {localStorage.getItem('rememberedCredentials') && (
+                      <motion.button
+                        type="button"
+                        onClick={handleClearRememberedData}
+                        variants={linkAnimation}
+                        whileHover="hover"
+                        whileTap="tap"
+                        className="text-xs text-red-500 hover:text-red-700 font-medium transition-colors duration-300"
+                      >
+                        Clear
+                      </motion.button>
+                    )}
                   </motion.div>
+
+                  {/* Security Notice for Remember Me */}
+                  {rememberMe && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4"
+                    >
+                      <div className="flex items-center gap-2 text-yellow-700">
+                        <Shield className="w-4 h-4" />
+                        <span className="text-sm font-medium">
+                          Your email/phone will be remembered on this device for 30 days. Do not use this option on shared devices.
+                        </span>
+                      </div>
+                    </motion.div>
+                  )}
 
                   {/* Submit Error */}
                   {fieldErrors.submit && (
@@ -805,7 +1173,7 @@ export default function Login() {
                     </motion.div>
                   )}
 
-                  {/* Submit Button - WITH ANIMATIONS */}
+                  {/* Submit Button */}
                   <motion.button
                     variants={fadeInUp}
                     type="submit"
@@ -839,7 +1207,7 @@ export default function Login() {
                         </>
                       ) : (
                         <>
-                          Continue to 2FA
+                          Continue to Verify
                           <motion.div
                             animate={{ x: [0, 5, 0] }}
                             transition={{ duration: 1.5, repeat: Infinity }}
@@ -853,7 +1221,7 @@ export default function Login() {
                 </form>
               </>
             ) : (
-              /* STEP 2: 2FA Verification - WITH ANIMATED ICON AND FIXED BACK LINK */
+              /* STEP 2: 2FA Verification */
               <>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -879,15 +1247,23 @@ export default function Login() {
                   <motion.p
                     className="text-gray-600 text-lg mb-6"
                   >
-                    Check your authenticator app for the code
+                    {verificationMethod === 'authenticator'
+                      ? 'Check your authenticator app for the verification code'
+                      : `Check your ${getVerificationMethodText()} for the verification code`
+                    }
                   </motion.p>
 
                   <div className="bg-blue-50 rounded-2xl p-4 border border-blue-200">
                     <div className="flex items-center gap-3">
                       <Key className="w-5 h-5 text-blue-600" />
                       <div className="text-left">
-                        <p className="text-blue-800 text-sm font-medium">Two-Factor Authentication</p>
-                        <p className="text-blue-600 text-xs">Enter the 6-digit verification code</p>
+                        <p className="text-blue-800 text-sm font-medium">Verify It's You</p>
+                        <p className="text-blue-600 text-xs">
+                          {verificationMethod === 'authenticator'
+                            ? 'Enter the 6-digit code from your authenticator app'
+                            : `Enter the 6-digit code sent to ${currentUserIdentifier}`
+                          }
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -921,9 +1297,55 @@ export default function Login() {
                         <XCircle className="w-4 h-4" /> {fieldErrors.twoFactor}
                       </motion.p>
                     )}
+
+                    {/* Success message for resend */}
+                    {fieldErrors.success && (
+                      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-green-500 text-sm mt-2 flex items-center gap-1">
+                        <CheckCircle className="w-4 h-4" /> {fieldErrors.success}
+                      </motion.p>
+                    )}
                   </motion.div>
 
-                  {/* Verify Button - WITH ANIMATIONS */}
+                  {/* Resend Code Option - Only show for email/phone, not authenticator */}
+                  {verificationMethod !== 'authenticator' && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.25 }}
+                      className="text-center"
+                    >
+                      <motion.button
+                        type="button"
+                        onClick={handleResendVerification}
+                        disabled={isTimerActive && timer > 0}
+                        variants={linkAnimation}
+                        whileHover="hover"
+                        whileTap="tap"
+                        className={`font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden ${isTimerActive && timer > 0
+                          ? "text-gray-400 cursor-not-allowed"
+                          : "text-blue-600 hover:text-blue-700"
+                          }`}
+                      >
+                        {isTimerActive && timer > 0 ? (
+                          `Resend available in ${timer}s`
+                        ) : (
+                          <>
+                            Didn't receive code? Resend
+                            <motion.span
+                              animate={{ x: [0, 3, 0] }}
+                              transition={{ duration: 1.5, repeat: Infinity }}
+                              className="group-hover:translate-x-1 transition-transform duration-300"
+                            >
+                              →
+                            </motion.span>
+                            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
+                          </>
+                        )}
+                      </motion.button>
+                    </motion.div>
+                  )}
+
+                  {/* Verify Button */}
                   <motion.button
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -971,8 +1393,7 @@ export default function Login() {
                     </span>
                   </motion.button>
 
-                  {/* Back to Login Button - FIXED ANIMATION TO MATCH OTHERS */}
-                  {/* Back to Login Button - FIXED TO MATCH CREATE ACCOUNT EXACTLY */}
+                  {/* Back to Login Button */}
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -985,6 +1406,8 @@ export default function Login() {
                         setShowTwoFactor(false);
                         setTwoFactorCode("");
                         setFieldErrors({});
+                        scrollToTop();
+                        window.history.back();
                       }}
                       variants={linkAnimation}
                       whileHover="hover"
@@ -1006,7 +1429,7 @@ export default function Login() {
               </>
             )}
 
-            {/* Sign Up Link - WITH ANIMATIONS */}
+            {/* Sign Up Link */}
             <motion.div
               variants={fadeInUp}
               className="text-center mt-6 pt-6 border-t border-gray-200"

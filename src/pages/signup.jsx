@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { 
-  Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, 
+import { authAPI } from "../services/api";
+import {
+  Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight,
   HeartHandshake, ShieldCheck, TrendingUp, Star, Zap, Target,
   CheckCircle, XCircle, Globe, Smartphone, Gift, HandHeart,
   Key, Shield, Clock, Fingerprint
@@ -11,18 +12,18 @@ import {
 export default function Signup() {
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // Get URL parameters
   const getUrlParams = () => {
     const searchParams = new URLSearchParams(location.search);
     return searchParams.get('type');
   };
-  
+
   const urlUserType = getUrlParams();
-  
+
   // Initialize userType with URL parameter or default to 'donor'
   const [userType, setUserType] = useState(urlUserType === 'recipient' ? 'recipient' : 'donor');
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,7 +31,8 @@ export default function Signup() {
   const [phoneCode, setPhoneCode] = useState("+92");
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     email: "",
     phone: "",
     password: "",
@@ -40,18 +42,72 @@ export default function Signup() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [shakeFields, setShakeFields] = useState([]);
 
-  // NEW: Verification and 2FA States
+  // REAL API Integration States
   const [currentStep, setCurrentStep] = useState('signup'); // 'signup', 'verify', 'setup2fa', 'complete'
   const [verificationCode, setVerificationCode] = useState("");
+  const [twoFactorCode, setTwoFactorCode] = useState(""); // Separate state for 2FA code
   const [verificationMethod, setVerificationMethod] = useState("email");
   const [isVerifying, setIsVerifying] = useState(false);
   const [twoFactorSecret, setTwoFactorSecret] = useState("");
   const [twoFactorQRCode, setTwoFactorQRCode] = useState("");
-  const [twoFactorBackupCodes, setTwoFactorBackupCodes] = useState([]);
-  const [twoFactorSetupCode, setTwoFactorSetupCode] = useState("");
   const [isTwoFactorVerifying, setIsTwoFactorVerifying] = useState(false);
+  const [currentUserIdentifier, setCurrentUserIdentifier] = useState("");
+
+  // Timer state for code expiration
+  const [timer, setTimer] = useState(60);
+  const [isTimerActive, setIsTimerActive] = useState(false);
 
   const dropdownRef = useRef(null);
+
+  // Timer effect - ONLY for resend cooldown
+  useEffect(() => {
+    let interval;
+    if (isTimerActive && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prevTimer) => prevTimer - 1);
+      }, 1000);
+    } else if (timer === 0) {
+      setIsTimerActive(false);
+    }
+    return () => clearInterval(interval);
+  }, [isTimerActive, timer]);
+
+  // Start timer when moving to verification step - set to 60 seconds for resend cooldown
+  useEffect(() => {
+    if (currentStep === 'verify') {
+      setTimer(60); // 60 seconds cooldown for resend
+      setIsTimerActive(true);
+    }
+  }, [currentStep]);
+
+  // Fix for browser back button scroll position and history management
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+      if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'auto';
+      }
+    };
+  }, []);
+
+  // Auto scroll to top when step changes
+  useEffect(() => {
+    scrollToTop();
+  }, [currentStep]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -96,11 +152,11 @@ export default function Signup() {
   // Enhanced Animation Variants
   const fadeInUp = {
     initial: { y: 40, opacity: 0 },
-    animate: { 
-      y: 0, 
+    animate: {
+      y: 0,
       opacity: 1,
-      transition: { 
-        duration: 0.8, 
+      transition: {
+        duration: 0.8,
         ease: [0.25, 0.46, 0.45, 0.94]
       }
     }
@@ -116,14 +172,14 @@ export default function Signup() {
 
   const scaleIn = {
     initial: { scale: 0.9, opacity: 0 },
-    animate: { 
-      scale: 1, 
+    animate: {
+      scale: 1,
       opacity: 1,
-      transition: { 
-        type: "spring", 
-        stiffness: 100, 
+      transition: {
+        type: "spring",
+        stiffness: 100,
         duration: 0.8,
-        delay: 0.2 
+        delay: 0.2
       }
     }
   };
@@ -138,12 +194,12 @@ export default function Signup() {
   // Premium Button Animations
   const buttonAnimation = {
     initial: { scale: 1 },
-    hover: { 
+    hover: {
       scale: 1.02,
-      transition: { 
-        type: "spring", 
-        stiffness: 400, 
-        damping: 10 
+      transition: {
+        type: "spring",
+        stiffness: 400,
+        damping: 10
       }
     },
     tap: { scale: 0.98 }
@@ -151,12 +207,12 @@ export default function Signup() {
 
   const eyeButtonAnimation = {
     initial: { scale: 1 },
-    hover: { 
+    hover: {
       scale: 1.1,
-      transition: { 
-        type: "spring", 
-        stiffness: 400, 
-        damping: 10 
+      transition: {
+        type: "spring",
+        stiffness: 400,
+        damping: 10
       }
     },
     tap: { scale: 0.9 }
@@ -164,26 +220,38 @@ export default function Signup() {
 
   const primaryButtonAnimation = {
     initial: { scale: 1 },
-    hover: { 
+    hover: {
       scale: 1.05,
       y: -2,
-      transition: { 
-        type: "spring", 
-        stiffness: 400, 
-        damping: 10 
+      transition: {
+        type: "spring",
+        stiffness: 400,
+        damping: 10
       }
     },
     tap: { scale: 0.95 }
   };
 
+  const pulseAnimation = {
+    initial: { boxShadow: "0 0 0 0 rgba(59, 130, 246, 0.7)" },
+    hover: {
+      boxShadow: [
+        "0 0 0 0 rgba(59, 130, 246, 0.7)",
+        "0 0 0 10px rgba(59, 130, 246, 0)",
+        "0 0 0 0 rgba(59, 130, 246, 0)"
+      ],
+      transition: { duration: 1.5, repeat: Infinity }
+    }
+  };
+
   const linkAnimation = {
     initial: { scale: 1 },
-    hover: { 
+    hover: {
       scale: 1.02,
-      transition: { 
-        type: "spring", 
-        stiffness: 500, 
-        damping: 15 
+      transition: {
+        type: "spring",
+        stiffness: 500,
+        damping: 15
       }
     },
     tap: { scale: 0.98 }
@@ -203,7 +271,6 @@ export default function Signup() {
     tap: { scale: 0.98 }
   };
 
-  // Icon animation for verification steps
   const iconAnimation = {
     initial: { scale: 0, rotate: -180 },
     animate: {
@@ -227,31 +294,18 @@ export default function Signup() {
     }
   };
 
-  // Pulse animation for primary buttons
-  const pulseAnimation = {
-    initial: { boxShadow: "0 0 0 0 rgba(59, 130, 246, 0.7)" },
-    hover: { 
-      boxShadow: [
-        "0 0 0 0 rgba(59, 130, 246, 0.7)",
-        "0 0 0 10px rgba(59, 130, 246, 0)",
-        "0 0 0 0 rgba(59, 130, 246, 0)"
-      ],
-      transition: { duration: 1.5, repeat: Infinity }
-    }
-  };
-
-  // User type options with simple attractive icons
+  // User type options with donor/recipient selection
   const userTypeOptions = [
-    { 
-      id: "donor", 
-      label: "I Want to Help", 
+    {
+      id: "donor",
+      label: "I Want to Help",
       sub: "Support others",
       icon: Gift,
       iconColor: "from-blue-500 to-cyan-400"
     },
-    { 
-      id: "recipient", 
-      label: "I Need Support", 
+    {
+      id: "recipient",
+      label: "I Need Support",
       sub: "Receive help",
       icon: HandHeart,
       iconColor: "from-green-500 to-emerald-400"
@@ -314,33 +368,10 @@ export default function Signup() {
     ]
   };
 
-  // Security Features for 2FA Setup
-  const securityFeatures = [
-    {
-      icon: ShieldCheck,
-      title: "Bank-Level Encryption",
-      description: "All data protected with AES-256 encryption",
-      color: "from-blue-500 to-cyan-400"
-    },
-    {
-      icon: Key,
-      title: "Multi-Factor Authentication",
-      description: "2FA required for all account access",
-      color: "from-green-500 to-emerald-400"
-    },
-    {
-      icon: Fingerprint,
-      title: "Identity Verification",
-      description: "Multi-step verification process",
-      color: "from-purple-500 to-pink-400"
-    },
-    {
-      icon: Clock,
-      title: "Real-time Monitoring",
-      description: "24/7 security monitoring and alerts",
-      color: "from-yellow-500 to-orange-400"
-    }
-  ];
+  // Auto scroll to top function
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Validation functions
   const validateEmail = (email) => {
@@ -389,81 +420,14 @@ export default function Signup() {
     setTimeout(() => setShakeFields([]), 500);
   };
 
-  // NEW: Send verification code
-  const sendVerificationCode = async () => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // In real app, this would call your backend API
-        console.log(`Sending verification code to: ${formData[loginType]}`);
-        resolve(true);
-      }, 1500);
-    });
-  };
-
-  // NEW: Verify account with code
-  const verifyAccount = async () => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // Accept "123456" for testing
-        const isValid = verificationCode === "123456";
-        resolve(isValid);
-      }, 1000);
-    });
-  };
-
-  // NEW: Generate 2FA setup data
-  const generateTwoFactorSetup = async () => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // In real app, this would come from your backend
-        const mockData = {
-          secret: "JBSWY3DPEHPK3PXP",
-          qrCode: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==",
-          backupCodes: ["12345678", "23456789", "34567890", "45678901", "56789012"]
-        };
-        resolve(mockData);
-      }, 1000);
-    });
-  };
-
-  // NEW: Verify 2FA setup code
-  const verifyTwoFactorSetup = async (code) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // Accept "123456" for testing
-        const isValid = code === "123456";
-        resolve(isValid);
-      }, 1000);
-    });
-  };
-
-  // NEW: Complete registration and save to database
-  const completeRegistration = async () => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // In real app, this would save to your database
-        const userData = {
-          ...formData,
-          userType,
-          phoneCode: loginType === 'phone' ? phoneCode : null,
-          twoFactorEnabled: true,
-          twoFactorSecret,
-          isVerified: true
-        };
-        console.log("Saving to database:", userData);
-        resolve(true);
-      }, 1500);
-    });
-  };
-
-  // UPDATED: Main signup handler
+  // 🔄 REAL API INTEGRATION - Main signup handler
   const handleSignup = async (e) => {
     e.preventDefault();
-    
+
     // Validate all fields
     const errors = {};
-    const requiredFields = ['fullName', 'password', 'confirmPassword', 'agreeTerms'];
-    
+    const requiredFields = ['firstName', 'lastName', 'password', 'confirmPassword', 'agreeTerms'];
+
     if (loginType === 'email') {
       requiredFields.push('email');
       if (!validateEmail(formData.email)) {
@@ -471,8 +435,8 @@ export default function Signup() {
       }
     } else {
       requiredFields.push('phone');
-      if (!validatePhone(formData.phone)) {
-        errors.phone = "Please enter a valid phone number";
+      if (!validatePhone(phoneCode + formData.phone)) {
+        errors.phone = "Please enter a valid phone number with country code";
       }
     }
 
@@ -503,22 +467,56 @@ export default function Signup() {
     setIsLoading(true);
 
     try {
-      // Step 1: Send verification code
-      const verificationSent = await sendVerificationCode();
-      
-      if (verificationSent) {
-        setVerificationMethod(loginType);
-        setCurrentStep('verify');
-        setFieldErrors({});
-      }
+        const registrationData = {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            password: formData.password,
+            userType: userType,
+        };
+
+        if (loginType === 'email') {
+            registrationData.email = formData.email;
+            registrationData.phone = null;
+        } else {
+            registrationData.phone = phoneCode + formData.phone;
+            registrationData.email = null;
+        }
+
+        console.log("Sending registration data:", registrationData);
+
+        const response = await authAPI.register(registrationData);
+
+        if (response.data.success) {
+            const identifier = loginType === 'email' ? formData.email : phoneCode + formData.phone;
+            setCurrentUserIdentifier(identifier);
+            setVerificationMethod(loginType);
+
+            // Check if this is a restarted registration
+            if (response.data.isRestarted) {
+                console.log("Registration restarted for:", identifier);
+            }
+
+            setCurrentStep('verify');
+            setFieldErrors({});
+
+            console.log("Registration successful, moving to verification:", response.data);
+            scrollToTop();
+
+        } else {
+            throw new Error(response.data.message || "Registration failed");
+        }
+
     } catch (error) {
-      setFieldErrors({ submit: "Failed to send verification code. Please try again." });
+        console.error("Registration error:", error);
+        setFieldErrors({
+            submit: error.response?.data?.message || "Registration failed. Please check your information and try again."
+        });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   };
 
-  // NEW: Handle verification code submission
+  // 🔄 REAL API INTEGRATION - Verification code submission
   const handleVerificationSubmit = async (e) => {
     e.preventDefault();
 
@@ -530,31 +528,52 @@ export default function Signup() {
     setIsVerifying(true);
 
     try {
-      const isValid = await verifyAccount();
+      let response;
 
-      if (isValid) {
-        // Move to 2FA setup
-        const twoFactorData = await generateTwoFactorSetup();
-        setTwoFactorSecret(twoFactorData.secret);
-        setTwoFactorQRCode(twoFactorData.qrCode);
-        setTwoFactorBackupCodes(twoFactorData.backupCodes);
-        setCurrentStep('setup2fa');
-        setFieldErrors({});
+      if (verificationMethod === 'email') {
+        response = await authAPI.verifyEmail(currentUserIdentifier, verificationCode);
       } else {
-        setFieldErrors({ verification: "Invalid verification code" });
+        response = await authAPI.verifyPhone(currentUserIdentifier, verificationCode);
+      }
+
+      if (response.data.success) {
+        // Move to 2FA setup
+        const twoFactorResponse = await authAPI.setupAuthenticator({
+          [verificationMethod]: currentUserIdentifier
+        });
+
+        if (twoFactorResponse.data.success) {
+          setTwoFactorSecret(twoFactorResponse.data.secret);
+          setTwoFactorQRCode(twoFactorResponse.data.qrCodeUrl);
+          setCurrentStep('setup2fa');
+          setVerificationCode(""); // Clear verification code
+          setTwoFactorCode(""); // Clear 2FA code
+          setFieldErrors({});
+
+          console.log("Verification successful, moving to 2FA setup");
+
+          scrollToTop();
+        } else {
+          throw new Error("Failed to setup authenticator");
+        }
+      } else {
+        setFieldErrors({ verification: response.data.message || "Invalid verification code" });
       }
     } catch (error) {
-      setFieldErrors({ verification: "Verification failed. Please try again." });
+      console.error("Verification error:", error);
+      setFieldErrors({
+        verification: error.response?.data?.message || "Verification failed. Please try again."
+      });
     } finally {
       setIsVerifying(false);
     }
   };
 
-  // NEW: Handle 2FA setup verification
+  // 🔄 REAL API INTEGRATION - 2FA setup verification
   const handleTwoFactorSetup = async (e) => {
     e.preventDefault();
 
-    if (!twoFactorSetupCode || twoFactorSetupCode.length !== 6) {
+    if (!twoFactorCode || twoFactorCode.length !== 6) {
       setFieldErrors({ twoFactor: "Please enter a valid 6-digit code" });
       return;
     }
@@ -562,25 +581,83 @@ export default function Signup() {
     setIsTwoFactorVerifying(true);
 
     try {
-      const isValid = await verifyTwoFactorSetup(twoFactorSetupCode);
+      const response = await authAPI.verifyAuthenticatorSetup({
+        [verificationMethod]: currentUserIdentifier,
+        code: twoFactorCode,
+        secret: twoFactorSecret
+      });
 
-      if (isValid) {
-        // Complete registration
-        await completeRegistration();
+      if (response.data.success) {
         setCurrentStep('complete');
+        console.log("2FA setup completed successfully");
+
+        scrollToTop();
       } else {
-        setFieldErrors({ twoFactor: "Invalid authentication code" });
+        setFieldErrors({ twoFactor: response.data.message || "Invalid authentication code" });
       }
     } catch (error) {
-      setFieldErrors({ twoFactor: "Setup failed. Please try again." });
+      console.error("2FA verification error:", error);
+      setFieldErrors({
+        twoFactor: error.response?.data?.message || "Setup failed. Please try again."
+      });
     } finally {
       setIsTwoFactorVerifying(false);
     }
   };
 
-  // NEW: Handle completion and redirect to login
+  // Handle completion and redirect to login
   const handleCompletion = () => {
-    navigate('/login');
+    scrollToTop();
+    setTimeout(() => {
+      navigate('/login');
+    }, 100);
+  };
+
+  // FIXED: Handle back button - navigate between steps, not browser history
+  const handleBackToSignup = () => {
+    setCurrentStep('signup');
+    setVerificationCode("");
+    setTwoFactorCode("");
+    setIsTimerActive(false);
+    setFieldErrors({});
+    scrollToTop();
+  };
+
+  // FIXED: Handle back from 2FA setup
+  const handleBackToVerification = () => {
+    setCurrentStep('verify');
+    setTwoFactorCode("");
+    setFieldErrors({});
+    scrollToTop();
+  };
+
+  // Resend verification code
+  const handleResendVerification = async () => {
+    if (isTimerActive && timer > 0) {
+      setFieldErrors({ verification: `Please wait ${timer} seconds before resending` });
+      return;
+    }
+
+    try {
+      const response = await authAPI.resendVerification({
+        [verificationMethod]: currentUserIdentifier,
+        type: verificationMethod === 'email' ? 'email_verification' : 'phone_verification'
+      });
+
+      if (response.data.success) {
+        console.log("Verification code resent successfully");
+        setTimer(60);
+        setIsTimerActive(true);
+        setFieldErrors({});
+      } else {
+        throw new Error("Failed to resend verification code");
+      }
+    } catch (error) {
+      console.error("Resend verification error:", error);
+      setFieldErrors({
+        verification: "Failed to resend verification code. Please try again."
+      });
+    }
   };
 
   const selectedCountry = countryCodes.find(country => country.code === phoneCode);
@@ -599,7 +676,7 @@ export default function Signup() {
     }
   };
 
-  // NEW: Verification Step
+  // Verification Step with Single Timer
   const renderVerificationStep = () => (
     <>
       <motion.div
@@ -633,7 +710,7 @@ export default function Signup() {
             <ShieldCheck className="w-5 h-5 text-blue-600" />
             <div className="text-left">
               <p className="text-blue-800 text-sm font-medium">Account Verification</p>
-              <p className="text-blue-600 text-xs">Enter the code sent to {formData[loginType]}</p>
+              <p className="text-blue-600 text-xs">Enter the code sent to {currentUserIdentifier}</p>
             </div>
           </div>
         </div>
@@ -662,6 +739,7 @@ export default function Signup() {
             maxLength={6}
             autoFocus
           />
+          {/* REMOVED the code expiration timer from here */}
           {fieldErrors.verification && (
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
               <XCircle className="w-4 h-4" /> {fieldErrors.verification}
@@ -669,10 +747,48 @@ export default function Signup() {
           )}
         </motion.div>
 
-        <motion.button
+        {/* Resend Code Link - UPDATED */}
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
+          className="text-center"
+        >
+          <motion.button
+            type="button"
+            onClick={handleResendVerification}
+            disabled={isTimerActive && timer > 0}
+            variants={linkAnimation}
+            whileHover="hover"
+            whileTap="tap"
+            className={`font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden ${isTimerActive && timer > 0
+              ? "text-gray-400 cursor-not-allowed"
+              : "text-blue-600 hover:text-blue-700"
+              }`}
+          >
+            {isTimerActive && timer > 0 ? (
+              `Resend available in ${timer}s`
+            ) : (
+              <>
+                Didn't receive code? Resend
+                <motion.span
+                  animate={{ x: [0, 3, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  className="group-hover:translate-x-1 transition-transform duration-300"
+                >
+                  →
+                </motion.span>
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
+              </>
+            )}
+          </motion.button>
+        </motion.div>
+
+        {/* Continue Button */}
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
           type="submit"
           disabled={isVerifying || verificationCode.length !== 6}
           whileHover="hover"
@@ -714,19 +830,16 @@ export default function Signup() {
           </span>
         </motion.button>
 
+        {/* Back Button */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.5 }}
           className="text-center"
         >
           <motion.button
             type="button"
-            onClick={() => {
-              setCurrentStep('signup');
-              setVerificationCode("");
-              setFieldErrors({});
-            }}
+            onClick={handleBackToSignup}
             variants={backLinkAnimation}
             whileHover="hover"
             whileTap="tap"
@@ -747,7 +860,7 @@ export default function Signup() {
     </>
   );
 
-  // NEW: 2FA Setup Step
+  // 2FA Setup Step with QR Code
   const renderTwoFactorSetupStep = () => (
     <>
       <motion.div
@@ -788,7 +901,7 @@ export default function Signup() {
       </motion.div>
 
       <div className="space-y-6">
-        {/* QR Code Section */}
+        {/* QR Code Section - FIXED: Now shows actual QR code */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -796,8 +909,21 @@ export default function Signup() {
         >
           <h3 className="font-bold text-gray-800 mb-4">Scan QR Code</h3>
           <div className="bg-gray-50 rounded-xl p-4 inline-block mb-4">
-            <div className="w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center">
-              <span className="text-gray-500 text-sm">QR Code would appear here</span>
+            {twoFactorQRCode ? (
+              <img
+                src={twoFactorQRCode}
+                alt="QR Code for 2FA Setup"
+                className="w-48 h-48 rounded-lg"
+                onError={(e) => {
+                  // Fallback if QR code fails to load
+                  e.target.style.display = 'none';
+                  const fallback = e.target.parentElement.querySelector('.qr-fallback');
+                  if (fallback) fallback.style.display = 'block';
+                }}
+              />
+            ) : null}
+            <div className={`w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center qr-fallback ${twoFactorQRCode ? 'hidden' : 'block'}`}>
+              <span className="text-gray-500 text-sm">Generating QR Code...</span>
             </div>
           </div>
           <p className="text-sm text-gray-600 mb-4">
@@ -822,9 +948,9 @@ export default function Signup() {
             </label>
             <input
               type="text"
-              value={twoFactorSetupCode}
+              value={twoFactorCode}
               onChange={(e) => {
-                setTwoFactorSetupCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6));
                 if (fieldErrors.twoFactor) {
                   setFieldErrors(prev => ({ ...prev, twoFactor: null }));
                 }
@@ -846,7 +972,7 @@ export default function Signup() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
             type="submit"
-            disabled={isTwoFactorVerifying || twoFactorSetupCode.length !== 6}
+            disabled={isTwoFactorVerifying || twoFactorCode.length !== 6}
             whileHover="hover"
             whileTap="tap"
             className="w-full py-5 px-6 bg-gradient-to-r from-green-600 to-emerald-500 
@@ -885,102 +1011,122 @@ export default function Signup() {
               )}
             </span>
           </motion.button>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="text-center"
+          >
+            <motion.button
+              type="button"
+              onClick={handleBackToVerification}
+              variants={backLinkAnimation}
+              whileHover="hover"
+              whileTap="tap"
+              className="text-blue-600 hover:text-blue-700 font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden"
+            >
+              <motion.span
+                animate={{ x: [0, -3, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="group-hover:-translate-x-1 transition-transform duration-300"
+              >
+                ←
+              </motion.span>
+              Back to verification
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
+            </motion.button>
+          </motion.div>
         </form>
       </div>
     </>
   );
 
-  // NEW: Completion Step
-  // NEW: Completion Step - FIXED ICON ANIMATION
-const renderCompletionStep = () => (
-  <motion.div
-    initial={{ opacity: 0, scale: 0.9 }}
-    animate={{ opacity: 1, scale: 1 }}
-    className="text-center py-8"
-  >
-    {/* FIXED: Icon with proper animation */}
+  // Completion Step
+  const renderCompletionStep = () => (
     <motion.div
-      initial={{ scale: 0, rotate: -180 }}
-      animate={{ scale: 1, rotate: 0 }}
-      transition={{ 
-        type: "spring", 
-        stiffness: 200, 
-        damping: 15,
-        duration: 0.8 
-      }}
-      className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-400 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl"
-    >
-      <CheckCircle className="w-12 h-12 text-white" />
-    </motion.div>
-
-    <motion.h2
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.4 }}
-      className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-green-800 bg-clip-text text-transparent mb-4"
-    >
-      Account Created Successfully!
-    </motion.h2>
-
-    <motion.p
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.6 }}
-      className="text-gray-600 text-lg mb-8"
-    >
-      Your account has been secured with two-factor authentication.
-      <br />
-      You can now sign in with enhanced security.
-    </motion.p>
-
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.8 }}
-      className="bg-green-50 rounded-2xl p-6 border border-green-200 mb-8"
-    >
-      <div className="flex items-center gap-3 justify-center">
-        <ShieldCheck className="w-6 h-6 text-green-600" />
-        <div>
-          <p className="text-green-800 font-semibold">Security Features Enabled</p>
-          <p className="text-green-600 text-sm">Email verification • Two-factor authentication • Encrypted data</p>
-        </div>
-      </div>
-    </motion.div>
-
-    <motion.button
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 1 }}
-      onClick={handleCompletion}
-      whileHover="hover"
-      whileTap="tap"
-      className="w-full py-5 px-6 bg-gradient-to-r from-blue-600 to-cyan-500 
-               text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
-               transform transition-all duration-300 flex items-center justify-center gap-3 relative overflow-hidden group"
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="text-center py-8"
     >
       <motion.div
-        className="absolute inset-0 rounded-2xl border-2 border-blue-400"
-        variants={pulseAnimation}
+        variants={iconAnimation}
+        initial="initial"
+        animate="animate"
         whileHover="hover"
-      />
+        className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-400 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl cursor-pointer"
+      >
+        <CheckCircle className="w-12 h-12 text-white" />
+      </motion.div>
 
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+      <motion.h2
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-green-800 bg-clip-text text-transparent mb-4"
+      >
+        Account Created Successfully!
+      </motion.h2>
 
-      <span className="relative z-10 flex items-center gap-3">
-        Continue to Login
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.6 }}
+        className="text-gray-600 text-lg mb-8"
+      >
+        Your account has been secured with two-factor authentication.
+        <br />
+        You can now sign in with enhanced security.
+      </motion.p>
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.8 }}
+        className="bg-green-50 rounded-2xl p-6 border border-green-200 mb-8"
+      >
+        <div className="flex items-center gap-3 justify-center">
+          <ShieldCheck className="w-6 h-6 text-green-600" />
+          <div>
+            <p className="text-green-800 font-semibold">Security Features Enabled</p>
+            <p className="text-green-600 text-sm">Email verification • Two-factor authentication • Encrypted data</p>
+          </div>
+        </div>
+      </motion.div>
+
+      <motion.button
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1 }}
+        onClick={handleCompletion}
+        whileHover="hover"
+        whileTap="tap"
+        className="w-full py-5 px-6 bg-gradient-to-r from-blue-600 to-cyan-500 
+                 text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
+                 transform transition-all duration-300 flex items-center justify-center gap-3 relative overflow-hidden group"
+      >
         <motion.div
-          animate={{ x: [0, 5, 0] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-        >
-          <ArrowRight className="w-5 h-5" />
-        </motion.div>
-      </span>
-    </motion.button>
-  </motion.div>
-);
+          className="absolute inset-0 rounded-2xl border-2 border-blue-400"
+          variants={pulseAnimation}
+          whileHover="hover"
+        />
 
-  // Original Signup Step
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+
+        <span className="relative z-10 flex items-center gap-3">
+          Continue to Login
+          <motion.div
+            animate={{ x: [0, 5, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            <ArrowRight className="w-5 h-5" />
+          </motion.div>
+        </span>
+      </motion.button>
+    </motion.div>
+  );
+
+  // Original Signup Step with donor/recipient selection
   const renderSignupStep = () => (
     <>
       <motion.div
@@ -1014,11 +1160,10 @@ const renderCompletionStep = () => (
               variants={buttonAnimation}
               whileHover="hover"
               whileTap="tap"
-              className={`py-4 px-3 rounded-xl text-center transition-all duration-200 ${
-                userType === type.id
-                  ? "bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-lg"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-white/50"
-              }`}
+              className={`py-4 px-3 rounded-xl text-center transition-all duration-200 ${userType === type.id
+                ? "bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-lg"
+                : "text-gray-600 hover:text-gray-900 hover:bg-white/50"
+                }`}
             >
               <motion.div
                 className={`w-10 h-10 bg-gradient-to-br ${type.iconColor} rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg`}
@@ -1075,11 +1220,10 @@ const renderCompletionStep = () => (
             variants={buttonAnimation}
             whileHover="hover"
             whileTap="tap"
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-300 ${
-              loginType === type.id
-                ? "bg-gradient-to-r from-blue-500 to-cyan-400 text-white shadow-lg"
-                : "text-gray-600 hover:text-gray-800 hover:bg-white/60"
-            }`}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-300 ${loginType === type.id
+              ? "bg-gradient-to-r from-blue-500 to-cyan-400 text-white shadow-lg"
+              : "text-gray-600 hover:text-gray-800 hover:bg-white/60"
+              }`}
           >
             <type.icon className="w-4 h-4" />
             <span className="font-medium text-sm">{type.label}</span>
@@ -1089,43 +1233,82 @@ const renderCompletionStep = () => (
 
       {/* Signup Form */}
       <form onSubmit={handleSignup} className="space-y-5">
-        {/* Full Name */}
+        {/* Full Name - Split into First and Last */}
         <motion.div
           variants={fadeInUp}
+          className="grid grid-cols-2 gap-4"
         >
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Full Name *
-          </label>
-          <motion.div
-            variants={shakeFields.includes('fullName') ? shakeAnimation : {}}
-            animate={shakeFields.includes('fullName') ? "shake" : "animate"}
-            className="relative group"
-          >
-            <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
-            <input
-              type="text"
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleChange}
-              className={`w-full pl-12 pr-4 py-4 border-2 rounded-2xl transition-all duration-300 bg-white/80 backdrop-blur-sm
-                focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
-                focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-                hover:border-blue-300 hover:bg-white
-                ${fieldErrors.fullName 
-                  ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200' 
-                  : 'border-gray-200'
-                }`}
-              placeholder="Enter your full name"
-            />
-            {fieldErrors.fullName && (
-              <XCircle className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-red-500" />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              First Name *
+            </label>
+            <motion.div
+              variants={shakeFields.includes('firstName') ? shakeAnimation : {}}
+              animate={shakeFields.includes('firstName') ? "shake" : "animate"}
+              className="relative group"
+            >
+              <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
+              <input
+                type="text"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                className={`w-full pl-12 pr-4 py-4 border-2 rounded-2xl transition-all duration-300 bg-white/80 backdrop-blur-sm
+                  focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
+                  focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
+                  hover:border-blue-300 hover:bg-white
+                  ${fieldErrors.firstName
+                    ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200'
+                    : 'border-gray-200'
+                  }`}
+                placeholder="First name"
+              />
+              {fieldErrors.firstName && (
+                <XCircle className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-red-500" />
+              )}
+            </motion.div>
+            {fieldErrors.firstName && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                <XCircle className="w-4 h-4" /> {fieldErrors.firstName}
+              </motion.p>
             )}
-          </motion.div>
-          {fieldErrors.fullName && (
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
-              <XCircle className="w-4 h-4" /> {fieldErrors.fullName}
-            </motion.p>
-          )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Last Name *
+            </label>
+            <motion.div
+              variants={shakeFields.includes('lastName') ? shakeAnimation : {}}
+              animate={shakeFields.includes('lastName') ? "shake" : "animate"}
+              className="relative group"
+            >
+              <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
+              <input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                className={`w-full pl-12 pr-4 py-4 border-2 rounded-2xl transition-all duration-300 bg-white/80 backdrop-blur-sm
+                  focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
+                  focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
+                  hover:border-blue-300 hover:bg-white
+                  ${fieldErrors.lastName
+                    ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200'
+                    : 'border-gray-200'
+                  }`}
+                placeholder="Last name"
+              />
+              {fieldErrors.lastName && (
+                <XCircle className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-red-500" />
+              )}
+            </motion.div>
+            {fieldErrors.lastName && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                <XCircle className="w-4 h-4" /> {fieldErrors.lastName}
+              </motion.p>
+            )}
+          </div>
         </motion.div>
 
         {/* Email or Phone */}
@@ -1145,7 +1328,7 @@ const renderCompletionStep = () => (
             ) : (
               <>
                 <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
-                
+
                 {/* Phone Code Dropdown */}
                 <div className="absolute left-12 h-full flex items-center z-20" ref={dropdownRef}>
                   <div className="relative">
@@ -1163,7 +1346,7 @@ const renderCompletionStep = () => (
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </motion.button>
-                    
+
                     {/* Dropdown Menu */}
                     {showCountryDropdown && (
                       <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-30 max-h-60 overflow-y-auto">
@@ -1178,9 +1361,8 @@ const renderCompletionStep = () => (
                             variants={linkAnimation}
                             whileHover="hover"
                             whileTap="tap"
-                            className={`w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-3 border-b border-gray-100 last:border-b-0 ${
-                              phoneCode === country.code ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
-                            }`}
+                            className={`w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-3 border-b border-gray-100 last:border-b-0 ${phoneCode === country.code ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                              }`}
                           >
                             <span className="text-base">{country.flag}</span>
                             <span className="flex-1 font-medium">{country.country}</span>
@@ -1204,8 +1386,8 @@ const renderCompletionStep = () => (
                 hover:border-blue-300 hover:bg-white
                 ${loginType === 'phone' ? 'pl-[9.5rem]' : 'pl-12'}
                 pr-12 py-4
-                ${fieldErrors[loginType] 
-                  ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200' 
+                ${fieldErrors[loginType]
+                  ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200'
                   : 'border-gray-200'
                 }`}
               placeholder={loginType === 'email' ? 'Enter your email' : 'Enter your phone'}
@@ -1246,13 +1428,13 @@ const renderCompletionStep = () => (
                 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
                 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
                 hover:border-blue-300 hover:bg-white
-                ${fieldErrors.password 
-                  ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200' 
+                ${fieldErrors.password
+                  ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200'
                   : 'border-gray-200'
                 }`}
               placeholder="Create a strong password"
             />
-            
+
             {/* Eye button */}
             <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10">
               <motion.button
@@ -1266,7 +1448,7 @@ const renderCompletionStep = () => (
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </motion.button>
             </div>
-            
+
             {fieldErrors.password && (
               <XCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-red-500 z-10" />
             )}
@@ -1300,13 +1482,13 @@ const renderCompletionStep = () => (
                 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
                 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
                 hover:border-blue-300 hover:bg-white
-                ${fieldErrors.confirmPassword 
-                  ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200' 
+                ${fieldErrors.confirmPassword
+                  ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200'
                   : 'border-gray-200'
                 }`}
               placeholder="Confirm your password"
             />
-            
+
             {/* Eye button */}
             <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10">
               <motion.button
@@ -1320,7 +1502,7 @@ const renderCompletionStep = () => (
                 {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </motion.button>
             </div>
-            
+
             {formData.confirmPassword && formData.password === formData.confirmPassword && (
               <CheckCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 z-10" />
             )}
@@ -1410,10 +1592,10 @@ const renderCompletionStep = () => (
             variants={pulseAnimation}
             whileHover="hover"
           />
-          
+
           {/* Shine Effect */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-          
+
           <span className="relative z-10 flex items-center gap-3">
             {isLoading ? (
               <>
@@ -1422,11 +1604,11 @@ const renderCompletionStep = () => (
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                   className="w-6 h-6 border-2 border-white border-t-transparent rounded-full"
                 />
-                Sending Verification Code...
+                Creating Account...
               </>
             ) : (
               <>
-                Continue to Verification
+                Create Account
                 <motion.div
                   animate={{ x: [0, 5, 0] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
@@ -1438,18 +1620,45 @@ const renderCompletionStep = () => (
           </span>
         </motion.button>
       </form>
+
+      {/* Login Link */}
+      <motion.div
+        variants={fadeInUp}
+        className="text-center mt-6 pt-6 border-t border-gray-200"
+      >
+        <p className="text-gray-600">
+          Already have an account?{" "}
+          <motion.a
+            href="/login"
+            variants={linkAnimation}
+            whileHover="hover"
+            whileTap="tap"
+            className="text-blue-600 font-semibold hover:text-blue-700 transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden"
+          >
+            Sign in
+            <motion.span
+              animate={{ x: [0, 3, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+              className="group-hover:translate-x-1 transition-transform duration-300"
+            >
+              →
+            </motion.span>
+            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
+          </motion.a>
+        </p>
+      </motion.div>
     </>
   );
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
       className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/30 flex items-center justify-center p-4 lg:p-8"
     >
       <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-        
+
         {/* Left Side - Brand & Benefits */}
         <motion.div
           initial="initial"
@@ -1517,11 +1726,10 @@ const renderCompletionStep = () => (
                     variants={buttonAnimation}
                     whileHover="hover"
                     whileTap="tap"
-                    className={`p-6 rounded-2xl text-center transition-all duration-300 ${
-                      userType === type.id
-                        ? "bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-lg"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-white/50 border border-transparent hover:border-white/30"
-                    }`}
+                    className={`p-6 rounded-2xl text-center transition-all duration-300 ${userType === type.id
+                      ? "bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-lg"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-white/50 border border-transparent hover:border-white/30"
+                      }`}
                   >
                     <motion.div
                       className={`w-12 h-12 bg-gradient-to-br ${type.iconColor} rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg`}
@@ -1560,6 +1768,20 @@ const renderCompletionStep = () => (
                 </motion.div>
               ))}
             </motion.div>
+
+            {/* Security Notice - Bank Level Security Label */}
+            <motion.div
+              variants={fadeInUp}
+              className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-4 border border-blue-200"
+            >
+              <div className="flex items-center gap-3">
+                <ShieldCheck className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h4 className="font-bold text-blue-800 text-sm">Bank-Level Security</h4>
+                  <p className="text-blue-600 text-xs">Your data is protected with enterprise-grade encryption</p>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </motion.div>
 
@@ -1584,51 +1806,19 @@ const renderCompletionStep = () => (
               transition={{ duration: 1, delay: 0.3 }}
             />
 
-            {/* Security Badge - Only show on verification steps */}
-            {(currentStep === 'verify' || currentStep === 'setup2fa') && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5 }}
-                className="absolute top-4 right-4 flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm font-medium border border-green-200"
-              >
-                <ShieldCheck className="w-4 h-4" />
-                Secure
-              </motion.div>
-            )}
+            {/* Security Badge - Show on ALL steps for consistency */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.5 }}
+              className="absolute top-4 right-4 flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm font-medium border border-green-200"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Secure
+            </motion.div>
 
             {/* Render current step */}
             {renderStep()}
-
-            {/* Login Link - Only show on signup step */}
-            {currentStep === 'signup' && (
-              <motion.div
-                variants={fadeInUp}
-                className="text-center mt-6 pt-6 border-t border-gray-200"
-              >
-                <p className="text-gray-600">
-                  Already have an account?{" "}
-                  <motion.a
-                    href="/login"
-                    variants={linkAnimation}
-                    whileHover="hover"
-                    whileTap="tap"
-                    className="text-blue-600 font-semibold hover:text-blue-700 transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden"
-                  >
-                    Sign in here
-                    <motion.span
-                      animate={{ x: [0, 3, 0] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                      className="group-hover:translate-x-1 transition-transform duration-300"
-                    >
-                      →
-                    </motion.span>
-                    {/* Animated underline */}
-                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
-                  </motion.a>
-                </p>
-              </motion.div>
-            )}
           </motion.div>
         </motion.div>
       </div>

@@ -1,8 +1,16 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Signup from './pages/Signup';
-import LandingPage from './pages/LandingPage'; // Create this component
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/login';
+import AdminDashboard from './pages/AdminDashboard'; // Fixed import
+import Signup from './pages/signup';
+import LandingPage from './pages/LandingPage';
+import ForgotPassword from './pages/ForgotPassword';
+import AdminSignup from './pages/adminSignup';
+
+// Add a simple route protection component
+const ProtectedRoute = ({ children }) => {
+  const isAuthenticated = localStorage.getItem('userSession');
+  return isAuthenticated ? children : <Navigate to="/login" />;
+};
 
 function App() {
   return (
@@ -11,7 +19,16 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route 
+          path="/AdminDashboard" 
+          element={
+            <ProtectedRoute>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/admin/signup" element={<AdminSignup />} />
       </Routes>
     </Router>
   );
