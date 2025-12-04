@@ -43,6 +43,17 @@ import {
   CheckCircle2,
   UserCog,
   BarChart3,
+  Search,
+  Filter,
+  Plus,
+  Edit,
+  Trash2,
+  Shield,
+  Zap,
+  TargetIcon,
+  BarChart4,
+  PieChart,
+  LineChart as LineChartIcon,
 } from 'lucide-react';
 import {
   LineChart,
@@ -61,6 +72,8 @@ import {
   Legend,
   ResponsiveContainer,
   ComposedChart,
+  RadialBarChart,
+  RadialBar,
 } from 'recharts';
 
 // ==================== DUMMY DATA ====================
@@ -392,7 +405,7 @@ const AnimatedLogo = () => (
 );
 
 // ==================== NOTIFICATION COMPONENT ====================
-const NotificationPanel = ({ isOpen, onClose, notifications, onMarkAsRead, onMarkAllAsRead, isDark }) => {
+const NotificationPanel = ({ isOpen, onClose, notifications, onMarkAsRead, onMarkAllAsRead, isDark, onViewAllNotifications }) => {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
@@ -505,10 +518,11 @@ const NotificationPanel = ({ isOpen, onClose, notifications, onMarkAsRead, onMar
 
             <div className={`p-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
               <button
+                onClick={onViewAllNotifications}
                 className={`w-full py-2 rounded-lg text-sm font-medium ${isDark
                   ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
+                  } transition-colors`}
               >
                 View All Notifications
               </button>
@@ -538,7 +552,7 @@ const EnhancedNotificationIcon = ({ isDark, onClick, unreadCount }) => {
       onClick={onClick}
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.95 }}
-      className="relative p-3 rounded-xl bg-white/10 backdrop-blur-sm transition-all border border-white/20"
+      className="relative p-2 rounded-xl bg-white/10 backdrop-blur-sm transition-all border border-white/20"
     >
       <motion.div
         animate={isRinging ? {
@@ -554,7 +568,7 @@ const EnhancedNotificationIcon = ({ isDark, onClick, unreadCount }) => {
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className="absolute top-2 right-2 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-rose-400"
+          className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full ring-2 ring-rose-400"
         >
           <motion.div
             className="absolute inset-0 bg-rose-500 rounded-full"
@@ -814,36 +828,34 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
     setIsDark(!isDark);
   };
 
-  // In the ModernSidebar component, update the logout section:
+  // UPDATED LOGOUT FUNCTIONALITY
+  const handleLogout = () => {
+    setShowLogoutModal(true);
+  };
 
-// UPDATED LOGOUT FUNCTIONALITY
-const handleLogout = () => {
-  setShowLogoutModal(true);
-};
+  const handleLogoutConfirm = () => {
+    // Clear all authentication-related data
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
+    localStorage.removeItem('userRole');
+    sessionStorage.removeItem('authToken');
+    sessionStorage.removeItem('userData');
+    
+    // Clear any app-specific data
+    localStorage.removeItem('donationDashboardSettings');
+    localStorage.removeItem('tablePreferences');
+    
+    console.log('User logged out successfully');
+    
+    // Redirect to login page after a brief delay to show success message
+    setTimeout(() => {
+      window.location.href = '/login';
+    }, 2000);
+  };
 
-const handleLogoutConfirm = () => {
-  // Clear all authentication-related data
-  localStorage.removeItem('authToken');
-  localStorage.removeItem('userData');
-  localStorage.removeItem('userRole');
-  sessionStorage.removeItem('authToken');
-  sessionStorage.removeItem('userData');
-  
-  // Clear any app-specific data
-  localStorage.removeItem('donationDashboardSettings');
-  localStorage.removeItem('tablePreferences');
-  
-  console.log('User logged out successfully');
-  
-  // Redirect to login page after a brief delay to show success message
-  setTimeout(() => {
-    window.location.href = '/login';
-  }, 2000);
-};
-
-const handleLogoutCancel = () => {
-  setShowLogoutModal(false);
-};
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false);
+  };
 
   const theme = {
     dark: {
@@ -1154,17 +1166,18 @@ const handleLogoutCancel = () => {
   );
 };
 
-// ==================== STAT CARD - THEME AWARE ====================
-const StatCard = ({ icon: Icon, title, value, change, changeType, color, delay, isDark }) => (
+// ==================== ENHANCED STAT CARD ====================
+const EnhancedStatCard = ({ icon: Icon, title, value, change, changeType, color, delay, isDark }) => (
   <motion.div
     initial={{ opacity: 0, y: 20, scale: 0.9 }}
     animate={{ opacity: 1, y: 0, scale: 1 }}
     transition={{ delay, duration: 0.5, type: "spring" }}
-    whileHover={{ y: -8, scale: 1.03 }}
-    className={`rounded-2xl p-6 shadow-2xl border relative overflow-hidden group ${isDark
-      ? 'bg-gray-800 border-gray-700'
-      : 'bg-white border-gray-100'
-      }`}
+    whileHover={{ y: -5, scale: 1.02 }}
+    className={`rounded-2xl p-6 shadow-xl border relative overflow-hidden group cursor-pointer ${
+      isDark
+        ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700'
+        : 'bg-gradient-to-br from-white to-gray-50 border-gray-200'
+    }`}
   >
     {/* Animated Background Gradient */}
     <motion.div
@@ -1214,7 +1227,12 @@ const StatCard = ({ icon: Icon, title, value, change, changeType, color, delay, 
       <div className="flex-1">
         <p className={`text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{title}</p>
         <motion.h3
-          className={`text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}
+          className={`text-3xl font-bold mb-2 bg-gradient-to-r bg-clip-text text-transparent ${
+            color.includes('blue') ? 'from-blue-500 to-cyan-500' :
+            color.includes('emerald') ? 'from-emerald-500 to-teal-500' :
+            color.includes('violet') ? 'from-violet-500 to-purple-500' :
+            'from-amber-500 to-orange-500'
+          }`}
           initial={{ scale: 0.5 }}
           animate={{ scale: 1 }}
           transition={{ delay: delay + 0.2, type: "spring" }}
@@ -1243,7 +1261,7 @@ const StatCard = ({ icon: Icon, title, value, change, changeType, color, delay, 
 
       {/* Icon with animations */}
       <motion.div
-        whileHover={{ rotate: [0, -10, 10, 0], scale: 1.2 }}
+        whileHover={{ rotate: [0, -10, 10, 0], scale: 1.1 }}
         transition={{ duration: 0.5 }}
         className="relative"
       >
@@ -1253,23 +1271,19 @@ const StatCard = ({ icon: Icon, title, value, change, changeType, color, delay, 
             scale: [1, 1.05, 1]
           }}
           transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-          className={`p-3 rounded-xl`}
-          style={{
-            backgroundColor: color.includes('blue') ? 'rgba(59, 130, 246, 0.1)' :
-              color.includes('emerald') ? 'rgba(16, 185, 129, 0.1)' :
-                color.includes('violet') ? 'rgba(139, 92, 246, 0.1)' :
-                  color.includes('amber') ? 'rgba(245, 158, 11, 0.1)' : 'rgba(59, 130, 246, 0.1)'
-          }}
+          className={`p-3 rounded-xl backdrop-blur-sm ${
+            isDark ? 'bg-white/5' : 'bg-black/5'
+          }`}
         >
           <Icon
             size={24}
             strokeWidth={2.5}
-            style={{
-              color: color.includes('blue') ? '#3b82f6' :
-                color.includes('emerald') ? '#10b981' :
-                  color.includes('violet') ? '#8b5cf6' :
-                    color.includes('amber') ? '#f59e0b' : '#3b82f6'
-            }}
+            className={
+              color.includes('blue') ? 'text-blue-500' :
+              color.includes('emerald') ? 'text-emerald-500' :
+              color.includes('violet') ? 'text-violet-500' :
+              'text-amber-500'
+            }
           />
         </motion.div>
       </motion.div>
@@ -1277,16 +1291,17 @@ const StatCard = ({ icon: Icon, title, value, change, changeType, color, delay, 
   </motion.div>
 );
 
-// Enhanced Chart Card Wrapper - THEME AWARE
+// Enhanced Chart Card Wrapper
 const ChartCard = ({ title, children, actions, height = "auto", isDark }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.5, type: "spring" }}
-    className={`rounded-2xl p-6 shadow-2xl border ${isDark
-      ? 'bg-gray-800 border-gray-700'
-      : 'bg-white border-gray-100'
-      }`}
+    className={`rounded-2xl p-6 shadow-xl border ${
+      isDark
+        ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700'
+        : 'bg-gradient-to-br from-white to-gray-50 border-gray-200'
+    }`}
     style={{ height }}
   >
     <div className="flex items-center justify-between mb-6">
@@ -1297,44 +1312,55 @@ const ChartCard = ({ title, children, actions, height = "auto", isDark }) => (
   </motion.div>
 );
 
-// Enhanced Secondary Stats - THEME AWARE
+// Enhanced Secondary Stats with better animation
 const EnhancedStatBox = ({ icon: Icon, title, value, color, delay, index, isDark }) => (
   <motion.div
-    initial={{ opacity: 0, scale: 0.8, y: 20 }}
+    initial={{ opacity: 0, scale: 0.9, y: 20 }}
     animate={{ opacity: 1, scale: 1, y: 0 }}
     transition={{ delay: delay, duration: 0.6, type: "spring" }}
-    className={`rounded-2xl p-6 shadow-2xl border relative overflow-hidden group cursor-pointer ${isDark
-      ? 'bg-gray-800 border-gray-700'
-      : 'bg-white border-gray-100'
-      }`}
-    whileHover={{ scale: 1.05, y: -5 }}
-    whileTap={{ scale: 0.95 }}
+    className={`rounded-2xl p-6 shadow-xl border relative overflow-hidden group cursor-pointer ${
+      isDark
+        ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700'
+        : 'bg-gradient-to-br from-white to-gray-50 border-gray-200'
+    }`}
+    whileHover={{ 
+      scale: 1.02,
+      y: -2,
+      transition: { duration: 0.2 }
+    }}
   >
+    {/* Subtle glow effect on hover */}
     <motion.div
-      className={`absolute inset-0 bg-gradient-to-r from-transparent ${isDark ? 'via-gray-700' : 'via-gray-50'
-        } to-transparent -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000`}
+      className={`absolute inset-0 bg-gradient-to-r from-transparent ${
+        isDark ? 'via-gray-700/20' : 'via-gray-100/50'
+      } to-transparent -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000`}
     />
 
     <motion.div
       className="mb-3 relative z-10"
       animate={{
-        y: [0, -5, 0],
-        rotate: index % 2 === 0 ? [0, 5, -5, 0] : [0, -5, 5, 0]
+        y: [0, -3, 0],
       }}
       transition={{
-        duration: 4,
+        duration: 3,
         repeat: Infinity,
         delay: index * 0.5
       }}
     >
-      <Icon size={28} className={color.includes('blue') ? 'text-blue-600' :
-        color.includes('emerald') ? 'text-emerald-600' :
-          color.includes('rose') ? 'text-rose-600' : 'text-blue-600'} />
+      <Icon size={28} className={
+        color.includes('blue') ? 'text-blue-500' :
+        color.includes('emerald') ? 'text-emerald-500' :
+        color.includes('rose') ? 'text-rose-500' : 'text-blue-500'
+      } />
     </motion.div>
 
     <h4 className={`text-sm font-medium mb-1 relative z-10 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{title}</h4>
     <motion.p
-      className={`text-3xl font-bold relative z-10 ${isDark ? 'text-white' : 'text-gray-900'}`}
+      className={`text-3xl font-bold relative z-10 ${
+        color.includes('blue') ? 'text-blue-500' :
+        color.includes('emerald') ? 'text-emerald-500' :
+        color.includes('rose') ? 'text-rose-500' : 'text-blue-500'
+      }`}
       initial={{ scale: 0.5 }}
       animate={{ scale: 1 }}
       transition={{ delay: delay + 0.3, type: "spring" }}
@@ -1342,30 +1368,34 @@ const EnhancedStatBox = ({ icon: Icon, title, value, color, delay, index, isDark
       {value}
     </motion.p>
 
-    {[...Array(5)].map((_, i) => (
+    {/* Subtle floating dots */}
+    {[...Array(3)].map((_, i) => (
       <motion.div
         key={i}
-        className={`absolute w-1 h-1 rounded-full ${isDark ? 'bg-gray-600' : 'bg-gray-300'}`}
+        className={`absolute w-1 h-1 rounded-full ${
+          color.includes('blue') ? 'bg-blue-500/20' :
+          color.includes('emerald') ? 'bg-emerald-500/20' :
+          color.includes('rose') ? 'bg-rose-500/20' : 'bg-blue-500/20'
+        }`}
         animate={{
-          y: [0, -30, 0],
-          x: [0, Math.sin(i) * 20, 0],
-          opacity: [0, 1, 0],
+          y: [0, -15, 0],
+          opacity: [0, 0.8, 0],
         }}
         transition={{
-          duration: 3 + i,
+          duration: 2 + i,
           repeat: Infinity,
-          delay: i * 0.7,
+          delay: i * 0.5,
         }}
         style={{
-          left: `${20 + i * 15}%`,
-          bottom: '10%',
+          left: `${20 + i * 25}%`,
+          bottom: '15%',
         }}
       />
     ))}
   </motion.div>
 );
 
-// ==================== ESSENTIAL ADMIN GRAPHS ====================
+// ==================== ENHANCED GRAPHS ====================
 
 // 1. Donations Over Time - Modern Line Chart with Animation
 const DonationsOverTimeChart = ({ data, isDark, timeRange }) => {
@@ -1616,8 +1646,9 @@ const TopRecipientsCard = ({ data, isDark }) => (
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: index * 0.1 }}
-          className={`flex items-center gap-4 p-3 rounded-xl transition-colors group ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
-            }`}
+          className={`flex items-center gap-4 p-3 rounded-xl transition-colors group ${
+            isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'
+          }`}
         >
           <motion.div
             className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-400 rounded-full flex items-center justify-center text-white font-bold shadow-lg"
@@ -1629,21 +1660,27 @@ const TopRecipientsCard = ({ data, isDark }) => (
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <span className={`font-semibold transition-colors group-hover:text-violet-600 ${isDark ? 'text-white' : 'text-gray-900'
-                  }`}>
+                <span className={`font-semibold transition-colors group-hover:text-violet-600 ${
+                  isDark ? 'text-white' : 'text-gray-900'
+                }`}>
                   {recipient.name}
                 </span>
-                <span className={`text-xs ml-2 px-2 py-1 rounded-full ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
-                  }`}>
+                <span className={`text-xs ml-2 px-2 py-1 rounded-full ${
+                  isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
+                }`}>
                   {recipient.category}
                 </span>
               </div>
-              <span className={`text-sm font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <span className={`text-sm font-bold ${
+                isDark ? 'text-white' : 'text-gray-900'
+              }`}>
                 ₨{recipient.totalReceived.toLocaleString()}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className={`flex-1 rounded-full h-2 ${isDark ? 'bg-gray-600' : 'bg-gray-200'} relative overflow-hidden`}>
+              <div className={`flex-1 rounded-full h-2 ${
+                isDark ? 'bg-gray-600' : 'bg-gray-200'
+              } relative overflow-hidden`}>
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${recipient.completionRate}%` }}
@@ -1688,8 +1725,9 @@ const TopDonorsCard = ({ data, isDark }) => (
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: index * 0.1 }}
-          className={`flex items-center gap-4 p-3 rounded-xl transition-colors group ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
-            }`}
+          className={`flex items-center gap-4 p-3 rounded-xl transition-colors group ${
+            isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'
+          }`}
         >
           <motion.div
             className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-400 rounded-full flex items-center justify-center text-white font-bold shadow-lg"
@@ -1701,16 +1739,20 @@ const TopDonorsCard = ({ data, isDark }) => (
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <span className={`font-semibold transition-colors group-hover:text-emerald-600 ${isDark ? 'text-white' : 'text-gray-900'
-                  }`}>
+                <span className={`font-semibold transition-colors group-hover:text-emerald-600 ${
+                  isDark ? 'text-white' : 'text-gray-900'
+                }`}>
                   {donor.name}
                 </span>
-                <span className={`text-xs ml-2 px-2 py-1 rounded-full ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
-                  }`}>
+                <span className={`text-xs ml-2 px-2 py-1 rounded-full ${
+                  isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
+                }`}>
                   {donor.donationCount} donations
                 </span>
               </div>
-              <span className={`text-sm font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <span className={`text-sm font-bold ${
+                isDark ? 'text-white' : 'text-gray-900'
+              }`}>
                 ₨{donor.totalDonated.toLocaleString()}
               </span>
             </div>
@@ -1810,6 +1852,11 @@ const DonationDashboard = () => {
     setNotifications(notifications.map(notification => ({ ...notification, read: true })));
   };
 
+  const handleViewAllNotifications = () => {
+    setShowNotifications(false);
+    setActiveTab('notifications');
+  };
+
   const handleViewDonation = (donation) => {
     setSelectedDonation(donation);
     alert(`Viewing donation: ${donation.id}\nDonor: ${donation.donor}\nRecipient: ${donation.recipient}\nAmount: ₨${donation.amount.toLocaleString()}`);
@@ -1821,10 +1868,10 @@ const DonationDashboard = () => {
 
   // Define DashboardContent inside the main component
   const DashboardContent = () => (
-    <div className="space-y-6">
-      {/* ALL 4 STAT CARDS - THEME AWARE */}
+    <div className="space-y-6 px-2 sm:px-0">
+      {/* ALL 4 STAT CARDS - ENHANCED */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-        <StatCard
+        <EnhancedStatCard
           icon={DollarSign}
           title="Total Donations"
           value={`₨ ${(dummyData.stats.totalAmount / 1000).toFixed(0)}K`}
@@ -1834,7 +1881,7 @@ const DonationDashboard = () => {
           delay={0.1}
           isDark={isDark}
         />
-        <StatCard
+        <EnhancedStatCard
           icon={Users}
           title="Total Donors"
           value={dummyData.stats.totalDonors}
@@ -1844,7 +1891,7 @@ const DonationDashboard = () => {
           delay={0.2}
           isDark={isDark}
         />
-        <StatCard
+        <EnhancedStatCard
           icon={UserCheck}
           title="Recipients Helped"
           value={dummyData.stats.totalRecipients}
@@ -1854,7 +1901,7 @@ const DonationDashboard = () => {
           delay={0.3}
           isDark={isDark}
         />
-        <StatCard
+        <EnhancedStatCard
           icon={Clock}
           title="Pending Approvals"
           value={dummyData.stats.pendingApprovals}
@@ -1866,7 +1913,7 @@ const DonationDashboard = () => {
         />
       </div>
 
-      {/* Secondary Stats - THEME AWARE */}
+      {/* Secondary Stats - ENHANCED ANIMATION */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <EnhancedStatBox
           icon={Activity}
@@ -1906,10 +1953,11 @@ const DonationDashboard = () => {
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value)}
-              className={`px-3 py-1.5 rounded-lg border text-sm focus:ring-2 focus:ring-violet-500 focus:outline-none ${isDark
-                ? 'bg-gray-700 border-gray-600 text-white'
-                : 'bg-white border-gray-300 text-gray-900'
-                }`}
+              className={`px-3 py-1.5 rounded-lg border text-sm focus:ring-2 focus:ring-violet-500 focus:outline-none ${
+                isDark
+                  ? 'bg-gray-700 border-gray-600 text-white'
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
             >
               <option value="6months">Last 6 Months</option>
               <option value="1year">Last Year</option>
@@ -1943,7 +1991,7 @@ const DonationDashboard = () => {
         <TopDonorsCard data={dummyData.topDonors} isDark={isDark} />
       </div>
 
-      {/* Recent Donations Table - FIXED SHAKING ISSUE */}
+      {/* Recent Donations Table - ENHANCED */}
       <ChartCard
         title="Recent Donations"
         actions={
@@ -1959,7 +2007,7 @@ const DonationDashboard = () => {
         isDark={isDark}
       >
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                 <th className={`text-left py-3 px-4 text-xs font-semibold uppercase ${isDark ? 'text-gray-300' : 'text-gray-600'
@@ -2087,10 +2135,11 @@ const DonationDashboard = () => {
 
   if (loading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDark
-        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
-        : 'bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/30'
-        }`}>
+      <div className={`min-h-screen flex items-center justify-center ${
+        isDark
+          ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
+          : 'bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/30'
+      }`}>
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -2116,10 +2165,11 @@ const DonationDashboard = () => {
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${isDark
-      ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
-      : 'bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/30'
-      }`}>
+    <div className={`min-h-screen transition-colors duration-300 ${
+      isDark
+        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
+        : 'bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/30'
+    }`}>
       <ModernSidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -2131,12 +2181,12 @@ const DonationDashboard = () => {
       />
 
       <motion.div
-        className="min-h-screen transition-all duration-300"
+        className="min-h-screen transition-all duration-300 overflow-x-hidden"
         style={{
           marginLeft: typeof window !== 'undefined' && window.innerWidth >= 768 ? (sidebarOpen ? 240 : 70) : 0
         }}
       >
-        {/* FIXED HEADER - STAYS PURPLE IN DARK MODE */}
+        {/* FIXED HEADER - PROPER HEIGHT */}
         <div className={`sticky top-0 z-30 shadow-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-500`}>
           <div className="px-4 sm:px-6 lg:px-8 py-2">
             <div className="flex items-center justify-between">
@@ -2167,11 +2217,12 @@ const DonationDashboard = () => {
           notifications={notifications}
           onMarkAsRead={handleMarkAsRead}
           onMarkAllAsRead={handleMarkAllAsRead}
+          onViewAllNotifications={handleViewAllNotifications}
           isDark={isDark}
         />
 
         <main className="p-4 sm:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-7xl mx-auto w-full">
             {renderActiveContent()}
           </div>
         </main>

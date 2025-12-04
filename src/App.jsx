@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/login';
-import AdminDashboard from './pages/AdminDashboard'; // Fixed import
+import AdminDashboard from './pages/AdminDashboard';
+import RecipientDashboard from './pages/RecipientDashboard';
 import Signup from './pages/signup';
 import LandingPage from './pages/LandingPage';
 import ForgotPassword from './pages/ForgotPassword';
@@ -24,6 +25,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/RecipientDashboard" 
+          element={
+            <ProtectedRoute>
+              <RecipientDashboard />
             </ProtectedRoute>
           } 
         />
