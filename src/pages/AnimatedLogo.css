@@ -1,0 +1,274 @@
+/* Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.app-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Main Logo Container */
+.donation-logo-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 20px;
+  background: white;
+  border-radius: 25px;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.donation-logo-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #2196F3, #4CAF50, #FF9800);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.donation-logo-container:hover::before {
+  opacity: 1;
+}
+
+.donation-logo-container:hover {
+  transform: translateY(-10px);
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Logo Text Styles */
+.logo-text-container {
+  text-align: center;
+  margin-top: 25px;
+  width: 100%;
+}
+
+.logo-main-text {
+  font-size: 2.8em;
+  font-weight: 800;
+  margin: 0;
+  background: linear-gradient(90deg, #2196F3, #4CAF50, #FF9800);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+}
+
+.logo-subtext {
+  font-size: 1.1em;
+  color: #666;
+  margin-top: 8px;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+
+.logo-tagline {
+  font-size: 0.9em;
+  color: #888;
+  margin-top: 10px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Spinner */
+.logo-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Header Logo */
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.header-logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-logo-text h3 {
+  margin: 0;
+  font-size: 1.5em;
+  color: #2196F3;
+  font-weight: 700;
+}
+
+.header-logo-text span {
+  font-size: 0.85em;
+  color: #666;
+  font-weight: 500;
+}
+
+/* Full Page Logo */
+.full-page-logo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  z-index: 1000;
+}
+
+.logo-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  opacity: 0.3;
+}
+
+.loading-phase,
+.building-phase,
+.complete-phase {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.loading-phase h2 {
+  color: white;
+  margin-top: 30px;
+  font-weight: 300;
+  letter-spacing: 1px;
+}
+
+.building-blocks {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 600px;
+}
+
+.building-block {
+  width: 40px;
+  height: 50px;
+  background: linear-gradient(135deg, #2196F3, #4CAF50);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2em;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.complete-phase {
+  background: white;
+  padding: 40px;
+  border-radius: 30px;
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.2);
+}
+
+.welcome-message {
+  color: #666;
+  font-size: 1.2em;
+  margin-top: 20px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Dashboard Styles */
+.dashboard {
+  padding: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard header {
+  margin-bottom: 40px;
+}
+
+.dashboard h1 {
+  color: #333;
+  margin-bottom: 30px;
+  font-weight: 700;
+}
+
+.logo-preview {
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+  background: #f8f9fa;
+  border-radius: 20px;
+  margin-top: 40px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .donation-logo-container {
+    padding: 15px;
+  }
+  
+  .logo-main-text {
+    font-size: 2em;
+  }
+  
+  .header-logo {
+    padding: 8px 15px;
+  }
+  
+  .header-logo-text h3 {
+    font-size: 1.2em;
+  }
+  
+  .complete-phase {
+    padding: 20px;
+    margin: 20px;
+  }
+  
+  .building-block {
+    width: 30px;
+    height: 40px;
+    font-size: 1em;
+  }
+}

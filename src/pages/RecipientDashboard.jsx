@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AnalyticsPage from './AnalyticsPage';
-import ProfileVerificationPage from './ProfileVerificationPage';
 import MyRequests from './MyRequests';
+import Donations from './Donations';
+import ProfileVerificationPage from './ProfileVerificationPage';
 import {
     LayoutDashboard,
     FileText,
@@ -235,13 +235,6 @@ const recipientDummyData = {
             type: "donation"
         }
     ],
-
-    analytics: {
-        monthlyGrowth: 15.7,
-        completionRate: 67,
-        avgDonation: 7500,
-        topCategory: "Medical"
-    },
 
     notifications: [
         {
@@ -551,7 +544,7 @@ const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm, isDark }) => {
 };
 
 // ==================== SIDEBAR COMPONENT ====================
-const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, user, isDark, setIsDark }) => {
+const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, user, isDark, setIsDark, onNavigateToRequests  }) => {
     const [isOpen, setIsOpen] = useState(true);
     const [isMobile, setIsMobile] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -580,7 +573,6 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
         { name: "My Requests", icon: FileText, id: "requests" },
         { name: "Donations", icon: Wallet, id: "donations" },
         { name: "Profile Verification", icon: FileCheck, id: "profile" },
-        { name: "Analytics", icon: BarChart3, id: "analytics" },
         { name: "Notifications", icon: Bell, id: "notifications" },
     ];
 
@@ -595,6 +587,10 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
 
     const handleItemClick = (itemId) => {
         setActiveTab(itemId);
+        // RESET CREATE REQUEST MODAL WHEN NAVIGATING TO REQUESTS
+        if (itemId === 'requests' && onNavigateToRequests) {
+            onNavigateToRequests();
+        }
         if (isMobile) {
             setSidebarOpen(false);
         }
@@ -795,18 +791,7 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
                                         ACCOUNT
                                     </h3>
                                     <div className="space-y-1">
-                                        <motion.button
-                                            onClick={() => handleItemClick('profile')}
-                                            whileHover={{ x: 3, scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                            className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all ${activeTab === 'profile'
-                                                ? `${currentTheme.active} text-white shadow-lg`
-                                                : `${currentTheme.text} ${currentTheme.hover}`
-                                                }`}
-                                        >
-                                            <User size={17} strokeWidth={2.5} />
-                                            <span>Profile</span>
-                                        </motion.button>
+                                        
 
                                         <motion.button
                                             onClick={() => handleItemClick('settings')}
@@ -1164,7 +1149,7 @@ const EnhancedStatCard = ({
 );
 
 // ==================== MODERN QUICK ACTIONS ====================
-const QuickActions = ({ isDark }) => {
+const QuickActions = ({ isDark, onCreateRequest, onUploadDocs, onViewRequests }) => {
     const [activeAction, setActiveAction] = useState(null);
 
     const actions = [
@@ -1175,7 +1160,8 @@ const QuickActions = ({ isDark }) => {
             description: 'Start new funding request',
             color: 'from-blue-500 to-blue-600',
             hoverColor: 'from-blue-600 to-blue-700',
-            delay: 0.1
+            delay: 0.1,
+            onClick: onCreateRequest
         },
         {
             id: 'upload-documents',
@@ -1184,16 +1170,8 @@ const QuickActions = ({ isDark }) => {
             description: 'Submit required documents',
             color: 'from-emerald-500 to-emerald-600',
             hoverColor: 'from-emerald-600 to-emerald-700',
-            delay: 0.2
-        },
-        {
-            id: 'view-analytics',
-            icon: BarChart3,
-            label: 'Analytics',
-            description: 'View detailed insights',
-            color: 'from-violet-500 to-violet-600',
-            hoverColor: 'from-violet-600 to-violet-700',
-            delay: 0.3
+            delay: 0.2,
+            onClick: onUploadDocs
         },
         {
             id: 'manage-requests',
@@ -1202,17 +1180,23 @@ const QuickActions = ({ isDark }) => {
             description: 'Manage all requests',
             color: 'from-amber-500 to-amber-600',
             hoverColor: 'from-amber-600 to-amber-700',
-            delay: 0.4
+            delay: 0.3,
+            onClick: onViewRequests
         }
     ];
 
-    const handleActionClick = (actionId) => {
+    const handleActionClick = async (actionId, onClickHandler) => {
         setActiveAction(actionId);
+        
         // Simulate action with a brief loading state
-        setTimeout(() => {
-            setActiveAction(null);
-            alert(`${actions.find(a => a.id === actionId)?.label} clicked!`);
-        }, 1000);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Call the provided onClick handler
+        if (onClickHandler) {
+            onClickHandler();
+        }
+        
+        setActiveAction(null);
     };
 
     return (
@@ -1264,11 +1248,11 @@ const QuickActions = ({ isDark }) => {
                 </motion.div>
 
                 {/* Actions Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                     {actions.map((action, index) => (
                         <motion.button
                             key={action.id}
-                            onClick={() => handleActionClick(action.id)}
+                            onClick={() => handleActionClick(action.id, action.onClick)}
                             disabled={activeAction === action.id}
                             initial={{ opacity: 0, y: 20, scale: 0.9 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1397,385 +1381,8 @@ const QuickActions = ({ isDark }) => {
                 >
                     <Zap size={14} className={isDark ? 'text-amber-400' : 'text-amber-600'} />
                     <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Click any action to get started quickly
+                        Click any action to navigate quickly
                     </span>
-                </motion.div>
-            </div>
-        </GlassCard>
-    );
-};
-
-// ==================== PERFECT ANALYTICS OVERVIEW ====================
-const AnalyticsOverview = ({ analytics, isDark }) => {
-    const [isRefreshing, setIsRefreshing] = useState(false);
-    const [chartView, setChartView] = useState('overview');
-
-    const handleRefresh = async () => {
-        setIsRefreshing(true);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setIsRefreshing(false);
-    };
-
-    const stats = [
-        {
-            label: "Monthly Growth",
-            value: `${analytics.monthlyGrowth}%`,
-            icon: TrendingUp,
-            color: "from-emerald-500 to-teal-400",
-            gradient: "bg-gradient-to-r from-emerald-500 to-teal-400",
-            delay: 0.1,
-            animation: "risingBubbles"
-        },
-        {
-            label: "Completion Rate",
-            value: `${analytics.completionRate}%`,
-            icon: Target,
-            color: "from-blue-500 to-cyan-400",
-            gradient: "bg-gradient-to-r from-blue-500 to-cyan-400",
-            delay: 0.2,
-            animation: "rotatingRings"
-        },
-        {
-            label: "Avg Donation",
-            value: `₨${analytics.avgDonation}`,
-            icon: DollarSign,
-            color: "from-violet-500 to-purple-400",
-            gradient: "bg-gradient-to-r from-violet-500 to-purple-400",
-            delay: 0.3,
-            animation: "pulsingWaves"
-        },
-        {
-            label: "Top Category",
-            value: analytics.topCategory,
-            icon: Award,
-            color: "from-amber-500 to-orange-400",
-            gradient: "bg-gradient-to-r from-amber-500 to-orange-400",
-            delay: 0.4,
-            animation: "floatingStars"
-        }
-    ];
-
-    const AnimationLayer = ({ type, color, isDark }) => {
-        switch (type) {
-            case 'risingBubbles':
-                return (
-                    <div className="absolute inset-0 overflow-hidden">
-                        {[...Array(6)].map((_, i) => (
-                            <motion.div
-                                key={i}
-                                className={`absolute w-2 h-2 rounded-full ${isDark ? 'bg-emerald-400/30' : 'bg-emerald-500/30'}`}
-                                style={{
-                                    left: `${15 + i * 15}%`,
-                                    bottom: '0%',
-                                }}
-                                animate={{
-                                    y: [0, -120, 0],
-                                    opacity: [0, 0.8, 0],
-                                    scale: [0.5, 1.2, 0.5],
-                                }}
-                                transition={{
-                                    duration: 3 + i * 0.5,
-                                    repeat: Infinity,
-                                    delay: i * 0.7,
-                                    ease: "easeInOut"
-                                }}
-                            />
-                        ))}
-                    </div>
-                );
-
-            case 'rotatingRings':
-                return (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        {[0, 1, 2].map((ring) => (
-                            <motion.div
-                                key={ring}
-                                className={`absolute border-2 rounded-full ${isDark ? 'border-blue-400/20' : 'border-blue-500/20'}`}
-                                style={{
-                                    width: `${40 + ring * 30}px`,
-                                    height: `${40 + ring * 30}px`,
-                                }}
-                                animate={{
-                                    rotate: 360,
-                                    scale: [1, 1.1, 1],
-                                }}
-                                transition={{
-                                    rotate: {
-                                        duration: 8 + ring * 2,
-                                        repeat: Infinity,
-                                        ease: "linear"
-                                    },
-                                    scale: {
-                                        duration: 3,
-                                        repeat: Infinity,
-                                        delay: ring * 0.5
-                                    }
-                                }}
-                            />
-                        ))}
-                    </div>
-                );
-
-            case 'pulsingWaves':
-                return (
-                    <div className="absolute inset-0">
-                        {[...Array(4)].map((_, i) => (
-                            <motion.div
-                                key={i}
-                                className={`absolute rounded-full ${isDark ? 'bg-violet-400/15' : 'bg-violet-500/15'}`}
-                                style={{
-                                    left: '50%',
-                                    top: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                }}
-                                animate={{
-                                    width: [0, 120, 0],
-                                    height: [0, 120, 0],
-                                    opacity: [0.8, 0, 0],
-                                }}
-                                transition={{
-                                    duration: 3,
-                                    repeat: Infinity,
-                                    delay: i * 0.8,
-                                    ease: "easeOut"
-                                }}
-                            />
-                        ))}
-                    </div>
-                );
-
-            case 'floatingStars':
-                return (
-                    <div className="absolute inset-0">
-                        {[...Array(5)].map((_, i) => (
-                            <motion.div
-                                key={i}
-                                className={`absolute ${isDark ? 'text-amber-400/40' : 'text-amber-500/40'}`}
-                                style={{
-                                    left: `${20 + i * 15}%`,
-                                    top: `${30 + (i % 2) * 20}%`,
-                                }}
-                                animate={{
-                                    y: [0, -10, 0, 10, 0],
-                                    rotate: [0, 180, 360],
-                                    scale: [0.8, 1.2, 0.8],
-                                }}
-                                transition={{
-                                    duration: 4 + i,
-                                    repeat: Infinity,
-                                    delay: i * 0.5,
-                                    ease: "easeInOut"
-                                }}
-                            >
-                                <Star size={16} fill="currentColor" />
-                            </motion.div>
-                        ))}
-                    </div>
-                );
-
-            default:
-                return null;
-        }
-    };
-
-    return (
-        <GlassCard isDark={isDark} className="p-8 relative overflow-hidden">
-            {/* Subtle Background Pattern */}
-            <motion.div
-                className="absolute inset-0 opacity-[0.02]"
-                animate={{
-                    background: [
-                        'radial-gradient(circle at 20% 80%, #4f46e5 0%, transparent 50%)',
-                        'radial-gradient(circle at 80% 20%, #06b6d4 0%, transparent 50%)',
-                        'radial-gradient(circle at 40% 40%, #10b981 0%, transparent 50%)',
-                    ]
-                }}
-                transition={{
-                    duration: 20,
-                    repeat: Infinity,
-                    repeatType: "reverse",
-                    ease: "easeInOut"
-                }}
-            />
-
-            <div className="relative z-10">
-                {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6 }}
-                    className="flex items-center justify-between mb-8"
-                >
-                    <div>
-                        <h3 className={`text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent mb-2`}>
-                            Performance Overview
-                        </h3>
-                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                            Real-time insights and performance metrics
-                        </p>
-                    </div>
-                </motion.div>
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                    {stats.map((stat, index) => (
-                        <motion.div
-                            key={stat.label}
-                            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            transition={{
-                                delay: stat.delay,
-                                duration: 0.6,
-                                type: "spring",
-                                stiffness: 100
-                            }}
-                            whileHover={{
-                                y: -4,
-                                scale: 1.02,
-                                transition: { duration: 0.2 }
-                            }}
-                            className={`relative p-6 rounded-2xl backdrop-blur-sm border-2 ${isDark
-                                ? 'bg-gray-800/40 border-gray-700/50 hover:border-gray-600/70'
-                                : 'bg-white/60 border-gray-200/50 hover:border-gray-300/70'
-                                } group/card cursor-pointer transition-all duration-300 overflow-hidden`}
-                        >
-                            {/* Unique Animation for Each Card */}
-                            <AnimationLayer
-                                type={stat.animation}
-                                color={stat.color}
-                                isDark={isDark}
-                            />
-
-                            {/* Hover Gradient Overlay */}
-                            <motion.div
-                                className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover/card:opacity-5`}
-                                transition={{ duration: 0.3 }}
-                            />
-
-                            {/* Main Content */}
-                            <div className="relative z-10">
-                                {/* Icon Container */}
-                                <motion.div
-                                    whileHover={{ scale: 1.1, rotate: 5 }}
-                                    transition={{ duration: 0.3 }}
-                                    className={`w-12 h-12 rounded-xl ${stat.gradient} flex items-center justify-center mb-4 shadow-lg group/icon relative overflow-hidden`}
-                                >
-                                    {/* Icon Shine Effect */}
-                                    <motion.div
-                                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 transform -translate-x-full group-hover/icon:translate-x-full"
-                                        transition={{ duration: 0.8 }}
-                                    />
-                                    <stat.icon size={20} className="text-white relative z-10" />
-                                </motion.div>
-
-                                {/* Value */}
-                                <motion.div
-                                    className={`text-2xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent mb-2`}
-                                    initial={{ scale: 0.8 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ delay: stat.delay + 0.3, type: "spring" }}
-                                >
-                                    {stat.value}
-                                </motion.div>
-
-                                {/* Label */}
-                                <p className={`text-sm font-medium mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                                    {stat.label}
-                                </p>
-
-                                {/* Progress Bar for Percentage Stats */}
-                                {(stat.label.includes('Growth') || stat.label.includes('Rate')) && (
-                                    <div className={`w-full h-1.5 rounded-full mt-2 ${isDark ? 'bg-gray-700' : 'bg-gray-200'
-                                        } overflow-hidden`}>
-                                        <motion.div
-                                            className={`h-full rounded-full ${stat.gradient} relative`}
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${parseInt(stat.value)}%` }}
-                                            transition={{
-                                                delay: stat.delay + 0.5,
-                                                duration: 1.5,
-                                                type: "spring",
-                                                stiffness: 60
-                                            }}
-                                        >
-                                            {/* Shimmer Effect */}
-                                            <motion.div
-                                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -skew-x-12"
-                                                animate={{
-                                                    x: ['-100%', '200%'],
-                                                }}
-                                                transition={{
-                                                    duration: 2,
-                                                    repeat: Infinity,
-                                                    repeatDelay: 1,
-                                                    ease: "easeInOut"
-                                                }}
-                                            />
-                                        </motion.div>
-                                    </div>
-                                )}
-
-                                {/* Subtle Trend Indicator */}
-                                <motion.div
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: stat.delay + 0.7 }}
-                                    className="flex items-center gap-1 mt-2"
-                                >
-                                    <TrendingUp size={12} className={
-                                        stat.color.includes('emerald') ? 'text-emerald-500' :
-                                            stat.color.includes('blue') ? 'text-blue-500' :
-                                                stat.color.includes('violet') ? 'text-violet-500' : 'text-amber-500'
-                                    } />
-                                    <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'
-                                        }`}>
-                                        {stat.animation === 'risingBubbles' ? 'Growing' :
-                                            stat.animation === 'rotatingRings' ? 'Active' :
-                                                stat.animation === 'pulsingWaves' ? 'Stable' : 'Leading'}
-                                    </span>
-                                </motion.div>
-                            </div>
-                        </motion.div>
-                    ))}
-                </div>
-
-                {/* Simple Footer */}
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 1 }}
-                    className={`flex items-center justify-between mt-8 pt-6 border-t ${isDark ? 'border-gray-700/50' : 'border-gray-200/50'
-                        }`}
-                >
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-emerald-500 rounded-full" />
-                        <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                            Live data updated just now
-                        </span>
-                    </div>
-
-                    <motion.button
-                        onClick={handleRefresh}
-                        disabled={isRefreshing}
-                        whileHover={!isRefreshing ? { scale: 1.05, x: 2 } : {}}
-                        whileTap={!isRefreshing ? { scale: 0.95 } : {}}
-                        className={`text-xs px-4 py-2 rounded-lg flex items-center gap-2 border ${isDark
-                            ? 'bg-gray-800/50 border-gray-600 text-gray-300 hover:bg-gray-700/50'
-                            : 'bg-white/50 border-gray-300 text-gray-700 hover:bg-gray-100/50'
-                            } transition-all duration-200 ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
-                    >
-                        <motion.div
-                            animate={isRefreshing ? { rotate: 360 } : { rotate: 0 }}
-                            transition={isRefreshing ?
-                                { duration: 1, repeat: Infinity, ease: "linear" } :
-                                { duration: 0.3 }
-                            }
-                        >
-                            <RefreshCw size={14} />
-                        </motion.div>
-                        {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
-                    </motion.button>
                 </motion.div>
             </div>
         </GlassCard>
@@ -1978,6 +1585,43 @@ const EnhancedNotificationIcon = ({ isDark, onClick, unreadCount }) => {
     );
 };
 
+// ==================== ADD NAVIGATION HANDLERS HERE ====================
+    const handleCreateRequest = () => {
+        // Navigate to My Requests and open create new request section
+        setActiveTab('requests');
+        setShowCreateRequest(true);
+        
+        // Scroll to top when switching tabs
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Optional: Show a notification or message
+        console.log('Navigate to My Requests - Create New Request');
+    };
+
+    const handleUploadDocs = () => {
+        // Navigate to Profile Verification section
+        setActiveTab('profile');
+        setShowCreateRequest(false); // Reset when navigating away
+        
+        // Scroll to top when switching tabs
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Optional: Show a notification or message
+        console.log('Navigate to Profile Verification');
+    };
+
+    const handleViewRequests = () => {
+        // Navigate to My Requests section (default view)
+        setActiveTab('requests');
+        setShowCreateRequest(false);
+        
+        // Scroll to top when switching tabs
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Optional: Show a notification or message
+        console.log('Navigate to My Requests');
+    };
+
 // ==================== MAIN DASHBOARD COMPONENT ====================
 const RecipientDashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -1987,6 +1631,7 @@ const RecipientDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [notifications, setNotifications] = useState(recipientDummyData.notifications);
     const [showNotifications, setShowNotifications] = useState(false);
+    const [showCreateRequest, setShowCreateRequest] = useState(false);
 
     // ==================== ADD THIS EFFECT FOR AUTO-SCROLL ====================
     useEffect(() => {
@@ -2002,6 +1647,20 @@ const RecipientDashboard = () => {
         // Scroll to top on initial component mount
         window.scrollTo({ top: 0, behavior: 'auto' });
     }, []); // Empty dependency array means this runs once on mount
+
+    // ==================== FIX: RESET SHOWCREATEREQUEST WHEN TAB CHANGES ====================
+    useEffect(() => {
+        // Reset showCreateRequest when switching away from requests tab
+        if (activeTab !== 'requests') {
+            setShowCreateRequest(false);
+        }
+    }, [activeTab]);
+
+    // ==================== ADD THIS CALLBACK FOR SIDEBAR ====================
+    const handleNavigateToRequests = () => {
+        setShowCreateRequest(false); // Reset when clicking "My Requests" from sidebar
+        console.log('Navigated to My Requests from sidebar - reset create form');
+    };
 
     useEffect(() => {
         const initializeDashboard = async () => {
@@ -2051,6 +1710,42 @@ const RecipientDashboard = () => {
     const handleViewAllNotifications = () => {
         setShowNotifications(false);
         setActiveTab('notifications');
+    };
+
+    // ==================== ADD NAVIGATION HANDLERS HERE ====================
+    const handleCreateRequest = () => {
+        // Navigate to My Requests and open create new request section
+        setActiveTab('requests');
+        setShowCreateRequest(true);
+        
+        // Scroll to top when switching tabs
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Optional: Show a notification or message
+        console.log('Navigate to My Requests - Create New Request');
+    };
+
+    const handleUploadDocs = () => {
+        // Navigate to Profile Verification section
+        setActiveTab('profile');
+        
+        // Scroll to top when switching tabs
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Optional: Show a notification or message
+        console.log('Navigate to Profile Verification');
+    };
+
+    const handleViewRequests = () => {
+        // Navigate to My Requests section (default view)
+        setActiveTab('requests');
+        setShowCreateRequest(false);
+        
+        // Scroll to top when switching tabs
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Optional: Show a notification or message
+        console.log('Navigate to My Requests');
     };
 
     // ==================== FIXED PROGRESS CARD FOR HORIZONTAL FIT ====================
@@ -2360,7 +2055,7 @@ const RecipientDashboard = () => {
         );
     };
 
-    // ==================== UPDATED DASHBOARD CONTENT WITH 500px HEIGHT AND NO VIEW ALL BUTTONS ====================
+    // ==================== UPDATED DASHBOARD CONTENT WITH NAVIGATION HANDLERS ====================
     const DashboardContent = ({ isDark }) => {
         const cardHeight = "500px"; // Set to 500px as requested
 
@@ -2411,11 +2106,13 @@ const RecipientDashboard = () => {
                     />
                 </div>
 
-                {/* Analytics Overview - unchanged */}
-                <AnalyticsOverview analytics={recipientDummyData.analytics} isDark={isDark} />
-
-                {/* Quick Actions - unchanged */}
-                <QuickActions isDark={isDark} />
+                {/* Quick Actions - Updated with navigation handlers */}
+                <QuickActions 
+                    isDark={isDark}
+                    onCreateRequest={handleCreateRequest}
+                    onUploadDocs={handleUploadDocs}
+                    onViewRequests={handleViewRequests}
+                />
 
                 {/* Active Requests & Recent Transactions - WITH 500px HEIGHT AND NO VIEW ALL BUTTONS */}
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -2520,11 +2217,11 @@ const RecipientDashboard = () => {
             case 'dashboard':
                 return <DashboardContent />;
             case 'requests':
-                return <MyRequests isDark={isDark} />;
+                return <MyRequests isDark={isDark} showCreateForm={showCreateRequest} />;
+            case 'donations':
+                return <Donations isDark={isDark} />;
             case 'profile':
                 return <ProfileVerificationPage isDark={isDark} />;
-            case 'analytics':
-                return <AnalyticsPage isDark={isDark} />;
             case 'notifications':
                 return (
                     <GlassCard isDark={isDark} className="p-6">
@@ -2539,25 +2236,11 @@ const RecipientDashboard = () => {
                         </div>
                     </GlassCard>
                 );
-            case 'donations':
-                return (
-                    <GlassCard isDark={isDark} className="p-6">
-                        <div className="text-center py-12">
-                            <Wallet size={48} className={`mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
-                            <h3 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                                Donations
-                            </h3>
-                            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                View and manage your donations here
-                            </p>
-                        </div>
-                    </GlassCard>
-                );
             case 'settings':
                 return (
                     <GlassCard isDark={isDark} className="p-6">
                         <div className="text-center py-12">
-                            <Settings size={48} className={`mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
+                            <Settings size={48} className={`mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-600'}`} />
                             <h3 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                                 Settings
                             </h3>

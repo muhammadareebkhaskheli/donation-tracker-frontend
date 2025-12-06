@@ -41,7 +41,7 @@ import {
 } from 'lucide-react';
 
 // ==================== MY REQUESTS COMPONENT (RECIPIENT VERSION) ====================
-const MyRequests = ({ isDark }) => {
+const MyRequests = ({ isDark, showCreateForm = false }) => {
     // Mock data for recipient requests - Include both Draft and Pending-Validation
     const mockRequestsData = [
         {
@@ -391,6 +391,7 @@ const MyRequests = ({ isDark }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(6);
 
+
     // Status options
     const statusOptions = [
         'All Status',
@@ -419,6 +420,36 @@ const MyRequests = ({ isDark }) => {
 
     // Urgency options
     const urgencyOptions = ['All Urgency', 'High', 'Medium', 'Low'];
+
+    // ==================== FIX: PROPERLY CONTROL CREATE MODAL BASED ON PROP ====================
+    useEffect(() => {
+        if (showCreateForm) {
+            // Only open create modal if showCreateForm is true
+            setShowCreateModal(true);
+            console.log('Opening create modal via prop');
+        }
+    }, [showCreateForm]);
+
+    // Also add effect to sync with internal state
+    useEffect(() => {
+        // If showCreateForm is false and modal is open, close it
+        if (!showCreateForm && showCreateModal) {
+            setShowCreateModal(false);
+        }
+    }, [showCreateForm, showCreateModal]);
+
+    // ==================== FIX: CLOSE MODAL AND RESET PARENT STATE ====================
+    const handleCloseCreateModal = () => {
+        setShowCreateModal(false);
+        setEditingRequest(null);
+
+        // If we were opened via showCreateForm prop, we should notify parent
+        // This is optional but good for state management
+        if (showCreateForm) {
+            // You might want to add a callback prop to notify parent
+            console.log('Create modal closed, parent state should be reset');
+        }
+    };
 
     // Shake animation variants
     const shakeAnimation = {
@@ -2737,9 +2768,8 @@ const MyRequests = ({ isDark }) => {
                             <div className="flex gap-3 pt-4">
                                 <motion.button
                                     onClick={() => {
-                                        setEditingRequest(selectedRequest);
-                                        setShowCreateModal(true);
                                         setShowDetailModal(false);
+                                        // Add any other cancel logic here if needed
                                     }}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
@@ -2747,9 +2777,7 @@ const MyRequests = ({ isDark }) => {
                                         ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                                         : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
                                         }`}
-                                >
-                                    <Edit size={16} />
-                                    Edit Request
+                                >Cancel
                                 </motion.button>
                                 <motion.button
                                     onClick={() => handleSubmitForValidation(selectedRequest)}
