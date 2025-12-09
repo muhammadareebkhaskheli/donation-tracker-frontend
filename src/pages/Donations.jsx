@@ -752,8 +752,12 @@ const Donations = ({ isDark }) => {
         <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ delay, duration: 0.5, type: "spring" }}
-            whileHover={{ y: -5, scale: 1.02 }}
+            transition={{ delay, duration: 0.5, type: "spring", default: { duration: 0.2, ease: "easeOut" } }}
+    whileHover={{
+      y: -5,
+      scale: 1.02,
+      transition: { duration: 0.2, ease: "easeOut" }
+    }}
             className={`rounded-2xl p-6 shadow-xl border relative overflow-hidden group cursor-pointer ${isDark
                 ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700'
                 : 'bg-gradient-to-br from-white to-gray-50 border-gray-200'
@@ -928,8 +932,12 @@ const Donations = ({ isDark }) => {
             <motion.div
                 initial={{ opacity: 0, y: 20, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ delay: index * 0.05, duration: 0.5, type: "spring" }}
-                whileHover={{ y: -5, scale: 1.02 }}
+                transition={{ delay: index * 0.05, duration: 0.5, type: "spring", default: { duration: 0.2, ease: "easeOut" } }}
+    whileHover={{
+      y: -5,
+      scale: 1.02,
+      transition: { duration: 0.2, ease: "easeOut" }
+    }}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
                 className={`rounded-2xl p-6 shadow-xl border relative overflow-hidden group cursor-pointer ${isDark

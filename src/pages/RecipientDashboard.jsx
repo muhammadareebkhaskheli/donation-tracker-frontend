@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MyRequests from './MyRequests';
 import Donations from './Donations';
 import ProfileVerificationPage from './ProfileVerificationPage';
+import RecipientNotifications from './RecipientNotifications';
+import RecipientSettings from './RecipientSettings';
 import {
     LayoutDashboard,
     FileText,
@@ -924,9 +926,9 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
 // ==================== GLASS MORPHISM CARD ====================
 const GlassCard = ({ children, className = "", isDark, ...props }) => (
     <motion.div
-        className={`rounded-3xl backdrop-blur-xl border border-white/20 bg-gradient-to-br ${isDark
-            ? 'from-gray-800/80 to-gray-900/80 shadow-2xl'
-            : 'from-white/80 to-gray-50/80 shadow-xl'
+        className={`rounded-3xl backdrop-blur-xl border ${isDark
+            ? 'border-gray-700/50 bg-gradient-to-br from-gray-800/90 via-gray-800/80 to-gray-900/90 shadow-2xl'
+            : 'border-gray-200/50 bg-gradient-to-br from-white/95 via-white/90 to-gray-50/95 shadow-xl'
             } ${className}`}
         {...props}
     >
@@ -1002,12 +1004,16 @@ const EnhancedStatCard = ({
     <motion.div
         initial={{ opacity: 0, y: 20, scale: 0.9 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ delay, duration: 0.5, type: "spring" }}
-        whileHover={{ y: -5, scale: 1.02 }}
+        transition={{ delay, duration: 0.5, type: "spring", default: { duration: 0.2, ease: "easeOut" } }}
+        whileHover={{
+      y: -5,
+      scale: 1.02,
+      transition: { duration: 0.2, ease: "easeOut" }
+    }}
         className={`rounded-2xl p-6 shadow-xl border relative overflow-hidden group cursor-pointer ${isDark
-            ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700'
-            : 'bg-gradient-to-br from-white to-gray-50 border-gray-200'
-            }`}
+    ? 'bg-gradient-to-br from-gray-800/90 to-gray-900/90 border-gray-700'
+    : 'bg-gradient-to-br from-white to-gray-50 border-gray-200'
+    }`}
     >
         {/* Animated Background Gradient */}
         <motion.div
@@ -1585,18 +1591,16 @@ const EnhancedNotificationIcon = ({ isDark, onClick, unreadCount }) => {
     );
 };
 
-// ==================== ADD NAVIGATION HANDLERS HERE ====================
-    const handleCreateRequest = () => {
-        // Navigate to My Requests and open create new request section
-        setActiveTab('requests');
-        setShowCreateRequest(true);
-        
-        // Scroll to top when switching tabs
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        // Optional: Show a notification or message
-        console.log('Navigate to My Requests - Create New Request');
-    };
+const handleCreateRequest = () => {
+    // Navigate to My Requests and open create new request section
+    setActiveTab('requests');
+    setShowCreateRequest(true);
+    
+    // Scroll to top when switching tabs
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    console.log('Navigate to My Requests - Create New Request');
+};
 
     const handleUploadDocs = () => {
         // Navigate to Profile Verification section
@@ -1712,18 +1716,22 @@ const RecipientDashboard = () => {
         setActiveTab('notifications');
     };
 
-    // ==================== ADD NAVIGATION HANDLERS HERE ====================
+    // Add a function to reset the create request state
+const handleResetCreateRequest = () => {
+    setShowCreateRequest(false);
+    console.log('Create request state reset');
+};
+
     const handleCreateRequest = () => {
-        // Navigate to My Requests and open create new request section
-        setActiveTab('requests');
-        setShowCreateRequest(true);
-        
-        // Scroll to top when switching tabs
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        // Optional: Show a notification or message
-        console.log('Navigate to My Requests - Create New Request');
-    };
+    // Navigate to My Requests and open create new request section
+    setActiveTab('requests');
+    setShowCreateRequest(true);
+    
+    // Scroll to top when switching tabs
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    console.log('Navigate to My Requests - Create New Request');
+};
 
     const handleUploadDocs = () => {
         // Navigate to Profile Verification section
@@ -1797,9 +1805,9 @@ const RecipientDashboard = () => {
                 className="relative"
             >
                 <div className={`rounded-xl backdrop-blur-sm border ${isDark
-                    ? 'bg-gray-800/40 border-gray-700'
-                    : 'bg-white/50 border-gray-200'
-                    } p-3 group cursor-pointer relative overflow-hidden`}>
+    ? 'bg-gray-800/50 border-gray-700'
+    : 'bg-white/60 border-gray-200'
+    } p-3 group cursor-pointer relative overflow-hidden`}>
                     {/* Removed GlassCard wrapper for better fit */}
 
                     <div className="relative z-10">
@@ -1963,8 +1971,10 @@ const RecipientDashboard = () => {
                 onHoverEnd={() => setIsHovered(false)}
                 className="relative"
             >
-                <div className={`p-2.5 rounded-lg border backdrop-blur-sm ${isDark ? 'bg-gray-800/40 border-gray-700' : 'bg-white/50 border-gray-200'
-                    } group relative overflow-hidden`}>
+                <div className={`p-2.5 rounded-lg border backdrop-blur-sm ${isDark 
+    ? 'bg-gray-800/50 border-gray-700' 
+    : 'bg-white/60 border-gray-200'
+    } group relative overflow-hidden`}>
                     {/* Reduced padding from p-3 to p-2.5, rounded-xl to rounded-lg */}
 
                     <div className="relative z-10">
@@ -2215,41 +2225,17 @@ const RecipientDashboard = () => {
     const renderActiveContent = () => {
         switch (activeTab) {
             case 'dashboard':
-                return <DashboardContent />;
+                return <DashboardContent isDark={isDark} />;
             case 'requests':
-                return <MyRequests isDark={isDark} showCreateForm={showCreateRequest} />;
+                return <MyRequests isDark={isDark} showCreateForm={showCreateRequest} onFormClose={handleResetCreateRequest} />;
             case 'donations':
                 return <Donations isDark={isDark} />;
             case 'profile':
                 return <ProfileVerificationPage isDark={isDark} />;
             case 'notifications':
-                return (
-                    <GlassCard isDark={isDark} className="p-6">
-                        <div className="text-center py-12">
-                            <Bell size={48} className={`mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
-                            <h3 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                                Notifications
-                            </h3>
-                            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                All your notifications will appear here
-                            </p>
-                        </div>
-                    </GlassCard>
-                );
+                return <RecipientNotifications isDark={isDark} />;
             case 'settings':
-                return (
-                    <GlassCard isDark={isDark} className="p-6">
-                        <div className="text-center py-12">
-                            <Settings size={48} className={`mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-600'}`} />
-                            <h3 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                                Settings
-                            </h3>
-                            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                Configure your application settings here
-                            </p>
-                        </div>
-                    </GlassCard>
-                );
+                return <RecipientSettings isDark={isDark} />;
             default:
                 return <DashboardContent />;
         }

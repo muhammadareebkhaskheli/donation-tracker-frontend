@@ -41,7 +41,7 @@ import {
 } from 'lucide-react';
 
 // ==================== MY REQUESTS COMPONENT (RECIPIENT VERSION) ====================
-const MyRequests = ({ isDark, showCreateForm = false }) => {
+const MyRequests = ({ isDark, showCreateForm = false, onFormClose }) => {
     // Mock data for recipient requests - Include both Draft and Pending-Validation
     const mockRequestsData = [
         {
@@ -423,32 +423,28 @@ const MyRequests = ({ isDark, showCreateForm = false }) => {
 
     // ==================== FIX: PROPERLY CONTROL CREATE MODAL BASED ON PROP ====================
     useEffect(() => {
-        if (showCreateForm) {
-            // Only open create modal if showCreateForm is true
+        console.log('showCreateForm prop:', showCreateForm, 'showCreateModal state:', showCreateModal);
+
+        if (showCreateForm && !showCreateModal) {
+            // Only open modal if prop is true and modal is not already open
             setShowCreateModal(true);
             console.log('Opening create modal via prop');
         }
+
+        // Don't auto-close based on prop change - let user control closing
     }, [showCreateForm]);
 
-    // Also add effect to sync with internal state
-    useEffect(() => {
-        // If showCreateForm is false and modal is open, close it
-        if (!showCreateForm && showCreateModal) {
-            setShowCreateModal(false);
-        }
-    }, [showCreateForm, showCreateModal]);
-
-    // ==================== FIX: CLOSE MODAL AND RESET PARENT STATE ====================
+    // ==================== FIX: CLOSE MODAL AND NOTIFY PARENT ====================
     const handleCloseCreateModal = () => {
         setShowCreateModal(false);
         setEditingRequest(null);
 
-        // If we were opened via showCreateForm prop, we should notify parent
-        // This is optional but good for state management
-        if (showCreateForm) {
-            // You might want to add a callback prop to notify parent
-            console.log('Create modal closed, parent state should be reset');
+        // Notify parent component that modal is closed
+        if (onFormClose) {
+            onFormClose();
         }
+
+        console.log('Create modal closed, parent notified');
     };
 
     // Shake animation variants
@@ -837,8 +833,12 @@ const MyRequests = ({ isDark, showCreateForm = false }) => {
         <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ delay, duration: 0.5, type: "spring" }}
-            whileHover={{ y: -5, scale: 1.02 }}
+            transition={{ delay, duration: 0.5, type: "spring", default: { duration: 0.2, ease: "easeOut" } }}
+            whileHover={{
+                y: -5,
+                scale: 1.02,
+                transition: { duration: 0.2, ease: "easeOut" }
+            }}
             className={`rounded-2xl p-6 shadow-xl border relative overflow-hidden group cursor-pointer ${isDark
                 ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700'
                 : 'bg-gradient-to-br from-white to-gray-50 border-gray-200'
@@ -1070,8 +1070,12 @@ const MyRequests = ({ isDark, showCreateForm = false }) => {
             <motion.div
                 initial={{ opacity: 0, y: 20, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ delay: index * 0.05, duration: 0.5, type: "spring" }}
-                whileHover={{ y: -5, scale: 1.02 }}
+                transition={{ delay: index * 0.05, duration: 0.5, type: "spring", default: { duration: 0.2, ease: "easeOut" } }}
+                whileHover={{
+                    y: -5,
+                    scale: 1.02,
+                    transition: { duration: 0.2, ease: "easeOut" }
+                }}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
                 className={`rounded-2xl p-6 shadow-xl border relative overflow-hidden group cursor-pointer ${isDark

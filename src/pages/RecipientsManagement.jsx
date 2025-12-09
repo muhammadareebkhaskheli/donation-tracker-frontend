@@ -10,6 +10,8 @@ import {
   Phone,
   MapPin,
   Calendar,
+  CheckCircle2,
+  BarChart3,
   FileUp,
   Shield,
   AlertCircle,
@@ -591,11 +593,13 @@ const ProgressCircle = ({ percentage, size = 80, isDark }) => {
   );
 };
 
-// MAIN RECIPIENT CARD COMPONENT - FIXED CORNERS AND ACTION MENU
+// UPDATED RECIPIENT CARD COMPONENT WITH ANIMATIONS
 const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward, onStatusChange, onApprove, index }) => {
   const [showActions, setShowActions] = useState(false);
-  const menuRef = React.useRef(null);
-  const buttonRef = React.useRef(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const hoverRef = useRef(false);
+  const menuRef = useRef(null);
+  const buttonRef = useRef(null);
 
   const getCategoryIcon = (category) => {
     const icons = {
@@ -604,6 +608,10 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
       'Emergency': AlertTriangle,
       'Food': Users,
       'Housing': Shield,
+      'Business': BarChart3,
+      'Utilities': Zap,
+      'Transportation': Activity,
+      'Other': FileText
     };
     return icons[category] || Users;
   };
@@ -615,13 +623,32 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
       'Emergency': 'from-amber-500 to-orange-600',
       'Food': 'from-emerald-500 to-teal-600',
       'Housing': 'from-purple-500 to-violet-600',
+      'Business': 'from-indigo-500 to-blue-600',
+      'Utilities': 'from-yellow-500 to-amber-600',
+      'Transportation': 'from-cyan-500 to-blue-600'
     };
     return colors[category] || 'from-gray-500 to-gray-600';
   };
 
   const CategoryIcon = getCategoryIcon(recipient.category);
+  const categoryColor = getCategoryColor(recipient.category);
 
-  // Close menu when clicking outside - FIXED VERSION
+  // Get primary color from gradient
+  const getPrimaryColor = (color) => {
+    if (color.includes('rose')) return '#f43f5e';
+    if (color.includes('blue')) return '#3b82f6';
+    if (color.includes('amber')) return '#f59e0b';
+    if (color.includes('emerald')) return '#10b981';
+    if (color.includes('violet')) return '#8b5cf6';
+    if (color.includes('purple')) return '#8b5cf6';
+    if (color.includes('cyan')) return '#06b6d4';
+    if (color.includes('yellow')) return '#eab308';
+    return '#6b7280';
+  };
+
+  const primaryColor = getPrimaryColor(categoryColor);
+
+  // Close menu when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -646,70 +673,275 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
     setShowActions(false);
   };
 
+  // Handle hover with immediate state update
+  const handleMouseEnter = () => {
+    hoverRef.current = true;
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    hoverRef.current = false;
+    setIsHovered(false);
+  };
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30, scale: 0.95 }}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ delay: index * 0.05, duration: 0.5, type: "spring" }}
-      whileHover={{ y: -8, scale: 1.02 }}
-      className={`relative rounded-3xl overflow-visible ${isDark
-        ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
-        : 'bg-gradient-to-br from-white via-white to-gray-50'
+      transition={{ delay: index * 0.05, duration: 0.5, type: "spring", default: { duration: 0.2, ease: "easeOut" } }}
+    whileHover={{
+      y: -5,
+      scale: 1.02,
+      transition: { duration: 0.2, ease: "easeOut" }
+    }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={`rounded-2xl p-6 shadow-xl border relative overflow-hidden group cursor-pointer ${isDark
+        ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700'
+        : 'bg-gradient-to-br from-white to-gray-50 border-gray-200'
         }`}
-      style={{
-        boxShadow: isDark
-          ? '0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05)'
-          : '0 20px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.03)'
-      }}
     >
-      {/* Gradient Header with Category - REMOVED ROUNDED CORNERS FROM TOP */}
-      <div className={`relative p-4 sm:p-6 bg-gradient-to-r ${getCategoryColor(recipient.category)} overflow-visible rounded-t-3xl`}>
-        {/* Animated background pattern */}
+      {/* Floating Orbs Animation */}
+      <div className="absolute inset-0 overflow-hidden">
+        {[...Array(10)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute"
+            style={{
+              width: `${Math.random() * 18 + 6}px`,
+              height: `${Math.random() * 18 + 6}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              background: `radial-gradient(circle, ${primaryColor} 0%, transparent 70%)`,
+              filter: 'blur(4px)',
+              opacity: 0,
+            }}
+            animate={{
+              y: isHovered ? [0, Math.random() * -100 - 30, Math.random() * -180 - 50] : 0,
+              x: isHovered ? [0, Math.random() * 50 - 25, Math.random() * 50 - 25] : 0,
+              opacity: isHovered ? [0, 0.5, 0] : 0,
+              scale: isHovered ? [0, 1, 0] : 0,
+            }}
+            transition={{
+              duration: isHovered ? Math.random() * 4 + 3 : 0.1,
+              delay: isHovered ? i * 0.25 : 0,
+              repeat: isHovered ? Infinity : 0,
+              repeatDelay: isHovered ? Math.random() * 1.5 + 0.5 : 0,
+              ease: isHovered ? "easeOut" : "linear",
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Floating Ring Animation */}
+      <div className="absolute inset-0 overflow-hidden">
+        {[...Array(4)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute inset-0 m-auto rounded-full"
+            style={{
+              width: `${30 + i * 70}px`,
+              height: `${30 + i * 70}px`,
+              border: `2px solid ${primaryColor}`,
+              opacity: 0,
+              boxShadow: isHovered ? `0 0 15px ${primaryColor}40` : 'none'
+            }}
+            animate={{
+              scale: isHovered ? [0.6, 1.6, 2.2] : 0.6,
+              opacity: isHovered ? [0.2, 0.12, 0] : 0,
+              rotate: isHovered ? [0, 180, 360] : 0,
+            }}
+            transition={{
+              duration: isHovered ? 5 + i : 0.1,
+              delay: isHovered ? i * 0.4 : 0,
+              repeat: isHovered ? Infinity : 0,
+              ease: "linear"
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Pulsing Glow Effect */}
+      <motion.div
+        className="absolute inset-0 rounded-2xl"
+        style={{
+          background: primaryColor,
+          opacity: 0,
+          filter: 'blur(50px)',
+        }}
+        animate={{
+          opacity: isHovered ? [0.08, 0.15, 0.08] : 0,
+          scale: isHovered ? [1, 1.12, 1] : 1,
+        }}
+        transition={{
+          duration: isHovered ? 2.5 : 0.1,
+          repeat: isHovered ? Infinity : 0,
+          ease: "easeInOut"
+        }}
+      />
+
+      {/* Shimmer Lines Animation */}
+      <div className="absolute inset-0 overflow-hidden">
         <motion.div
-          className="absolute inset-0 opacity-10 rounded-t-3xl"
+          className="absolute top-0 left-0 right-0 h-1"
+          style={{
+            background: `linear-gradient(to right, transparent, ${primaryColor}80, transparent)`
+          }}
           animate={{
-            backgroundPosition: ['0% 0%', '100% 100%'],
+            x: isHovered ? ['-100%', '200%'] : '-100%',
           }}
           transition={{
-            duration: 20,
-            repeat: Infinity,
-            repeatType: "reverse"
+            duration: isHovered ? 1.8 : 0.1,
+            delay: isHovered ? 0.8 : 0,
+            repeat: isHovered ? Infinity : 0,
+            repeatDelay: isHovered ? 1.5 : 0,
+            ease: "linear"
           }}
+        />
+        <motion.div
+          className="absolute bottom-0 left-0 right-0 h-1"
           style={{
-            backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
-            backgroundSize: '20px 20px',
+            background: `linear-gradient(to right, transparent, ${primaryColor}60, transparent)`
+          }}
+          animate={{
+            x: isHovered ? ['200%', '-100%'] : '200%',
+          }}
+          transition={{
+            duration: isHovered ? 2.2 : 0.1,
+            delay: isHovered ? 0.3 : 0,
+            repeat: isHovered ? Infinity : 0,
+            repeatDelay: isHovered ? 0.8 : 0,
+            ease: "linear"
           }}
         />
 
-        <div className="relative z-10 flex items-start justify-between">
-          <div className="flex items-start gap-3 sm:gap-4 flex-1">
-            {/* Avatar - FIXED ANIMATION */}
+        {/* Additional diagonal shimmer lines */}
+        <motion.div
+          className="absolute top-0 left-0 w-1 h-20"
+          style={{
+            background: `linear-gradient(to bottom, transparent, ${primaryColor}50, transparent)`
+          }}
+          animate={{
+            y: isHovered ? ['-100%', '300%'] : '-100%',
+            rotate: isHovered ? [0, 15] : 0,
+          }}
+          transition={{
+            duration: isHovered ? 2.5 : 0.1,
+            delay: isHovered ? 0.5 : 0,
+            repeat: isHovered ? Infinity : 0,
+            repeatDelay: isHovered ? 2 : 0,
+            ease: "linear"
+          }}
+        />
+      </div>
+
+      {/* Light Background Overlay */}
+      <motion.div
+        className={`absolute inset-0 rounded-2xl ${categoryColor.split(' ')[0]}`}
+        style={{
+          opacity: 0,
+        }}
+        animate={{
+          opacity: isHovered ? 0.05 : 0,
+        }}
+        transition={{
+          duration: 0.1,
+          ease: "easeInOut"
+        }}
+      />
+
+      {/* Particle Dots */}
+      <div className="absolute inset-0 overflow-hidden">
+        {[...Array(15)].map((_, i) => (
+          <motion.div
+            key={`dot-${i}`}
+            className="absolute rounded-full"
+            style={{
+              width: '1px',
+              height: '1px',
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              background: primaryColor,
+              opacity: 0,
+            }}
+            animate={{
+              opacity: isHovered ? [0, 0.3, 0] : 0,
+              scale: isHovered ? [0, 1.5, 0] : 0,
+            }}
+            transition={{
+              duration: isHovered ? Math.random() * 2 + 1 : 0.1,
+              delay: isHovered ? i * 0.1 : 0,
+              repeat: isHovered ? Infinity : 0,
+              repeatDelay: isHovered ? Math.random() * 3 + 2 : 0,
+              ease: "easeInOut"
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="relative z-10">
+        {/* Header Section */}
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex items-start gap-4 flex-1">
             <motion.div
-              whileHover={{ scale: 1.05, rotate: 5 }}
+              whileHover={{ scale: 1.1, rotate: 5 }}
               whileTap={{ scale: 0.95 }}
               transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-lg rounded-2xl flex items-center justify-center text-white text-lg sm:text-2xl font-bold shadow-xl border-2 border-white/30"
+              className="relative"
             >
-              {recipient.name.split(' ').map(n => n[0]).join('')}
+              <motion.div
+                animate={{
+                  rotate: isHovered ? [0, 5, -5, 0] : 0,
+                  scale: isHovered ? [1, 1.08, 1] : 1,
+                }}
+                transition={{
+                  duration: isHovered ? 1.5 : 0.1,
+                  repeat: isHovered ? Infinity : 0,
+                  repeatDelay: isHovered ? 2 : 0
+                }}
+                className={`p-3 rounded-xl backdrop-blur-sm ${isDark ? 'bg-white/5' : 'bg-black/5'
+                  }`}
+                style={{
+                  boxShadow: isHovered ? `0 0 20px ${primaryColor}30` : 'none'
+                }}
+              >
+                <CategoryIcon
+                  size={24}
+                  strokeWidth={2.5}
+                  style={{
+                    color: primaryColor,
+                    filter: isHovered ? `drop-shadow(0 0 8px ${primaryColor}50)` : 'none'
+                  }}
+                />
+              </motion.div>
             </motion.div>
 
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg sm:text-xl font-bold text-white mb-1 truncate">
+              <h3 className={`text-lg font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 {recipient.name}
               </h3>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-white/90 text-xs font-medium bg-white/20 backdrop-blur-sm px-2 sm:px-3 py-1 rounded-full truncate">
+                <motion.span
+                  animate={{
+                    scale: isHovered ? [1, 1.05, 1] : 1,
+                  }}
+                  transition={{
+                    duration: isHovered ? 2 : 0.1,
+                    repeat: isHovered ? Infinity : 0,
+                    repeatDelay: isHovered ? 1 : 0
+                  }}
+                  className={`text-xs font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'} bg-gradient-to-r ${categoryColor} bg-clip-text text-transparent`}
+                >
                   {recipient.id}
+                </motion.span>
+                <span className={`text-xs font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  • {recipient.category}
                 </span>
-                <div className="flex items-center gap-1.5 text-white/90 text-xs font-medium bg-white/20 backdrop-blur-sm px-2 sm:px-3 py-1 rounded-full">
-                  <CategoryIcon size={12} className="hidden xs:block" />
-                  <span className="truncate">{recipient.category}</span>
-                </div>
               </div>
             </div>
           </div>
 
-          {/* Action Menu - FIXED Z-INDEX ISSUE */}
+          {/* Action Menu */}
           <div className="relative">
             <motion.button
               ref={buttonRef}
@@ -719,9 +951,12 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
                 e.stopPropagation();
                 setShowActions(!showActions);
               }}
-              className="p-1.5 sm:p-2 rounded-xl bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors z-40 relative"
+              className={`p-2 rounded-xl backdrop-blur-sm ${isDark
+                ? 'bg-gray-700/50 border-gray-600 text-gray-300 hover:bg-gray-600'
+                : 'bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200'
+                } border transition-colors z-40 relative`}
             >
-              <MoreVertical size={18} className="text-white sm:w-5 sm:h-5" />
+              <MoreVertical size={20} />
             </motion.button>
 
             <AnimatePresence>
@@ -731,17 +966,16 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
                   initial={{ opacity: 0, scale: 0.9, y: -10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                  className={`absolute right-0 top-10 sm:top-12 w-48 sm:w-56 rounded-2xl overflow-visible z-[9999] ${isDark ? 'bg-gray-800' : 'bg-white'
+                  className={`absolute right-0 top-12 w-56 rounded-2xl overflow-visible z-[9999] ${isDark ? 'bg-gray-800' : 'bg-white'
                     }`}
                   style={{
                     boxShadow: '0 25px 50px rgba(0, 0, 0, 0.4), 0 10px 20px rgba(0, 0, 0, 0.3)'
                   }}
                 >
-                  {/* Menu Content */}
                   <div className="p-2 space-y-1 relative z-[9999]">
                     <button
                       onClick={() => handleMenuAction(() => onView(recipient))}
-                      className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-2 sm:gap-3 ${isDark ? 'hover:bg-blue-500/20 text-gray-300' : 'hover:bg-blue-100 text-gray-700'
+                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-blue-500/20 text-gray-300' : 'hover:bg-blue-100 text-gray-700'
                         }`}
                     >
                       <Eye size={16} />
@@ -752,7 +986,7 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
                     {(recipient.status === 'Pending-Validation' || recipient.status === 'Validated') && (
                       <button
                         onClick={() => handleMenuAction(() => onApprove(recipient))}
-                        className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-2 sm:gap-3 ${isDark ? 'hover:bg-emerald-500/20 text-gray-300' : 'hover:bg-emerald-100 text-gray-700'
+                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-emerald-500/20 text-gray-300' : 'hover:bg-emerald-100 text-gray-700'
                           }`}
                       >
                         <CheckCircle size={16} />
@@ -762,7 +996,7 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
 
                     <button
                       onClick={() => handleMenuAction(() => onEdit(recipient))}
-                      className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-2 sm:gap-3 ${isDark ? 'hover:bg-amber-500/20 text-gray-300' : 'hover:bg-amber-100 text-gray-700'
+                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-amber-500/20 text-gray-300' : 'hover:bg-amber-100 text-gray-700'
                         }`}
                     >
                       <Edit size={16} />
@@ -770,7 +1004,7 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
                     </button>
                     <button
                       onClick={() => handleMenuAction(() => onForward(recipient))}
-                      className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-2 sm:gap-3 ${isDark ? 'hover:bg-violet-500/20 text-gray-300' : 'hover:bg-violet-100 text-gray-700'
+                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-violet-500/20 text-gray-300' : 'hover:bg-violet-100 text-gray-700'
                         }`}
                     >
                       <Send size={16} />
@@ -779,7 +1013,7 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
                     <div className={`my-2 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`} />
                     <button
                       onClick={() => handleMenuAction(() => onDelete(recipient))}
-                      className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-2 sm:gap-3 ${isDark ? 'hover:bg-rose-500/20 text-rose-400' : 'hover:bg-rose-100 text-rose-700'
+                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-rose-500/20 text-rose-400' : 'hover:bg-rose-100 text-rose-700'
                         }`}
                     >
                       <Trash2 size={16} />
@@ -791,25 +1025,22 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
             </AnimatePresence>
           </div>
         </div>
-      </div>
 
-      {/* Rest of the card content remains the same */}
-      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Description */}
-        <div>
-          <p className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} line-clamp-2`}>
+        <div className="mb-6">
+          <p className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} line-clamp-2`}>
             {recipient.description}
           </p>
         </div>
 
         {/* Status & Urgency Row */}
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap mb-6">
           <StatusBadge status={recipient.status} isDark={isDark} />
           <UrgencyBadge urgency={recipient.urgency} isDark={isDark} />
         </div>
 
         {/* Contact Information */}
-        <div className={`p-3 sm:p-4 rounded-2xl space-y-2 sm:space-y-3 ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+        <div className={`p-3 sm:p-4 rounded-2xl space-y-2 sm:space-y-3 mb-6 ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
           <div className="flex items-center gap-2 sm:gap-3">
             <Mail size={14} className="text-blue-500 flex-shrink-0" />
             <span className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} truncate`}>
@@ -831,32 +1062,62 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
         </div>
 
         {/* Financial Info & Progress */}
-        <div className="flex items-center justify-between gap-4 sm:gap-6">
-          <div className="flex-1 space-y-2 sm:space-y-3 min-w-0">
-            <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between gap-6 mb-6">
+          <div className="flex-1 space-y-3 min-w-0">
+            <motion.div
+              animate={{
+                x: isHovered ? [0, 2, 0] : 0,
+              }}
+              transition={{
+                duration: isHovered ? 1.2 : 0.1,
+                repeat: isHovered ? Infinity : 0,
+                repeatDelay: isHovered ? 0.8 : 0
+              }}
+              className="flex justify-between items-center"
+            >
               <span className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                 Required
               </span>
-              <span className={`text-sm sm:text-base font-bold ${isDark ? 'text-white' : 'text-gray-900'} truncate ml-2`}>
+              <span className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'} truncate ml-2`}>
                 ₨{(recipient.requiredAmount / 1000).toFixed(0)}K
               </span>
-            </div>
-            <div className="flex justify-between items-center">
+            </motion.div>
+            <motion.div
+              animate={{
+                x: isHovered ? [0, 3, 0] : 0,
+              }}
+              transition={{
+                duration: isHovered ? 1.4 : 0.1,
+                repeat: isHovered ? Infinity : 0,
+                repeatDelay: isHovered ? 1 : 0
+              }}
+              className="flex justify-between items-center"
+            >
               <span className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                 Donated
               </span>
-              <span className="text-sm sm:text-base font-bold text-emerald-500 truncate ml-2">
+              <span className="text-lg font-bold text-emerald-500 truncate ml-2">
                 ₨{(recipient.donatedAmount / 1000).toFixed(0)}K
               </span>
-            </div>
-            <div className="flex justify-between items-center">
+            </motion.div>
+            <motion.div
+              animate={{
+                x: isHovered ? [0, 2, 0] : 0,
+              }}
+              transition={{
+                duration: isHovered ? 1.6 : 0.1,
+                repeat: isHovered ? Infinity : 0,
+                repeatDelay: isHovered ? 1.2 : 0
+              }}
+              className="flex justify-between items-center"
+            >
               <span className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                 Balance
               </span>
-              <span className="text-sm sm:text-base font-bold text-rose-500 truncate ml-2">
+              <span className="text-lg font-bold text-rose-500 truncate ml-2">
                 ₨{(recipient.balanceAmount / 1000).toFixed(0)}K
               </span>
-            </div>
+            </motion.div>
           </div>
 
           <div className="flex-shrink-0">
@@ -865,27 +1126,47 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
         </div>
 
         {/* Additional Info Row */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          <div className={`p-2 sm:p-3 rounded-xl text-center ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <motion.div
+            animate={{
+              y: isHovered ? [0, -1, 0] : 0,
+            }}
+            transition={{
+              duration: isHovered ? 1 : 0.1,
+              repeat: isHovered ? Infinity : 0,
+              repeatDelay: isHovered ? 1.5 : 0
+            }}
+            className={`p-3 rounded-xl text-center ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}
+          >
             <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               Age
             </p>
-            <p className={`text-base sm:text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <p className={`text-base font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {recipient.age}
             </p>
-          </div>
-          <div className={`p-2 sm:p-3 rounded-xl text-center ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+          </motion.div>
+          <motion.div
+            animate={{
+              y: isHovered ? [0, -1, 0] : 0,
+            }}
+            transition={{
+              duration: isHovered ? 1 : 0.1,
+              repeat: isHovered ? Infinity : 0,
+              repeatDelay: isHovered ? 2 : 0
+            }}
+            className={`p-3 rounded-xl text-center ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}
+          >
             <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               Family
             </p>
-            <p className={`text-base sm:text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <p className={`text-base font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {recipient.familyMembers}
             </p>
-          </div>
+          </motion.div>
         </div>
 
         {/* Assigned Admin & Documents */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-6">
           <div className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-medium ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'
             }`}>
             <UserCheck size={12} className="flex-shrink-0" />
@@ -901,10 +1182,10 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
         </div>
 
         {/* Registration Date */}
-        <div className="flex items-center gap-2 text-xs font-medium">
-          <Calendar size={12} className={`flex-shrink-0 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-          <span className={isDark ? 'text-gray-500' : 'text-gray-500'} style={{ fontSize: '0.7rem' }}>
-            Registered: {recipient.registrationDate}
+        <div className="flex items-center gap-2 text-xs font-medium pt-4 border-t border-gray-700/20">
+          <Calendar size={14} className={`flex-shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+          <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>
+            Registered: {formatDate(recipient.registrationDate)}
           </span>
         </div>
       </div>
@@ -912,25 +1193,49 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
   );
 };
 
-// Modern Stat Card Component with smaller icons
-const ModernStatCard = ({ icon: Icon, title, value, change, changeType, gradient, delay, isDark }) => (
+// Helper function to format date
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleDateString('en-PK', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+};
+
+// Enhanced Stat Card Component - SIMILAR TO MY REQUESTS
+const EnhancedStatCard = ({
+  icon: Icon,
+  title,
+  value,
+  change,
+  changeType,
+  color,
+  delay,
+  isDark,
+  subtitle
+}) => (
   <motion.div
-    initial={{ opacity: 0, y: 30 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay, duration: 0.6, type: "spring", stiffness: 100 }}
-    whileHover={{ y: -12, transition: { duration: 0.3 } }}
-    className={`relative rounded-2xl sm:rounded-3xl p-4 sm:p-7 overflow-hidden group cursor-pointer ${isDark
-      ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
-      : 'bg-gradient-to-br from-white via-white to-gray-50'
+    initial={{ opacity: 0, y: 20, scale: 0.9 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    transition={{ delay, duration: 0.5, type: "spring", default: { duration: 0.2, ease: "easeOut" } }}
+    whileHover={{
+      y: -5,
+      scale: 1.02,
+      transition: { duration: 0.2, ease: "easeOut" }
+    }}
+    className={`rounded-2xl p-6 shadow-xl border relative overflow-hidden group cursor-pointer ${isDark
+      ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700'
+      : 'bg-gradient-to-br from-white to-gray-50 border-gray-200'
       }`}
     style={{
-      boxShadow: isDark
-        ? '0 10px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05)'
-        : '0 10px 40px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.03)'
+      willChange: 'transform, opacity',
+      contain: 'layout style',
+      transform: 'translateZ(0)',
     }}
   >
+    {/* ROTATING GRADIENT ANIMATION */}
     <motion.div
-      className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-[0.15] transition-opacity duration-700`}
+      className={`absolute inset-0 bg-gradient-to-br ${color} opacity-0 group-hover:opacity-10 transition-opacity duration-700`}
       animate={{
         scale: [1, 1.2, 1],
         rotate: [0, 90, 0],
@@ -942,70 +1247,99 @@ const ModernStatCard = ({ icon: Icon, title, value, change, changeType, gradient
       }}
     />
 
-    <div className="relative z-10 flex items-start justify-between">
-      <div className="flex-1 min-w-0">
-        <p className={`text-xs font-semibold mb-1 sm:mb-2 tracking-wide uppercase ${isDark ? 'text-gray-400' : 'text-gray-600'
-          }`}>
-          {title}
-        </p>
-        <motion.h3
-          className={`text-xl sm:text-2xl font-bold mb-2 sm:mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: delay + 0.2, type: "spring", stiffness: 200 }}
-        >
-          {typeof value === 'number' ? value.toLocaleString() : value}
-        </motion.h3>
-        {change && (
-          <motion.div
-            className="flex items-center gap-2"
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: delay + 0.3 }}
+    {/* Floating Icon */}
+    <motion.div
+      className="absolute -top-4 -right-4 opacity-10"
+      animate={{
+        rotate: [0, 10, -10, 0],
+        scale: [1, 1.1, 1],
+      }}
+      transition={{
+        duration: 4,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+    >
+      <Icon size={80} />
+    </motion.div>
+
+    <div className="relative z-10">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <p className={`text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+            {title}
+          </p>
+          <motion.h3
+            className={`text-3xl font-bold mb-2 bg-gradient-to-r bg-clip-text text-transparent ${color.includes('blue') ? 'from-blue-500 to-cyan-500' :
+              color.includes('emerald') ? 'from-emerald-500 to-teal-500' :
+                color.includes('violet') ? 'from-violet-500 to-purple-500' :
+                  color.includes('rose') ? 'from-rose-500 to-pink-500' :
+                    'from-amber-500 to-orange-500'
+              }`}
+            initial={{ scale: 0.5 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: delay + 0.2, type: "spring" }}
           >
-            <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${changeType === 'increase'
-              ? 'bg-emerald-500/20 text-emerald-600'
-              : 'bg-rose-500/20 text-rose-600'
-              }`}>
-              {changeType === 'increase' ? (
-                <TrendingUp size={12} />
-              ) : (
-                <TrendingDown size={12} />
-              )}
-              <span>{change}%</span>
-            </div>
+            {typeof value === 'number' ?
+              (title.includes('Amount') || title.includes('Total') ? `₨${value.toLocaleString()}` : value.toLocaleString())
+              : value
+            }
+          </motion.h3>
+          {subtitle && (
+            <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              {subtitle}
+            </p>
+          )}
+        </div>
+
+        {/* Icon with animations */}
+        <motion.div
+          whileHover={{ rotate: [0, -10, 10, 0], scale: 1.1 }}
+          transition={{ duration: 0.5 }}
+          className="relative"
+        >
+          <motion.div
+            animate={{
+              rotate: [0, 5, -5, 0],
+              scale: [1, 1.05, 1]
+            }}
+            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+            className={`p-3 rounded-xl backdrop-blur-sm ${isDark ? 'bg-white/5' : 'bg-black/5'
+              }`}
+          >
+            <Icon
+              size={24}
+              strokeWidth={2.5}
+              className={
+                color.includes('blue') ? 'text-blue-500' :
+                  color.includes('emerald') ? 'text-emerald-500' :
+                    color.includes('violet') ? 'text-violet-500' :
+                      color.includes('rose') ? 'text-rose-500' :
+                        'text-amber-500'
+              }
+            />
           </motion.div>
-        )}
+        </motion.div>
       </div>
 
-      <motion.div
-        whileHover={{ rotate: 15, scale: 1.1 }}
-        transition={{ type: "spring", stiffness: 400 }}
-        className="relative flex-shrink-0"
-      >
+      {change && (
         <motion.div
-          animate={{
-            rotate: [0, 5, -5, 0],
-          }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className={`p-2 sm:p-3 rounded-xl sm:rounded-2xl relative overflow-hidden`}
-          style={{
-            background: gradient.includes('blue') ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.15))' :
-              gradient.includes('emerald') ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15))' :
-                gradient.includes('amber') ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.15))' :
-                  'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(124, 58, 237, 0.15))',
-            backdropFilter: 'blur(10px)',
-          }}
+          className="flex items-center gap-1 mt-3"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: delay + 0.3 }}
         >
-          <Icon
-            size={20}
-            strokeWidth={2.5}
-            className={gradient.includes('blue') ? 'text-blue-500' :
-              gradient.includes('emerald') ? 'text-emerald-500' :
-                gradient.includes('amber') ? 'text-amber-500' : 'text-violet-500'}
-          />
+          {changeType === 'increase' ? (
+            <TrendingUp size={16} className="text-emerald-500" />
+          ) : (
+            <TrendingDown size={16} className="text-rose-500" />
+          )}
+          <span className={`text-sm font-semibold ${changeType === 'increase' ? 'text-emerald-500' : 'text-rose-500'}`}>
+            {change}%
+          </span>
+          <span className={`text-xs ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>vs last month</span>
         </motion.div>
-      </motion.div>
+      )}
     </div>
   </motion.div>
 );
@@ -1036,7 +1370,7 @@ const ForwardModal = ({ isDark, recipient, onClose, onForward, currentAdmin = 'a
       if (/^\d/.test(address.trim())) {
         return false;
       }
-      
+
       // Check if address contains only allowed characters
       const addressRegex = /^[A-Za-z][A-Za-z0-9\s\-_/,'."]*$/;
       return addressRegex.test(address.trim());
@@ -1746,67 +2080,67 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
   }, []);
 
   // Phone number formatting function
-const formatPhoneNumber = (digits, countryCode) => {
-  if (!digits) return '';
-  
-  const country = countryCodes.find(c => c.code === countryCode);
-  const maxLength = country?.length || 10;
-  
-  let formatted = digits.slice(0, maxLength);
-  
-  // Apply formatting based on country
-  switch (countryCode) {
-    case '+1': // US: xxx-xxx-xxxx
-      if (formatted.length > 6) {
-        formatted = `${formatted.slice(0, 3)}-${formatted.slice(3, 6)}-${formatted.slice(6)}`;
-      } else if (formatted.length > 3) {
-        formatted = `${formatted.slice(0, 3)}-${formatted.slice(3)}`;
-      }
-      break;
-      
-    case '+92': // Pakistan: xxx-xxx-xxxx
-      if (formatted.length > 6) {
-        formatted = `${formatted.slice(0, 3)}-${formatted.slice(3, 6)}-${formatted.slice(6)}`;
-      } else if (formatted.length > 3) {
-        formatted = `${formatted.slice(0, 3)}-${formatted.slice(3)}`;
-      }
-      break;
-      
-    case '+44': // UK: xxxx-xxx-xxx
-      if (formatted.length > 7) {
-        formatted = `${formatted.slice(0, 4)}-${formatted.slice(4, 7)}-${formatted.slice(7)}`;
-      } else if (formatted.length > 4) {
-        formatted = `${formatted.slice(0, 4)}-${formatted.slice(4)}`;
-      }
-      break;
-      
-    case '+971': // UAE: xx-xxx-xxxx
-      if (formatted.length > 5) {
-        formatted = `${formatted.slice(0, 2)}-${formatted.slice(2, 5)}-${formatted.slice(5)}`;
-      } else if (formatted.length > 2) {
-        formatted = `${formatted.slice(0, 2)}-${formatted.slice(2)}`;
-      }
-      break;
-      
-    case '+966': // KSA: x-xxx-xxxx
-      if (formatted.length > 4) {
-        formatted = `${formatted.slice(0, 1)}-${formatted.slice(1, 4)}-${formatted.slice(4)}`;
-      } else if (formatted.length > 1) {
-        formatted = `${formatted.slice(0, 1)}-${formatted.slice(1)}`;
-      }
-      break;
-      
-    default:
-      // Default formatting: xxx-xxx-xxxx
-      if (formatted.length > 6) {
-        formatted = `${formatted.slice(0, 3)}-${formatted.slice(3, 6)}-${formatted.slice(6)}`;
-      } else if (formatted.length > 3) {
-        formatted = `${formatted.slice(0, 3)}-${formatted.slice(3)}`;
-      }
-  }
-  
-  return formatted;
-};
+  const formatPhoneNumber = (digits, countryCode) => {
+    if (!digits) return '';
+
+    const country = countryCodes.find(c => c.code === countryCode);
+    const maxLength = country?.length || 10;
+
+    let formatted = digits.slice(0, maxLength);
+
+    // Apply formatting based on country
+    switch (countryCode) {
+      case '+1': // US: xxx-xxx-xxxx
+        if (formatted.length > 6) {
+          formatted = `${formatted.slice(0, 3)}-${formatted.slice(3, 6)}-${formatted.slice(6)}`;
+        } else if (formatted.length > 3) {
+          formatted = `${formatted.slice(0, 3)}-${formatted.slice(3)}`;
+        }
+        break;
+
+      case '+92': // Pakistan: xxx-xxx-xxxx
+        if (formatted.length > 6) {
+          formatted = `${formatted.slice(0, 3)}-${formatted.slice(3, 6)}-${formatted.slice(6)}`;
+        } else if (formatted.length > 3) {
+          formatted = `${formatted.slice(0, 3)}-${formatted.slice(3)}`;
+        }
+        break;
+
+      case '+44': // UK: xxxx-xxx-xxx
+        if (formatted.length > 7) {
+          formatted = `${formatted.slice(0, 4)}-${formatted.slice(4, 7)}-${formatted.slice(7)}`;
+        } else if (formatted.length > 4) {
+          formatted = `${formatted.slice(0, 4)}-${formatted.slice(4)}`;
+        }
+        break;
+
+      case '+971': // UAE: xx-xxx-xxxx
+        if (formatted.length > 5) {
+          formatted = `${formatted.slice(0, 2)}-${formatted.slice(2, 5)}-${formatted.slice(5)}`;
+        } else if (formatted.length > 2) {
+          formatted = `${formatted.slice(0, 2)}-${formatted.slice(2)}`;
+        }
+        break;
+
+      case '+966': // KSA: x-xxx-xxxx
+        if (formatted.length > 4) {
+          formatted = `${formatted.slice(0, 1)}-${formatted.slice(1, 4)}-${formatted.slice(4)}`;
+        } else if (formatted.length > 1) {
+          formatted = `${formatted.slice(0, 1)}-${formatted.slice(1)}`;
+        }
+        break;
+
+      default:
+        // Default formatting: xxx-xxx-xxxx
+        if (formatted.length > 6) {
+          formatted = `${formatted.slice(0, 3)}-${formatted.slice(3, 6)}-${formatted.slice(6)}`;
+        } else if (formatted.length > 3) {
+          formatted = `${formatted.slice(0, 3)}-${formatted.slice(3)}`;
+        }
+    }
+
+    return formatted;
+  };
 
   const initialFormData = isEditing ? recipient : {
     name: '',
@@ -1982,25 +2316,25 @@ const formatPhoneNumber = (digits, countryCode) => {
     }
 
     // 3. Phone - Enhanced validation with country codes
-if (!formData.phone.trim()) {
-  errors.phone = 'Phone number is required';
-  invalidFields.push('phone');
-} else {
-  const fullPhoneNumber = phoneCode + formData.phone.replace(/\D/g, '');
-  const country = countryCodes.find(c => c.code === phoneCode);
-  const expectedLength = country?.length || 10;
-  
-  // Check if phone number has correct length for the country
-  const actualLength = formData.phone.replace(/\D/g, '').length;
-  
-  if (actualLength !== expectedLength) {
-    errors.phone = `Phone number must be ${expectedLength} digits for ${country?.country}`;
-    invalidFields.push('phone');
-  } else if (!/^\+?[\d\s-()]+$/.test(fullPhoneNumber)) {
-    errors.phone = 'Please enter a valid phone number';
-    invalidFields.push('phone');
-  }
-}
+    if (!formData.phone.trim()) {
+      errors.phone = 'Phone number is required';
+      invalidFields.push('phone');
+    } else {
+      const fullPhoneNumber = phoneCode + formData.phone.replace(/\D/g, '');
+      const country = countryCodes.find(c => c.code === phoneCode);
+      const expectedLength = country?.length || 10;
+
+      // Check if phone number has correct length for the country
+      const actualLength = formData.phone.replace(/\D/g, '').length;
+
+      if (actualLength !== expectedLength) {
+        errors.phone = `Phone number must be ${expectedLength} digits for ${country?.country}`;
+        invalidFields.push('phone');
+      } else if (!/^\+?[\d\s-()]+$/.test(fullPhoneNumber)) {
+        errors.phone = 'Please enter a valid phone number';
+        invalidFields.push('phone');
+      }
+    }
 
     // 4. Address - CANNOT START WITH NUMBER, ALLOW LIMITED SPECIAL CHARS
     if (!formData.address.trim()) {
@@ -2177,7 +2511,7 @@ if (!formData.phone.trim()) {
   };
 
   // UPDATED handleChange function with address field restrictions
-const handleChange = (e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
 
     // For numeric fields
@@ -2231,7 +2565,7 @@ const handleChange = (e) => {
     else if (name === 'phone') {
       // Remove all non-digit and non-dash characters
       newValue = value.replace(/[^\d-]/g, '');
-      
+
       // Ensure proper phone format (xxx-xxx-xxxx)
       const digitsOnly = newValue.replace(/\D/g, '');
       if (digitsOnly.length <= 3) {
@@ -2247,12 +2581,12 @@ const handleChange = (e) => {
       // Remove any characters that are not allowed in address
       // Allowed: letters (a-z, A-Z), numbers (0-9), spaces, and these special characters: - _ / , . ' "
       newValue = value.replace(/[^a-zA-Z0-9\s\-_/,'."]/g, '');
-      
+
       // Prevent address from starting with a number
       if (/^\d/.test(newValue)) {
         newValue = newValue.replace(/^\d+/, '');
       }
-      
+
       // Remove multiple consecutive spaces
       newValue = newValue.replace(/\s+/g, ' ');
     }
@@ -2476,113 +2810,113 @@ const handleChange = (e) => {
                   </div>
 
                   {/* Phone Field - Fixed with proper theme styling and no placeholder */}
-      <div ref={fieldRefs.phone} className="overflow-visible">
-        <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-          Phone *
-        </label>
-        <motion.div
-          animate={shakeFields.includes('phone') ? "shake" : "initial"}
-          variants={shakeAnimation}
-          className="overflow-visible"
-        >
-          <div className="flex gap-2 sm:gap-3">
-            {/* Country Code Dropdown */}
-            <div className="flex-shrink-0 w-28 sm:w-32" ref={dropdownRef}>
-              <div className="relative">
-                <motion.button
-                  type="button"
-                  onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`w-full p-2 sm:p-3 rounded-2xl border-2 text-sm font-medium flex items-center justify-between ${isDark
-                    ? 'bg-gray-800 border-gray-600 text-white hover:border-gray-500'
-                    : 'bg-white border-gray-200 text-gray-900 hover:border-gray-300'
-                    } ${fieldErrors.phone ? 'border-rose-500' : ''}`}
-                >
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <span className="text-sm">{selectedCountry?.flag}</span>
-                    <span className="text-xs sm:text-sm">{selectedCountry?.code}</span>
-                  </div>
-                  <ChevronDown size={14} className={`transition-transform ${showCountryDropdown ? 'rotate-180' : ''}`} />
-                </motion.button>
+                  <div ref={fieldRefs.phone} className="overflow-visible">
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Phone *
+                    </label>
+                    <motion.div
+                      animate={shakeFields.includes('phone') ? "shake" : "initial"}
+                      variants={shakeAnimation}
+                      className="overflow-visible"
+                    >
+                      <div className="flex gap-2 sm:gap-3">
+                        {/* Country Code Dropdown */}
+                        <div className="flex-shrink-0 w-28 sm:w-32" ref={dropdownRef}>
+                          <div className="relative">
+                            <motion.button
+                              type="button"
+                              onClick={() => setShowCountryDropdown(!showCountryDropdown)}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              className={`w-full p-2 sm:p-3 rounded-2xl border-2 text-sm font-medium flex items-center justify-between ${isDark
+                                ? 'bg-gray-800 border-gray-600 text-white hover:border-gray-500'
+                                : 'bg-white border-gray-200 text-gray-900 hover:border-gray-300'
+                                } ${fieldErrors.phone ? 'border-rose-500' : ''}`}
+                            >
+                              <div className="flex items-center gap-1 sm:gap-2">
+                                <span className="text-sm">{selectedCountry?.flag}</span>
+                                <span className="text-xs sm:text-sm">{selectedCountry?.code}</span>
+                              </div>
+                              <ChevronDown size={14} className={`transition-transform ${showCountryDropdown ? 'rotate-180' : ''}`} />
+                            </motion.button>
 
-                {/* Country Dropdown Menu */}
-                {showCountryDropdown && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`absolute top-full left-0 mt-1 w-48 sm:w-56 rounded-2xl shadow-xl z-30 max-h-60 overflow-y-auto ${isDark
-                      ? 'bg-gray-800 border border-gray-600'
-                      : 'bg-white border border-gray-200'
-                      }`}
-                  >
-                    {countryCodes.map((country) => (
-                      <motion.button
-                        key={country.code}
-                        type="button"
-                        onClick={() => {
-                          setPhoneCode(country.code);
-                          setShowCountryDropdown(false);
-                        }}
-                        whileHover={{ 
-                          backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)' 
-                        }}
-                        className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 border-b ${isDark
-                          ? 'border-gray-700 text-gray-300'
-                          : 'border-gray-100 text-gray-700'
-                          } last:border-b-0 ${phoneCode === country.code 
-                          ? isDark 
-                            ? 'bg-blue-900/20 text-blue-400' 
-                            : 'bg-blue-50 text-blue-600'
-                          : ''}`}
-                      >
-                        <span className="text-base">{country.flag}</span>
-                        <div className="flex-1 text-left">
-                          <div className="text-sm font-medium">{country.country}</div>
-                          <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                            {country.code}
+                            {/* Country Dropdown Menu */}
+                            {showCountryDropdown && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className={`absolute top-full left-0 mt-1 w-48 sm:w-56 rounded-2xl shadow-xl z-30 max-h-60 overflow-y-auto ${isDark
+                                  ? 'bg-gray-800 border border-gray-600'
+                                  : 'bg-white border border-gray-200'
+                                  }`}
+                              >
+                                {countryCodes.map((country) => (
+                                  <motion.button
+                                    key={country.code}
+                                    type="button"
+                                    onClick={() => {
+                                      setPhoneCode(country.code);
+                                      setShowCountryDropdown(false);
+                                    }}
+                                    whileHover={{
+                                      backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)'
+                                    }}
+                                    className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 border-b ${isDark
+                                      ? 'border-gray-700 text-gray-300'
+                                      : 'border-gray-100 text-gray-700'
+                                      } last:border-b-0 ${phoneCode === country.code
+                                        ? isDark
+                                          ? 'bg-blue-900/20 text-blue-400'
+                                          : 'bg-blue-50 text-blue-600'
+                                        : ''}`}
+                                  >
+                                    <span className="text-base">{country.flag}</span>
+                                    <div className="flex-1 text-left">
+                                      <div className="text-sm font-medium">{country.country}</div>
+                                      <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                        {country.code}
+                                      </div>
+                                    </div>
+                                  </motion.button>
+                                ))}
+                              </motion.div>
+                            )}
                           </div>
                         </div>
-                      </motion.button>
-                    ))}
-                  </motion.div>
-                )}
-              </div>
-            </div>
 
-            {/* Phone Number Input - WHITE BACKGROUND IN LIGHT MODE, DARK IN DARK MODE, NO PLACEHOLDER */}
-            <div className="flex-1">
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                onKeyPress={(e) => {
-                  // Only allow numbers and dashes
-                  if (!/[0-9-]/.test(e.key)) {
-                    e.preventDefault();
-                  }
-                }}
-                className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                  ? 'bg-gray-800 border-gray-600 text-white' // Dark theme
-                  : 'bg-white border-gray-200 text-gray-900' // Light theme - WHITE background
-                  } ${fieldErrors.phone ? 'border-rose-500' : ''}`}
-                // No placeholder attribute
-              />
-            </div>
-          </div>
-        </motion.div>
-        {fieldErrors.phone && (
-          <motion.p
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-          >
-            <XCircle size={12} />
-            {fieldErrors.phone}
-          </motion.p>
-        )}
-      </div>
+                        {/* Phone Number Input - WHITE BACKGROUND IN LIGHT MODE, DARK IN DARK MODE, NO PLACEHOLDER */}
+                        <div className="flex-1">
+                          <input
+                            type="tel"
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleChange}
+                            onKeyPress={(e) => {
+                              // Only allow numbers and dashes
+                              if (!/[0-9-]/.test(e.key)) {
+                                e.preventDefault();
+                              }
+                            }}
+                            className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                              ? 'bg-gray-800 border-gray-600 text-white' // Dark theme
+                              : 'bg-white border-gray-200 text-gray-900' // Light theme - WHITE background
+                              } ${fieldErrors.phone ? 'border-rose-500' : ''}`}
+                          // No placeholder attribute
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                    {fieldErrors.phone && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+                      >
+                        <XCircle size={12} />
+                        {fieldErrors.phone}
+                      </motion.p>
+                    )}
+                  </div>
 
                   {/* Address Field - FIXED SHAKE */}
                   <div ref={fieldRefs.address} className="overflow-visible">
@@ -3388,122 +3722,92 @@ const RecipientsManagement = ({ isDark }) => {
 
   return (
     <div className="space-y-4 sm:space-y-6 md:space-y-8 px-3 sm:px-4">
-      {/* Header Section - At Top */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className={`rounded-2xl sm:rounded-3xl p-4 sm:p-6 ${isDark
-          ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
-          : 'bg-gradient-to-br from-white via-white to-gray-50'
-          }`}
-        style={{
-          boxShadow: isDark
-            ? '0 10px 40px rgba(0, 0, 0, 0.3)'
-            : '0 10px 40px rgba(0, 0, 0, 0.08)'
-        }}
-      >
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 sm:gap-6">
-          <div className="flex-1 min-w-0">
-            <motion.h1
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className={`text-xl sm:text-2xl font-bold mb-1 sm:mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}
-            >
-              Recipients Management
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className={`text-xs sm:text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'} truncate`}
-            >
-              Manage and track all recipient requests
-            </motion.p>
-          </div>
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 sm:gap-6">
+        <div className="flex-1 min-w-0">
 
-          {/* Mobile View: Stack buttons vertically */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
-            {/* Add New Recipient Button - Full width on mobile */}
+        </div>
+
+        {/* Mobile View: Stack buttons vertically */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+          {/* Add New Recipient Button - Full width on mobile */}
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowAddRecipientModal(true)}
+            className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold shadow-xl w-full sm:w-auto"
+          >
+            <UserPlus size={16} />
+            <span className="truncate">Add New Recipient</span>
+          </motion.button>
+
+          {/* Export Buttons - Side by side on mobile, full width */}
+          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
             <motion.button
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setShowAddRecipientModal(true)}
-              className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold shadow-xl w-full sm:w-auto"
+              onClick={handleExportExcel}
+              className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold shadow-xl flex-1 sm:flex-none"
             >
-              <UserPlus size={16} />
-              <span className="truncate">Add New Recipient</span>
+              <Download size={16} />
+              <span className="truncate">Excel</span>
             </motion.button>
-
-            {/* Export Buttons - Side by side on mobile, full width */}
-            <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-              <motion.button
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleExportExcel}
-                className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold shadow-xl flex-1 sm:flex-none"
-              >
-                <Download size={16} />
-                <span className="truncate">Excel</span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleExportPDF}
-                className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-rose-600 to-pink-600 text-white rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold shadow-xl flex-1 sm:flex-none"
-              >
-                <FileText size={16} />
-                <span className="truncate">PDF</span>
-              </motion.button>
-            </div>
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleExportPDF}
+              className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-rose-600 to-pink-600 text-white rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold shadow-xl flex-1 sm:flex-none"
+            >
+              <FileText size={16} />
+              <span className="truncate">PDF</span>
+            </motion.button>
           </div>
         </div>
-      </motion.div>
+      </div>
 
-      {/* Statistics Cards */}
+      {/* Statistics Cards - Using EnhancedStatCard design */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
         className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6"
       >
-        <ModernStatCard
+        <EnhancedStatCard
           icon={Users}
           title="Total Recipients"
           value={stats.totalRecipients}
           change={8.3}
           changeType="increase"
-          gradient="from-blue-500 via-blue-600 to-cyan-500"
+          color="from-blue-500 to-blue-600"
           delay={0.1}
           isDark={isDark}
         />
-        <ModernStatCard
+        <EnhancedStatCard
           icon={UserCheck}
           title="Approved"
           value={stats.approvedRecipients}
           change={12.5}
           changeType="increase"
-          gradient="from-emerald-500 via-emerald-600 to-teal-500"
+          color="from-emerald-500 to-emerald-600"
           delay={0.2}
           isDark={isDark}
         />
-        <ModernStatCard
+        <EnhancedStatCard
           icon={Clock}
           title="Pending"
           value={stats.pendingRecipients}
           change={5.2}
           changeType="decrease"
-          gradient="from-amber-500 via-amber-600 to-orange-500"
+          color="from-amber-500 to-amber-600"
           delay={0.3}
           isDark={isDark}
         />
-        <ModernStatCard
+        <EnhancedStatCard
           icon={Shield}
           title="Verified"
           value={stats.verifiedRecipients}
           change={15.7}
           changeType="increase"
-          gradient="from-violet-500 via-violet-600 to-purple-500"
+          color="from-violet-500 to-violet-600"
           delay={0.4}
           isDark={isDark}
         />
@@ -3706,27 +4010,30 @@ const RecipientsManagement = ({ isDark }) => {
       {/* Recipients Card Grid */}
       {paginatedRecipients.length > 0 ? (
         <>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6"
-          >
-            {paginatedRecipients.map((recipient, index) => (
-              <RecipientCard
-                key={recipient.id}
-                recipient={recipient}
-                isDark={isDark}
-                onView={handleViewRecipient}
-                onEdit={handleEditRecipient}
-                onDelete={handleDeleteRecipient}
-                onForward={handleOpenForwardModal}
-                onApprove={handleApproveRecipient}
-                onStatusChange={handleStatusChange}
-                index={index}
-              />
-            ))}
-          </motion.div>
+          {/* Add this wrapper div with class name */}
+          <div className="requests-grid-container">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"
+            >
+              {paginatedRecipients.map((recipient, index) => (
+                <RecipientCard
+                  key={recipient.id}
+                  recipient={recipient}
+                  isDark={isDark}
+                  onView={handleViewRecipient}
+                  onEdit={handleEditRecipient}
+                  onDelete={handleDeleteRecipient}
+                  onForward={handleOpenForwardModal}
+                  onApprove={handleApproveRecipient}
+                  onStatusChange={handleStatusChange}
+                  index={index}
+                />
+              ))}
+            </motion.div>
+          </div>
 
           {/* Pagination */}
           {totalPages > 1 && (
@@ -3742,7 +4049,7 @@ const RecipientsManagement = ({ isDark }) => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className={`rounded-2xl sm:rounded-3xl p-8 sm:p-12 md:p-20 text-center ${isDark
+          className={`rounded-3xl p-12 md:p-20 text-center ${isDark
             ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
             : 'bg-gradient-to-br from-white via-white to-gray-50'
             }`}
@@ -3762,16 +4069,59 @@ const RecipientsManagement = ({ isDark }) => {
               repeat: Infinity
             }}
           >
-            <Users size={48} className={`mx-auto mb-3 sm:mb-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
+            <Users size={48} className={`mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
           </motion.div>
-          <p className={`text-sm sm:text-base font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`text-base font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             No recipients found matching your criteria
           </p>
-          <p className={`text-xs sm:text-sm font-medium mt-1 sm:mt-2 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+          <p className={`text-sm font-medium mt-2 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
             Try adjusting your filters or search term
           </p>
         </motion.div>
       )}
+
+      {/* Tips Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.8 }}
+        className={`rounded-3xl p-6 ${isDark
+          ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
+          : 'bg-gradient-to-br from-white via-white to-gray-50'
+          }`}
+        style={{
+          boxShadow: isDark
+            ? '0 10px 40px rgba(0, 0, 0, 0.3)'
+            : '0 10px 40px rgba(0, 0, 0, 0.08)'
+        }}
+      >
+        <div>
+          <h4 className={`font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Tips for Managing Recipients
+          </h4>
+          <p className={`text-sm mb-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            Here's how to effectively manage recipients:
+          </p>
+          <ul className={`text-sm space-y-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 size={16} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+              <span>Review all documents before approving recipient requests</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 size={16} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+              <span>Forward complex cases to specialized admin teams</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 size={16} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+              <span>Regularly update recipient status to reflect current progress</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 size={16} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+              <span>Monitor high-urgency cases closely for timely assistance</span>
+            </li>
+          </ul>
+        </div>
+      </motion.div>
 
       {/* Modals */}
       <AnimatePresence>

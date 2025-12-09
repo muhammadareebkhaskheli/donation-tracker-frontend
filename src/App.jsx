@@ -37,7 +37,7 @@ function App() {
           } 
         />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/admin/signup" element={<AdminSignup />} />
+        <Route path="/AdminSignup" element={<AdminSignup />} />
       </Routes>
     </Router>
   );
