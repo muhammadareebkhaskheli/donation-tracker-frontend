@@ -39,15 +39,15 @@ const recipientData = {
   lastLogin: '2025-11-05T08:45:00Z',
   avatar: null,
   bio: 'I need financial assistance for my daughter\'s medical treatment. She has been diagnosed with a rare condition and requires specialized care.',
-  
+
   verificationStatus: 'pending',
-  
+
   donations: [
     { id: 'don1', donorName: 'Anonymous', amount: 10000, date: '2024-01-20', message: 'Get well soon!' },
     { id: 'don2', donorName: 'Sarah Ahmed', amount: 5000, date: '2024-01-18', message: 'Hope this helps' },
     { id: 'don3', donorName: 'Community Fund', amount: 10000, date: '2024-01-15', message: 'Community Support' },
   ],
-  
+
   preferences: {
     emailNotifications: true,
     smsNotifications: true,
@@ -56,7 +56,7 @@ const recipientData = {
     theme: 'auto',
     showContactInfo: true,
   },
-  
+
   security: {
     twoFactorEnabled: false,
     lastPasswordChange: '2024-01-10',
@@ -65,7 +65,7 @@ const recipientData = {
       { id: 'dev1', name: 'Android Phone', lastUsed: '2025-11-05T08:45:00Z', ip: '192.168.1.150' },
     ],
   },
-  
+
   activity: {
     totalLogins: 45,
     lastActivity: '2025-11-05T08:45:00Z',
@@ -78,9 +78,8 @@ const ProfileSection = ({ title, icon: Icon, children, isDark }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
-    className={`rounded-2xl p-6 shadow-2xl border ${
-      isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
-    }`}
+    className={`rounded-2xl p-6 shadow-2xl border ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+      }`}
   >
     <div className="flex items-center gap-3 mb-6">
       <Icon size={24} className={isDark ? 'text-blue-400' : 'text-blue-600'} />
@@ -108,11 +107,10 @@ const ProfileInput = ({ label, type = 'text', value, onChange, placeholder, help
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         disabled={disabled}
-        className={`w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none ${
-          isDark 
-            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-        } ${Icon ? 'pl-10' : ''} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none ${isDark
+          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+          } ${Icon ? 'pl-10' : ''} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       />
     </div>
     {helpText && (
@@ -159,13 +157,12 @@ const AvatarUpload = ({ user, onAvatarChange, isDark }) => {
   return (
     <div className="flex flex-col items-center space-y-4">
       <div
-        className={`relative w-32 h-32 rounded-full border-4 ${
-          isDragging 
-            ? 'border-blue-500 bg-blue-500/10' 
-            : isDark 
-              ? 'border-gray-600 bg-gray-700' 
-              : 'border-gray-300 bg-gray-100'
-        } transition-all duration-200`}
+        className={`relative w-32 h-32 rounded-full border-4 ${isDragging
+          ? 'border-blue-500 bg-blue-500/10'
+          : isDark
+            ? 'border-gray-600 bg-gray-700'
+            : 'border-gray-300 bg-gray-100'
+          } transition-all duration-200`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -181,7 +178,7 @@ const AvatarUpload = ({ user, onAvatarChange, isDark }) => {
             <User size={48} className="text-white" />
           </div>
         )}
-        
+
         <label
           htmlFor="avatar-upload"
           className="absolute bottom-0 right-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-colors border-2 border-white"
@@ -234,17 +231,17 @@ const SecuritySettings = ({ user, onSecurityChange, isDark }) => {
       setPasswordError('Please fill in both password fields');
       return;
     }
-    
+
     if (newPassword !== confirmPassword) {
       setPasswordError('Passwords do not match');
       return;
     }
-    
+
     if (newPassword.length < 8) {
       setPasswordError('Password must be at least 8 characters long');
       return;
     }
-    
+
     setPasswordError('');
     return true;
   };
@@ -252,9 +249,8 @@ const SecuritySettings = ({ user, onSecurityChange, isDark }) => {
   return (
     <div className="space-y-6">
       {/* Two-Factor Authentication */}
-      <div className={`p-4 rounded-lg border ${
-        isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
-      }`}>
+      <div className={`p-4 rounded-lg border ${isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+        }`}>
         <div className="flex items-center justify-between">
           <div>
             <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -305,7 +301,7 @@ const SecuritySettings = ({ user, onSecurityChange, isDark }) => {
         <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
           Change Password
         </h4>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="relative">
             <input
@@ -313,18 +309,16 @@ const SecuritySettings = ({ user, onSecurityChange, isDark }) => {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="New Password"
-              className={`w-full p-3 pr-10 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none ${
-                isDark 
-                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-              }`}
+              className={`w-full p-3 pr-10 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none ${isDark
+                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                }`}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1 ${
-                isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
-              }`}
+              className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1 ${isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
+                }`}
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -335,11 +329,10 @@ const SecuritySettings = ({ user, onSecurityChange, isDark }) => {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Confirm Password"
-            className={`w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none ${
-              isDark 
-                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-            }`}
+            className={`w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none ${isDark
+              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+              }`}
           />
         </div>
 
@@ -367,9 +360,8 @@ const SecuritySettings = ({ user, onSecurityChange, isDark }) => {
           {user.security.trustedDevices.map((device) => (
             <div
               key={device.id}
-              className={`flex items-center justify-between p-3 rounded-lg border ${
-                isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
-              }`}
+              className={`flex items-center justify-between p-3 rounded-lg border ${isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                }`}
             >
               <div className="flex items-center gap-3">
                 <Smartphone size={20} className={isDark ? 'text-gray-400' : 'text-gray-600'} />
@@ -435,9 +427,8 @@ const ActivityStats = ({ user, isDark }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.1 }}
-          className={`p-4 rounded-xl border text-center ${
-            isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
-          }`}
+          className={`p-4 rounded-xl border text-center ${isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+            }`}
         >
           <stat.icon size={24} className={`mx-auto mb-2 ${stat.color}`} />
           <p className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -561,15 +552,15 @@ const RecipientSettings = ({ isDark }) => {
 
   const handleManualSave = async () => {
     setIsSaving(true);
-    
+
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
+
     console.log('Profile saved:', user);
-    
+
     // Update original user data
     setOriginalUser(JSON.parse(JSON.stringify(user)));
-    
+
     setIsSaving(false);
     setSuccessMessage('Profile updated successfully!');
     setShowSuccessDialog(true);
@@ -592,13 +583,13 @@ const RecipientSettings = ({ isDark }) => {
         return (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1">
-              <AvatarUpload 
-                user={user} 
+              <AvatarUpload
+                user={user}
                 onAvatarChange={(avatar) => handleUserUpdate('avatar', avatar)}
                 isDark={isDark}
               />
             </div>
-            
+
             <div className="lg:col-span-2 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <ProfileInput
@@ -636,7 +627,7 @@ const RecipientSettings = ({ isDark }) => {
                   icon={MapPin}
                 />
               </div>
-              
+
               <div>
                 <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   Your Story & Needs
@@ -645,11 +636,10 @@ const RecipientSettings = ({ isDark }) => {
                   value={user.bio}
                   onChange={(e) => handleUserUpdate('bio', e.target.value)}
                   rows={6}
-                  className={`w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none ${
-                    isDark 
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                  }`}
+                  className={`w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none ${isDark
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                    }`}
                   placeholder="Share your story and explain why you need help..."
                 />
                 <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -662,8 +652,8 @@ const RecipientSettings = ({ isDark }) => {
 
       case 'security':
         return (
-          <SecuritySettings 
-            user={user} 
+          <SecuritySettings
+            user={user}
             onSecurityChange={handleSecurityUpdate}
             isDark={isDark}
           />
@@ -676,7 +666,7 @@ const RecipientSettings = ({ isDark }) => {
               <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 Notification Preferences
               </h4>
-              
+
               <div className="space-y-3">
                 <label className={`flex items-center gap-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   <input
@@ -691,7 +681,7 @@ const RecipientSettings = ({ isDark }) => {
                   <Mail size={16} />
                   <span>Email Notifications</span>
                 </label>
-                
+
                 <label className={`flex items-center gap-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   <input
                     type="checkbox"
@@ -705,7 +695,7 @@ const RecipientSettings = ({ isDark }) => {
                   <Phone size={16} />
                   <span>SMS Notifications</span>
                 </label>
-                
+
                 <label className={`flex items-center gap-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   <input
                     type="checkbox"
@@ -726,7 +716,7 @@ const RecipientSettings = ({ isDark }) => {
               <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 Profile Preferences
               </h4>
-              
+
               <ProfileInput
                 label="Language"
                 value={user.preferences.language}
@@ -737,7 +727,7 @@ const RecipientSettings = ({ isDark }) => {
                 isDark={isDark}
                 icon={Globe}
               />
-              
+
               <div>
                 <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   Theme
@@ -748,18 +738,17 @@ const RecipientSettings = ({ isDark }) => {
                     ...user.preferences,
                     theme: e.target.value
                   })}
-                  className={`w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none ${
-                    isDark 
-                      ? 'bg-gray-700 border-gray-600 text-white' 
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
+                  className={`w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none ${isDark
+                    ? 'bg-gray-700 border-gray-600 text-white'
+                    : 'bg-white border-gray-300 text-gray-900'
+                    }`}
                 >
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
                   <option value="auto">Auto (System)</option>
                 </select>
               </div>
-              
+
               <label className={`flex items-center gap-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <input
                   type="checkbox"
@@ -781,14 +770,13 @@ const RecipientSettings = ({ isDark }) => {
         return (
           <div className="space-y-6">
             <ActivityStats user={user} isDark={isDark} />
-            
+
             <div>
               <h4 className={`font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 Account Activity
               </h4>
-              <div className={`p-4 rounded-lg border ${
-                isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
-              }`}>
+              <div className={`p-4 rounded-lg border ${isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                }`}>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>Last Login</span>
@@ -820,170 +808,159 @@ const RecipientSettings = ({ isDark }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`rounded-2xl p-6 shadow-2xl border ${
-            isDark 
-              ? 'bg-gradient-to-br from-gray-800 to-gray-700 border-gray-600' 
-              : 'bg-gradient-to-br from-white to-gray-50 border-gray-100'
+    <div className="max-w-7xl mx-auto space-y-6">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`rounded-2xl p-6 shadow-2xl border ${isDark
+          ? 'bg-gradient-to-br from-gray-800 to-gray-700 border-gray-600'
+          : 'bg-gradient-to-br from-white to-gray-50 border-gray-100'
           }`}
-        >
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center">
-                {user.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt="Profile"
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <User size={32} className="text-white" />
-                )}
-              </div>
-              <div>
-                <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {user.name}
-                </h2>
-                <div className="flex items-center gap-3 mt-1">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    user.verificationStatus === 'approved' 
-                      ? (isDark ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-700')
-                      : user.verificationStatus === 'pending'
-                      ? (isDark ? 'bg-amber-900 text-amber-200' : 'bg-amber-100 text-amber-700')
-                      : (isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700')
-                  }`}>
-                    {user.verificationStatus.charAt(0).toUpperCase() + user.verificationStatus.slice(1)}
-                  </span>
-                  <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                    {user.role} • Joined {new Date(user.joinDate).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Save Button */}
-            <div className="flex flex-col items-end gap-3">
-              {hasChanges() && (
-                <div className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-                  isDark ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-700'
-                }`}>
-                  <span>You have unsaved changes</span>
-                </div>
+      >
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center">
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt="Profile"
+                  className="w-full h-full rounded-full object-cover"
+                />
+              ) : (
+                <User size={32} className="text-white" />
               )}
-              
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleManualSave}
-                disabled={isSaving || !hasChanges()}
-                className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 ${
-                  isSaving || !hasChanges()
-                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                    : 'bg-blue-500 text-white hover:bg-blue-600'
-                }`}
-              >
-                <Save size={16} />
-                {isSaving ? 'Saving...' : 'Save All Changes'}
-              </motion.button>
             </div>
-          </div>
-        </motion.div>
-
-        {/* Tabs Navigation */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className={`rounded-2xl p-6 shadow-2xl border ${
-            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
-          }`}
-        >
-          <div className="flex flex-wrap gap-2">
-            {tabs.map((tab) => (
-              <motion.button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-blue-500 text-white shadow-lg'
-                    : isDark
-                    ? 'text-gray-300 hover:bg-gray-700'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <tab.icon size={18} />
-                {tab.name}
-              </motion.button>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Tab Content */}
-        <ProfileSection
-          title={tabs.find(tab => tab.id === activeTab)?.name || 'Settings'}
-          icon={tabs.find(tab => tab.id === activeTab)?.icon || User}
-          isDark={isDark}
-        >
-          {renderTabContent()}
-        </ProfileSection>
-
-        {/* Account Status */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className={`rounded-2xl p-6 shadow-2xl border ${
-            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
-          }`}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <Award size={32} className="mx-auto mb-2 text-amber-500" />
-              <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Verification Status
-              </h4>
-              <p className={`font-medium ${
-                user.verificationStatus === 'approved' 
-                  ? (isDark ? 'text-green-400' : 'text-green-600')
+            <div>
+              <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {user.name}
+              </h2>
+              <div className="flex items-center gap-3 mt-1">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${user.verificationStatus === 'approved'
+                  ? (isDark ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-700')
                   : user.verificationStatus === 'pending'
-                  ? (isDark ? 'text-amber-400' : 'text-amber-600')
-                  : (isDark ? 'text-gray-400' : 'text-gray-600')
-              }`}>
-                {user.verificationStatus.charAt(0).toUpperCase() + user.verificationStatus.slice(1)}
-              </p>
-            </div>
-            
-            <div className="text-center">
-              <Shield size={32} className="mx-auto mb-2 text-green-500" />
-              <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Security Level
-              </h4>
-              <p className={isDark ? 'text-blue-400' : 'text-blue-600'}>
-                {user.security.twoFactorEnabled ? 'Enhanced' : 'Standard'}
-              </p>
-            </div>
-            
-            <div className="text-center">
-              <Heart size={32} className="mx-auto mb-2 text-purple-500" />
-              <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Donations Received
-              </h4>
-              <p className={`text-lg font-bold ${
-                isDark ? 'text-purple-400' : 'text-purple-600'
-              }`}>
-                {user.donations.length} donations
-              </p>
+                    ? (isDark ? 'bg-amber-900 text-amber-200' : 'bg-amber-100 text-amber-700')
+                    : (isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700')
+                  }`}>
+                  {user.verificationStatus.charAt(0).toUpperCase() + user.verificationStatus.slice(1)}
+                </span>
+                <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+                  {user.role} • Joined {new Date(user.joinDate).toLocaleDateString()}
+                </span>
+              </div>
             </div>
           </div>
-        </motion.div>
-      </div>
+
+          {/* Save Button */}
+          <div className="flex flex-col items-end gap-3">
+            {hasChanges() && (
+              <div className={`px-3 py-1.5 rounded-lg text-sm font-medium ${isDark ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-700'
+                }`}>
+                <span>You have unsaved changes</span>
+              </div>
+            )}
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleManualSave}
+              disabled={isSaving || !hasChanges()}
+              className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 ${isSaving || !hasChanges()
+                ? 'bg-gray-400 text-white cursor-not-allowed'
+                : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
+            >
+              <Save size={16} />
+              {isSaving ? 'Saving...' : 'Save All Changes'}
+            </motion.button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Tabs Navigation */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className={`rounded-2xl p-6 shadow-2xl border ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+          }`}
+      >
+        <div className="flex flex-wrap gap-2">
+          {tabs.map((tab) => (
+            <motion.button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${activeTab === tab.id
+                ? 'bg-blue-500 text-white shadow-lg'
+                : isDark
+                  ? 'text-gray-300 hover:bg-gray-700'
+                  : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <tab.icon size={18} />
+              {tab.name}
+            </motion.button>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Tab Content */}
+      <ProfileSection
+        title={tabs.find(tab => tab.id === activeTab)?.name || 'Settings'}
+        icon={tabs.find(tab => tab.id === activeTab)?.icon || User}
+        isDark={isDark}
+      >
+        {renderTabContent()}
+      </ProfileSection>
+
+      {/* Account Status */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className={`rounded-2xl p-6 shadow-2xl border ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+          }`}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="text-center">
+            <Award size={32} className="mx-auto mb-2 text-amber-500" />
+            <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Verification Status
+            </h4>
+            <p className={`font-medium ${user.verificationStatus === 'approved'
+              ? (isDark ? 'text-green-400' : 'text-green-600')
+              : user.verificationStatus === 'pending'
+                ? (isDark ? 'text-amber-400' : 'text-amber-600')
+                : (isDark ? 'text-gray-400' : 'text-gray-600')
+              }`}>
+              {user.verificationStatus.charAt(0).toUpperCase() + user.verificationStatus.slice(1)}
+            </p>
+          </div>
+
+          <div className="text-center">
+            <Shield size={32} className="mx-auto mb-2 text-green-500" />
+            <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Security Level
+            </h4>
+            <p className={isDark ? 'text-blue-400' : 'text-blue-600'}>
+              {user.security.twoFactorEnabled ? 'Enhanced' : 'Standard'}
+            </p>
+          </div>
+
+          <div className="text-center">
+            <Heart size={32} className="mx-auto mb-2 text-purple-500" />
+            <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Donations Received
+            </h4>
+            <p className={`text-lg font-bold ${isDark ? 'text-purple-400' : 'text-purple-600'
+              }`}>
+              {user.donations.length} donations
+            </p>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Success Dialog */}
       <AnimatePresence>

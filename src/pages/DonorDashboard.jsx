@@ -1,382 +1,223 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import MyRequests from './MyRequests';
-import Donations from './Donations';
-import ProfileVerificationPage from './ProfileVerificationPage';
+import BrowseRecipients from './BrowseRecipients';
+import DonorProfileVerificationPage from './DonorProfileVerificationPage';
 import NotificationsPage from './NotificationsPage';
 import RecipientSettings from './RecipientSettings';
 import {
     LayoutDashboard,
-    FileText,
+    Users,
     Wallet,
     Bell,
     Sun,
     Moon,
+    Settings,
     ChevronLeft,
     ChevronRight,
-    TrendingDown,
-    IndianRupee,
-    Users,
-    Calendar,
-    Clock,
-    CheckCircle,
     CheckCircle2,
-    FileCheck,
-    Settings,
+    ShieldCheck,
+    TrendingDown,
+    Heart,
+    Activity,
     User,
     LogOut,
     Menu,
     X,
-    Upload,
-    PlusCircle,
-    ShieldCheck,
     TrendingUp,
-    FilePlus,
     HeartHandshake,
-    Zap,
+    IndianRupee,
 } from 'lucide-react';
 
-// ==================== DUMMY DATA FOR RECIPIENTS DASHBOARD ====================
-const recipientData = {
+// ==================== DUMMY DATA FOR DONORS ====================
+const donorData = {
     userInfo: {
-        name: 'Fatima Bibi',
-        email: 'fatima@example.com',
-        phone: '+91 98765 43210',
-        status: 'Verified',
-        verificationLevel: 'Level 2',
-        joinDate: '2024-01-15',
+        name: 'John Doe',
+        email: 'donor@example.com',
+        phone: '+91 98765 43210', // Changed to Indian format
+        status: 'Active Donor',
+        verificationLevel: 'Verified',
+        joinDate: '2023-01-15',
+        totalDonations: 8,
+        recipientsHelped: 3,
     },
 
     stats: {
-        totalRequests: 12,
-        approvedRequests: 8,
-        pendingRequests: 3,
-        totalAmountReceived: 125000,
-        monthlyGrowth: 15.7,
-        completionRate: 67
+        totalDonations: 125700,
+        donationCount: 8,
+        recipients: 3,
+        impactScore: 85,
+        lastDonationDate: '2024-01-15',
+        averageDonation: 15625,
+        monthlyChange: 25.3,
     },
 
-    activeRequests: [
-        {
-            id: 1,
-            title: "Medical Treatment for Mother",
-            targetAmount: 50000,
-            receivedAmount: 25000,
-            progress: 50,
-            status: "in-progress",
-            category: "Medical",
-            createdAt: "2024-01-10",
-            deadline: "2024-03-10",
-            donors: 24
-        },
-        {
-            id: 2,
-            title: "Children Education Fund",
-            targetAmount: 30000,
-            receivedAmount: 18000,
-            progress: 60,
-            status: "in-progress",
-            category: "Education",
-            createdAt: "2024-01-15",
-            deadline: "2024-04-15",
-            donors: 18
-        },
-        {
-            id: 3,
-            title: "Emergency Housing Support",
-            targetAmount: 80000,
-            receivedAmount: 32000,
-            progress: 40,
-            status: "in-progress",
-            category: "Housing",
-            createdAt: "2024-01-20",
-            deadline: "2024-05-20",
-            donors: 32
-        },
-        {
-            id: 4,
-            title: "Medical Equipment Purchase",
-            targetAmount: 20000,
-            receivedAmount: 15000,
-            progress: 75,
-            status: "approved",
-            category: "Medical",
-            createdAt: "2024-01-05",
-            deadline: "2024-02-28",
-            donors: 12
-        },
-        {
-            id: 5,
-            title: "Small Business Startup",
-            targetAmount: 100000,
-            receivedAmount: 45000,
-            progress: 45,
-            status: "in-progress",
-            category: "Business",
-            createdAt: "2024-01-25",
-            deadline: "2024-06-25",
-            donors: 15
-        },
-        {
-            id: 6,
-            title: "Family Food Support",
-            targetAmount: 15000,
-            receivedAmount: 12000,
-            progress: 80,
-            status: "approved",
-            category: "Food",
-            createdAt: "2024-01-08",
-            deadline: "2024-02-15",
-            donors: 8
-        }
+    recentDonations: [
+        { date: 'Jan 10', amount: 20000, recipient: 'Ahmed Khan', category: 'Medical' },
+        { date: 'Jan 5', amount: 15000, recipient: 'Fatima Bibi', category: 'Education' },
+        { date: 'Dec 28', amount: 25000, recipient: 'Ali Hassan', category: 'Emergency' },
+        { date: 'Dec 15', amount: 18000, recipient: 'Zainab Malik', category: 'Food' },
+        { date: 'Dec 5', amount: 22000, recipient: 'Hassan Ahmed', category: 'Housing' },
     ],
 
-    recentTransactions: [
-        {
-            id: 1,
-            date: "2024-01-15",
-            donorName: "Anonymous",
-            amount: 5000,
-            requestTitle: "Medical Treatment for Mother",
-            status: "completed",
-            type: "donation"
-        },
-        {
-            id: 2,
-            date: "2024-01-14",
-            donorName: "Sarah Ali",
-            amount: 10000,
-            requestTitle: "Children Education Fund",
-            status: "completed",
-            type: "donation"
-        },
-        {
-            id: 3,
-            date: "2024-01-13",
-            donorName: "Muhammad Hassan",
-            amount: 7500,
-            requestTitle: "Emergency Housing Support",
-            status: "completed",
-            type: "donation"
-        },
-        {
-            id: 4,
-            date: "2024-01-12",
-            donorName: "Anonymous",
-            amount: 3000,
-            requestTitle: "Medical Equipment Purchase",
-            status: "completed",
-            type: "donation"
-        },
-        {
-            id: 5,
-            date: "2024-01-11",
-            donorName: "Ayesha Khan",
-            amount: 12000,
-            requestTitle: "Medical Treatment for Mother",
-            status: "completed",
-            type: "donation"
-        },
-        {
-            id: 6,
-            date: "2024-01-10",
-            donorName: "Imran Shah",
-            amount: 8000,
-            requestTitle: "Children Education Fund",
-            status: "completed",
-            type: "donation"
-        },
-        {
-            id: 7,
-            date: "2024-01-09",
-            donorName: "Fatima Ahmed",
-            amount: 6000,
-            requestTitle: "Emergency Housing Support",
-            status: "completed",
-            type: "donation"
-        },
-        {
-            id: 8,
-            date: "2024-01-08",
-            donorName: "Anonymous",
-            amount: 2500,
-            requestTitle: "Medical Equipment Purchase",
-            status: "completed",
-            type: "donation"
-        },
-        {
-            id: 9,
-            date: "2024-01-07",
-            donorName: "Raza Khan",
-            amount: 15000,
-            requestTitle: "Small Business Startup",
-            status: "completed",
-            type: "donation"
-        },
-        {
-            id: 10,
-            date: "2024-01-06",
-            donorName: "Sana Malik",
-            amount: 4500,
-            requestTitle: "Family Food Support",
-            status: "completed",
-            type: "donation"
-        }
-    ],
-
-    quickActions: [
-        {
-            id: 1,
-            title: 'Create Request',
-            description: 'Start new funding request',
-            icon: PlusCircle,
-            color: 'from-blue-500 to-blue-600',
-            action: 'create-request'
-        },
-        {
-            id: 2,
-            title: 'My Donations',
-            description: 'View your all donations',
-            icon: Wallet,
-            color: 'from-amber-500 to-amber-600',
-            action: 'view-requests'
-        },
-        {
-            id: 3,
-            title: 'Upload Documents',
-            description: 'Submit required documents',
-            icon: Upload,
-            color: 'from-emerald-500 to-emerald-600',
-            action: 'upload-docs'
-        }
+    recipients: [
+        { name: 'Ahmed Khan', totalReceived: 125700, yourDonations: 20000, needs: 15000, category: 'Medical' },
+        { name: 'Fatima Bibi', totalReceived: 98000, yourDonations: 15000, needs: 20000, category: 'Education' },
+        { name: 'Ali Hassan', totalReceived: 87000, yourDonations: 25000, needs: 5000, category: 'Emergency' },
     ],
 
     notifications: [
         {
             id: 1,
-            title: 'Request Approved',
-            message: 'Your education fee request has been fully approved',
+            title: 'Donation Successful',
+            message: 'Your donation of ₹20,000 to Ahmed Khan has been processed',
             time: '2 hours ago',
             read: false,
-            type: 'approval'
+            type: 'success'
         },
         {
             id: 2,
-            title: 'New Donation Received',
-            message: 'Anonymous donated ₹50,000 for medical treatment',
+            title: 'Impact Update',
+            message: 'Fatima Bibi has received 75% of her education fund',
             time: '1 day ago',
             read: false,
-            type: 'donation'
+            type: 'update'
         },
+        {
+            id: 3,
+            title: 'New Recipient',
+            message: 'A new medical recipient needs your support',
+            time: '2 days ago',
+            read: true,
+            type: 'new'
+        },
+        {
+            id: 4,
+            title: 'Thank You',
+            message: 'Ali Hassan sent you a thank you message',
+            time: '3 days ago',
+            read: true,
+            type: 'thank'
+        }
     ]
 };
 
-// ==================== SMART FORMATTING SYSTEM ====================
-const formatNumberForDisplay = (num, isCurrency = false) => {
-    // Handle string numbers
-    if (typeof num === 'string') {
-        num = parseFloat(num.replace(/[^0-9.-]+/g, ''));
-    }
-
-    // Handle invalid numbers
-    if (isNaN(num) || !isFinite(num)) {
+// ==================== UNIVERSAL NUMBER FORMATTER ====================
+const formatUniversalNumber = (num, isCurrency = false) => {
+    // Handle invalid inputs
+    if (num === null || num === undefined || isNaN(num) || !isFinite(num)) {
         return isCurrency ? '0' : '0';
     }
 
-    // Convert to string for analysis
-    const numStr = Math.abs(num).toString();
+    const absNum = Math.abs(num);
     const isNegative = num < 0;
     const prefix = isNegative ? '-' : '';
     const currencyPrefix = isCurrency ? '' : '';
 
-    // For currency, we'll use compact format for very large numbers
+    // Function to truncate to given decimal places without rounding
+    const truncateDecimals = (number, decimals) => {
+        const factor = Math.pow(10, decimals);
+        return Math.floor(number * factor) / factor;
+    };
+
+    // Function to format with 2 decimal places without rounding
+    const formatWithTwoDecimals = (value) => {
+        // Convert to string, split by decimal point
+        const [whole, decimal] = value.toFixed(10).split('.');
+        // Take first 2 decimal places without rounding
+        const decimalPart = decimal ? decimal.slice(0, 2) : '00';
+        // Remove trailing zeros
+        const trimmedDecimal = decimalPart.replace(/0+$/, '');
+        return trimmedDecimal ? `${whole}.${trimmedDecimal}` : whole;
+    };
+
+    // Function to format with 1 decimal place without rounding
+    const formatWithOneDecimal = (value) => {
+        const [whole, decimal] = value.toFixed(10).split('.');
+        const decimalPart = decimal ? decimal.slice(0, 1) : '0';
+        // Remove trailing zeros
+        const trimmedDecimal = decimalPart.replace(/0+$/, '');
+        return trimmedDecimal ? `${whole}.${trimmedDecimal}` : whole;
+    };
+
+    // For currency/Indian context - use these special cases
     if (isCurrency) {
-        if (num >= 1e18) {
-            // Quintillions and beyond
-            return `${prefix}${currencyPrefix}${(num / 1e18).toLocaleString('en-IN', {
-                maximumFractionDigits: 2,
-                minimumFractionDigits: 0
-            })}Q`;
-        } else if (num >= 1e15) {
-            // Quadrillions
-            return `${prefix}${currencyPrefix}${(num / 1e15).toLocaleString('en-IN', {
-                maximumFractionDigits: 2,
-                minimumFractionDigits: 0
-            })}Qa`;
-        } else if (num >= 1e12) {
-            // Trillions
-            return `${prefix}${currencyPrefix}${(num / 1e12).toLocaleString('en-IN', {
-                maximumFractionDigits: 2,
-                minimumFractionDigits: 0
-            })}T`;
-        } else if (num >= 1e9) {
-            // Billions
-            return `${prefix}${currencyPrefix}${(num / 1e9).toLocaleString('en-IN', {
-                maximumFractionDigits: 2,
-                minimumFractionDigits: 0
-            })}B`;
-        } else if (num >= 1e7) {
-            // Crores (Indian system)
-            return `${prefix}${currencyPrefix}${(num / 1e7).toLocaleString('en-IN', {
-                maximumFractionDigits: 2,
-                minimumFractionDigits: 0
-            })}Cr`;
-        } else if (num >= 1e5) {
-            // Lakhs
-            return `${prefix}${currencyPrefix}${(num / 1e5).toLocaleString('en-IN', {
-                maximumFractionDigits: 2,
-                minimumFractionDigits: 0
-            })}L`;
-        } else if (num >= 1e3) {
-            // Thousands
-            return `${prefix}${currencyPrefix}${(num / 1e3).toLocaleString('en-IN', {
-                maximumFractionDigits: 2,
-                minimumFractionDigits: 0
-            })}K`;
+        if (absNum >= 1e24) {
+            return `${prefix}${currencyPrefix}${formatWithTwoDecimals(absNum / 1e24)} Y`;
+        } else if (absNum >= 1e21) {
+            return `${prefix}${currencyPrefix}${formatWithTwoDecimals(absNum / 1e21)} Z`;
+        } else if (absNum >= 1e18) {
+            return `${prefix}${currencyPrefix}${formatWithTwoDecimals(absNum / 1e18)} E`;
+        } else if (absNum >= 1e15) {
+            return `${prefix}${currencyPrefix}${formatWithTwoDecimals(absNum / 1e15)} P`;
+        } else if (absNum >= 1e12) {
+            return `${prefix}${currencyPrefix}${formatWithTwoDecimals(absNum / 1e12)} T`;
+        } else if (absNum >= 1e9) {
+            return `${prefix}${currencyPrefix}${formatWithTwoDecimals(absNum / 1e9)} B`;
+        } else if (absNum >= 1e7) {
+            // For crores, show 2 decimal places for values < 100Cr, 1 decimal for larger
+            const croreValue = absNum / 1e7;
+            if (croreValue < 100) {
+                return `${prefix}${currencyPrefix}${formatWithTwoDecimals(croreValue)} Cr`;
+            } else {
+                return `${prefix}${currencyPrefix}${formatWithOneDecimal(croreValue)} Cr`;
+            }
+        } else if (absNum >= 1e5) {
+            // For lakhs, show 2 decimal places for values < 10L, 1 decimal for larger
+            const lakhValue = absNum / 1e5;
+            if (lakhValue < 10) {
+                return `${prefix}${currencyPrefix}${formatWithTwoDecimals(lakhValue)} L`;
+            } else {
+                return `${prefix}${currencyPrefix}${formatWithOneDecimal(lakhValue)} L`;
+            }
+        } else if (absNum >= 1e3) {
+            // For thousands, show 1 decimal place for values < 10K, whole number for larger
+            const thousandValue = absNum / 1e3;
+            if (thousandValue < 10) {
+                return `${prefix}${currencyPrefix}${formatWithOneDecimal(thousandValue)} K`;
+            } else {
+                return `${prefix}${currencyPrefix}${Math.floor(thousandValue)} K`;
+            }
         } else {
-            // Small numbers - show full with Indian formatting
-            return `${prefix}${currencyPrefix}${Math.abs(num).toLocaleString('en-IN')}`;
+            // For numbers less than 1000, show full number
+            return `${prefix}${currencyPrefix}${absNum.toLocaleString('en-IN')}`;
         }
-    } else {
-        // For non-currency numbers (like counts)
-        if (num >= 1e12) {
-            return `${prefix}${(num / 1e12).toLocaleString('en-IN', {
-                maximumFractionDigits: 2,
-                minimumFractionDigits: 0
-            })}T`;
-        } else if (num >= 1e9) {
-            return `${prefix}${(num / 1e9).toLocaleString('en-IN', {
-                maximumFractionDigits: 2,
-                minimumFractionDigits: 0
-            })}B`;
-        } else if (num >= 1e6) {
-            return `${prefix}${(num / 1e6).toLocaleString('en-IN', {
-                maximumFractionDigits: 2,
-                minimumFractionDigits: 0
-            })}M`;
-        } else if (num >= 1e3) {
-            return `${prefix}${(num / 1e3).toLocaleString('en-IN', {
-                maximumFractionDigits: 2,
-                minimumFractionDigits: 0
-            })}K`;
+    }
+    // For non-currency numbers (counts, metrics, etc.)
+    else {
+        if (absNum >= 1e12) {
+            return `${prefix}${formatWithTwoDecimals(absNum / 1e12)}T`;
+        } else if (absNum >= 1e9) {
+            return `${prefix}${formatWithTwoDecimals(absNum / 1e9)}B`;
+        } else if (absNum >= 1e6) {
+            return `${prefix}${formatWithTwoDecimals(absNum / 1e6)}M`;
+        } else if (absNum >= 1e3) {
+            const thousandValue = absNum / 1e3;
+            if (thousandValue < 10) {
+                return `${prefix}${formatWithOneDecimal(thousandValue)}K`;
+            } else {
+                return `${prefix}${Math.floor(thousandValue)}K`;
+            }
         } else {
-            return `${prefix}${Math.abs(num).toLocaleString('en-IN')}`;
+            return `${prefix}${absNum.toLocaleString('en-IN')}`;
         }
     }
 };
 
-const getFullFormattedNumber = (num, isCurrency = false) => {
-    if (typeof num === 'string') {
-        num = parseFloat(num.replace(/[^0-9.-]+/g, ''));
-    }
-
-    if (isNaN(num) || !isFinite(num)) {
+// Get full formatted number for tooltip
+const getNumberFullText = (num, isCurrency = false) => {
+    if (num === null || num === undefined || isNaN(num) || !isFinite(num)) {
         return isCurrency ? '0' : '0';
     }
 
+    const absNum = Math.abs(num);
     const isNegative = num < 0;
     const prefix = isNegative ? '-' : '';
-    const currencyPrefix = isCurrency ? '' : '';
+    const currencyPrefix = isCurrency ? '₹ ' : '';
+
+    // For extremely large numbers, use scientific notation
+    if (absNum >= 1e15) {
+        return `${prefix}${currencyPrefix}${num.toExponential(2)}`;
+    }
 
     return `${prefix}${currencyPrefix}${Math.abs(num).toLocaleString('en-IN')}`;
 };
@@ -408,27 +249,14 @@ const CustomScrollbarStyles = ({ isDark }) => (
   `}</style>
 );
 
-// ==================== GLASS MORPHISM CARD ====================
-const GlassCard = ({ children, className = "", isDark, ...props }) => (
-    <motion.div
-        className={`rounded-3xl backdrop-blur-xl border ${isDark
-            ? 'border-gray-700/50 bg-gradient-to-br from-gray-800/90 via-gray-800/80 to-gray-900/90 shadow-2xl'
-            : 'border-gray-200/50 bg-gradient-to-br from-white/95 via-white/90 to-gray-50/95 shadow-xl'
-            } ${className}`}
-        {...props}
-    >
-        {children}
-    </motion.div>
-);
-
 // ==================== ANIMATED TYPING TEXT ====================
 const TypingText = ({ name, isDark }) => {
     const messages = [
         `Welcome back, ${name}!`,
         `Great to see you, ${name}!`,
-        `Hello ${name}! Ready to create a request?`,
+        `Hello ${name}! Ready to make a difference?`,
         `Welcome to your dashboard, ${name}!`,
-        `Hi ${name}! Let's check your requests today!`,
+        `Hi ${name}! Let's check your impact today!`,
     ];
 
     const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
@@ -463,12 +291,12 @@ const TypingText = ({ name, isDark }) => {
     }, [displayText, isDeleting, currentMessageIndex, typingSpeed]);
 
     return (
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-violet-500 bg-clip-text text-transparent">
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
             {displayText}
             <motion.span
                 animate={{ opacity: [1, 0] }}
                 transition={{ duration: 0.7, repeat: Infinity, repeatType: "reverse" }}
-                className="inline-block w-0.5 h-6 bg-blue-500 ml-1 align-middle"
+                className="inline-block w-0.5 h-6 bg-emerald-500 ml-1 align-middle"
             />
         </h1>
     );
@@ -509,12 +337,12 @@ const TooltipHover = ({ text, children, isDark }) => {
 // ==================== ANIMATED ICON LOGO ====================
 const AnimatedLogo = () => (
     <motion.div
-        className="w-10 h-10 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center shadow-lg relative overflow-hidden"
+        className="w-10 h-10 bg-gradient-to-br from-emerald-600 to-teal-500 rounded-xl flex items-center justify-center shadow-lg relative overflow-hidden"
         whileHover={{ scale: 1.1, rotate: 5 }}
         transition={{ type: "spring", stiffness: 300 }}
     >
         <motion.div
-            className="absolute inset-0 bg-gradient-to-br from-violet-400 to-blue-700 opacity-0"
+            className="absolute inset-0 bg-gradient-to-br from-teal-400 to-emerald-700 opacity-0"
             animate={{
                 opacity: [0, 0.3, 0],
                 scale: [1, 1.2, 1],
@@ -582,7 +410,7 @@ const NotificationPanel = ({ isOpen, onClose, notifications, onMarkAsRead, isDar
                                 <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                                     Notifications
                                     {unreadCount > 0 && (
-                                        <span className="ml-2 px-2 py-1 bg-red-500 text-white text-xs rounded-full">
+                                        <span className="ml-2 px-2 py-1 bg-rose-500 text-white text-xs rounded-full">
                                             {unreadCount} new
                                         </span>
                                     )}
@@ -625,20 +453,22 @@ const NotificationPanel = ({ isOpen, onClose, notifications, onMarkAsRead, isDar
                                             animate={{ opacity: 1, x: 0 }}
                                             className={`p-3 rounded-xl mb-2 cursor-pointer transition-all ${notification.read
                                                 ? (isDark ? 'bg-gray-700/50' : 'bg-gray-50')
-                                                : (isDark ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200')
+                                                : (isDark ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-200')
                                                 }`}
                                             onClick={() => onMarkAsRead(notification.id)}
                                             whileHover={{ scale: 1.02 }}
                                         >
                                             <div className="flex items-start gap-3">
-                                                <div className={`p-2 rounded-lg ${notification.type === 'donation' ? 'bg-green-500/20' :
-                                                    notification.type === 'approval' ? 'bg-blue-500/20' :
-                                                        'bg-amber-500/20'
+                                                <div className={`p-2 rounded-lg ${notification.type === 'success' ? 'bg-emerald-500/20' :
+                                                    notification.type === 'update' ? 'bg-blue-500/20' :
+                                                        notification.type === 'new' ? 'bg-amber-500/20' :
+                                                            'bg-purple-500/20'
                                                     }`}>
                                                     <Bell size={16} className={
-                                                        notification.type === 'donation' ? 'text-green-500' :
-                                                            notification.type === 'approval' ? 'text-blue-500' :
-                                                                'text-amber-500'
+                                                        notification.type === 'success' ? 'text-emerald-500' :
+                                                            notification.type === 'update' ? 'text-blue-500' :
+                                                                notification.type === 'new' ? 'text-amber-500' :
+                                                                    'text-purple-500'
                                                     } />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
@@ -647,7 +477,7 @@ const NotificationPanel = ({ isOpen, onClose, notifications, onMarkAsRead, isDar
                                                             {notification.title}
                                                         </p>
                                                         {!notification.read && (
-                                                            <div className="w-2 h-2 bg-red-500 rounded-full ml-2 flex-shrink-0" />
+                                                            <div className="w-2 h-2 bg-rose-500 rounded-full ml-2 flex-shrink-0" />
                                                         )}
                                                     </div>
                                                     <p className={`text-xs mt-1 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
@@ -707,10 +537,10 @@ const EnhancedNotificationIcon = ({ isDark, onClick, unreadCount }) => {
                 <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full ring-2 ring-red-400"
+                    className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full ring-2 ring-rose-400"
                 >
                     <motion.div
-                        className="absolute inset-0 bg-red-500 rounded-full"
+                        className="absolute inset-0 bg-rose-500 rounded-full"
                         animate={{
                             scale: [1, 1.5, 1],
                             opacity: [1, 0, 1],
@@ -726,7 +556,7 @@ const EnhancedNotificationIcon = ({ isDark, onClick, unreadCount }) => {
 
             {isRinging && (
                 <motion.div
-                    className="absolute inset-0 border-2 border-red-400 rounded-xl"
+                    className="absolute inset-0 border-2 border-rose-400 rounded-xl"
                     initial={{ opacity: 0.8, scale: 1 }}
                     animate={{ opacity: 0, scale: 1.5 }}
                     transition={{ duration: 0.6 }}
@@ -932,11 +762,12 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
         return () => window.removeEventListener('resize', checkMobile);
     }, [setSidebarOpen]);
 
+    // Donor-specific sidebar menu items
     const mainMenuItems = [
         { name: "Dashboard", icon: LayoutDashboard, id: "dashboard" },
-        { name: "My Requests", icon: FileText, id: "requests" },
-        { name: "Donations", icon: Wallet, id: "donations" },
-        { name: "Profile Verification", icon: ShieldCheck, id: "profile" },
+        { name: "Recipients", icon: Users, id: "recipients" },
+        { name: "My Donations", icon: Wallet, id: "donations" },
+        { name: "Profile", icon: ShieldCheck, id: "profile" },
         { name: "Notifications", icon: Bell, id: "notifications" },
     ];
 
@@ -986,7 +817,7 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
             text: 'text-white',
             textSecondary: 'text-gray-400',
             border: 'border-slate-700',
-            active: 'bg-gradient-to-r from-blue-600 to-violet-600 shadow-lg',
+            active: 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-lg',
             hover: 'hover:bg-white/5',
         },
         light: {
@@ -994,7 +825,7 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
             text: 'text-gray-900',
             textSecondary: 'text-gray-600',
             border: 'border-gray-200',
-            active: 'bg-gradient-to-r from-blue-500 to-violet-500 text-white shadow-lg',
+            active: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg',
             hover: 'hover:bg-black/5',
         }
     };
@@ -1033,6 +864,7 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
                 transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
                 className={`fixed top-0 left-0 h-screen z-50 flex flex-col ${currentTheme.sidebar} border-r ${currentTheme.border} shadow-2xl overflow-hidden`}
             >
+                {/* Sidebar Toggle Button - SINGLE VERSION */}
                 {!isMobile && (
                     <motion.button
                         onClick={toggleSidebar}
@@ -1065,6 +897,7 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
                     </motion.button>
                 )}
 
+                {/* Theme Toggle Button */}
                 <AnimatePresence>
                     {(isOpen || sidebarOpen) && (
                         <motion.button
@@ -1101,9 +934,9 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
                                 <AnimatedLogo />
                                 <div className="flex-1 min-w-0">
                                     <p className={`text-[9px] font-bold uppercase tracking-[0.1em] ${currentTheme.textSecondary} mb-0.5`}>
-                                        RECIPIENT
+                                        DONOR PORTAL
                                     </p>
-                                    <h2 className={`font-semibold text-[13px] ${currentTheme.text}`}>Recipient Panel</h2>
+                                    <h2 className={`font-semibold text-[13px] ${currentTheme.text}`}>Donation Tracker</h2>
                                 </div>
                             </motion.div>
                         ) : (
@@ -1115,7 +948,7 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
                                 transition={{ duration: 0.2 }}
                                 className="flex justify-center"
                             >
-                                <TooltipHover text="Recipient Dashboard" isDark={isDark}>
+                                <TooltipHover text="Dashboard" isDark={isDark}>
                                     <AnimatedLogo />
                                 </TooltipHover>
                             </motion.div>
@@ -1188,7 +1021,7 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
                                             onClick={handleLogout}
                                             whileHover={{ x: 3, scale: 1.02 }}
                                             whileTap={{ scale: 0.98 }}
-                                            className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all text-red-500 ${currentTheme.hover}`}
+                                            className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all text-rose-500 ${currentTheme.hover}`}
                                         >
                                             <LogOut size={17} strokeWidth={2.5} />
                                             <span>Logout</span>
@@ -1228,7 +1061,7 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
                                 </div>
 
                                 <div className="space-y-2 flex flex-col items-center pt-4 border-t border-gray-700/20">
-                                    <TooltipHover text="settings" isDark={isDark}>
+                                    <TooltipHover text="Settings" isDark={isDark}>
                                         <motion.button
                                             onClick={() => handleItemClick('settings')}
                                             whileHover={{ scale: 1.1, rotate: 5 }}
@@ -1253,7 +1086,7 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
                                             whileTap={{ scale: 0.9 }}
                                             className={`p-2.5 rounded-xl transition-all ${currentTheme.hover} w-11 h-11 flex items-center justify-center`}
                                         >
-                                            <LogOut size={18} className="text-red-500" strokeWidth={2.5} />
+                                            <LogOut size={18} className="text-rose-500" strokeWidth={2.5} />
                                         </motion.button>
                                     </TooltipHover>
 
@@ -1295,7 +1128,7 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
     );
 };
 
-// ==================== UNIVERSAL STAT CARD (100% SOLUTION) ====================
+// ==================== UNIVERSAL STAT CARD ====================
 const UniversalStatCard = ({
     icon: Icon,
     title,
@@ -1309,128 +1142,8 @@ const UniversalStatCard = ({
     changeType,
     isCurrency = false
 }) => {
-    // Format the value based on its size and type
-    const formatValue = (val) => {
-        if (val === null || val === undefined) {
-            return isCurrency ? '0' : '0';
-        }
-
-        // Handle extremely large numbers with scientific notation for display
-        const num = typeof val === 'string' ? parseFloat(val.replace(/[^0-9.-]+/g, '')) : val;
-
-        if (isNaN(num) || !isFinite(num)) {
-            return isCurrency ? '0' : '0';
-        }
-
-        const absNum = Math.abs(num);
-        const isNegative = num < 0;
-        const prefix = isNegative ? '-' : '';
-        const currencyPrefix = isCurrency ? '' : '';
-
-        // For display - use compact format with dynamic scaling
-        let displayValue;
-        let suffix = '';
-
-        // Helper function to format with 2 decimal places without rounding
-        const formatWithTwoDecimals = (value) => {
-            // Convert to string, split by decimal point
-            const [whole, decimal] = value.toFixed(10).split('.');
-            // Take first 2 decimal places without rounding
-            const decimalPart = decimal ? decimal.slice(0, 2) : '00';
-            // Remove trailing zeros
-            const trimmedDecimal = decimalPart.replace(/0+$/, '');
-            return trimmedDecimal ? `${whole}.${trimmedDecimal}` : whole;
-        };
-
-        // Helper function to format with 1 decimal place without rounding
-        const formatWithOneDecimal = (value) => {
-            const [whole, decimal] = value.toFixed(10).split('.');
-            const decimalPart = decimal ? decimal.slice(0, 1) : '0';
-            // Remove trailing zeros
-            const trimmedDecimal = decimalPart.replace(/0+$/, '');
-            return trimmedDecimal ? `${whole}.${trimmedDecimal}` : whole;
-        };
-
-        if (absNum >= 1e24) {
-            displayValue = formatWithTwoDecimals(absNum / 1e24);
-            suffix = ' Y'; // Yotta
-        } else if (absNum >= 1e21) {
-            displayValue = formatWithTwoDecimals(absNum / 1e21);
-            suffix = ' Z'; // Zetta
-        } else if (absNum >= 1e18) {
-            displayValue = formatWithTwoDecimals(absNum / 1e18);
-            suffix = ' E'; // Exa
-        } else if (absNum >= 1e15) {
-            displayValue = formatWithTwoDecimals(absNum / 1e15);
-            suffix = ' P'; // Peta
-        } else if (absNum >= 1e12) {
-            displayValue = formatWithTwoDecimals(absNum / 1e12);
-            suffix = ' T'; // Tera
-        } else if (absNum >= 1e9) {
-            displayValue = formatWithTwoDecimals(absNum / 1e9);
-            suffix = ' B'; // Billion
-        } else if (absNum >= 1e7) {
-            // For crores, show 2 decimal places for values < 100Cr, 1 decimal for larger
-            const croreValue = absNum / 1e7;
-            if (croreValue < 100) {
-                displayValue = formatWithTwoDecimals(croreValue);
-            } else {
-                displayValue = formatWithOneDecimal(croreValue);
-            }
-            suffix = ' Cr'; // Crore
-        } else if (absNum >= 1e5) {
-            // For lakhs, show 2 decimal places for values < 10L, 1 decimal for larger
-            const lakhValue = absNum / 1e5;
-            if (lakhValue < 10) {
-                displayValue = formatWithTwoDecimals(lakhValue);
-            } else {
-                displayValue = formatWithOneDecimal(lakhValue);
-            }
-            suffix = ' L'; // Lakh
-        } else if (absNum >= 1e3) {
-            // For thousands, show 1 decimal place for values < 10K, whole number for larger
-            const thousandValue = absNum / 1e3;
-            if (thousandValue < 10) {
-                displayValue = formatWithOneDecimal(thousandValue);
-            } else {
-                displayValue = Math.floor(thousandValue).toString();
-            }
-            suffix = ' K'; // Thousand
-        } else {
-            // For numbers less than 1000, show full number
-            return `${prefix}${currencyPrefix}${absNum.toLocaleString('en-IN')}`;
-        }
-
-        // Remove trailing decimal point if no decimals
-        if (displayValue.endsWith('.')) {
-            displayValue = displayValue.slice(0, -1);
-        }
-
-        return `${prefix}${currencyPrefix}${displayValue}${suffix}`;
-    };
-
-    // Get full formatted number for tooltip
-    const getFullNumber = (val) => {
-        const num = typeof val === 'string' ? parseFloat(val.replace(/[^0-9.-]+/g, '')) : val;
-
-        if (isNaN(num) || !isFinite(num)) {
-            return isCurrency ? '0' : '0';
-        }
-
-        const isNegative = num < 0;
-        const prefix = isNegative ? '-' : '';
-        const currencyPrefix = isCurrency ? '₹ ' : '';
-
-        // For extremely large numbers, use scientific notation
-        if (Math.abs(num) >= 1e15) {
-            return `${prefix}${currencyPrefix}${num.toExponential(2)}`;
-        }
-
-        return `${prefix}${currencyPrefix}${Math.abs(num).toLocaleString('en-IN')}`;
-    };
-
-    const displayText = formatValue(value);
-    const fullNumber = getFullNumber(value);
+    const displayText = formatUniversalNumber(value, isCurrency);
+    const fullNumber = getNumberFullText(value, isCurrency);
 
     return (
         <motion.div
@@ -1471,10 +1184,11 @@ const UniversalStatCard = ({
                         key={i}
                         className={`absolute w-1.5 h-1.5 rounded-full opacity-40`}
                         style={{
-                            backgroundColor: color.includes('blue') ? '#3b82f6' :
-                                color.includes('emerald') ? '#10b981' :
+                            backgroundColor: color.includes('emerald') ? '#10b981' :
+                                color.includes('blue') ? '#3b82f6' :
                                     color.includes('violet') ? '#8b5cf6' :
-                                        color.includes('amber') ? '#f59e0b' : '#3b82f6',
+                                        color.includes('amber') ? '#f59e0b' :
+                                            color.includes('rose') ? '#ef4444' : '#10b981',
                             left: `${15 + i * 17}%`,
                             top: '25%',
                         }}
@@ -1492,7 +1206,7 @@ const UniversalStatCard = ({
                 ))}
             </motion.div>
 
-            {/* Floating Icon - LARGE BACKGROUND ICON */}
+            {/* Floating Icon */}
             <motion.div
                 className="absolute -top-4 -right-4 opacity-10"
                 animate={{
@@ -1515,11 +1229,11 @@ const UniversalStatCard = ({
                             {title}
                         </p>
                         <motion.h3
-                            className={`text-3xl font-bold mb-2 bg-gradient-to-r bg-clip-text text-transparent ${color.includes('blue') ? 'from-blue-500 to-cyan-500' :
-                                color.includes('emerald') ? 'from-emerald-500 to-teal-500' :
+                            className={`text-3xl font-bold mb-2 bg-gradient-to-r bg-clip-text text-transparent ${color.includes('emerald') ? 'from-emerald-500 to-teal-500' :
+                                color.includes('blue') ? 'from-blue-500 to-cyan-500' :
                                     color.includes('violet') ? 'from-violet-500 to-purple-500' :
                                         color.includes('amber') ? 'from-amber-500 to-orange-500' :
-                                            'from-blue-500 to-blue-600'
+                                            color.includes('rose') ? 'from-rose-500 to-pink-600' : 'from-emerald-500 to-teal-500'
                                 } truncate`}
                             initial={{ scale: 0.5 }}
                             animate={{ scale: 1 }}
@@ -1535,7 +1249,7 @@ const UniversalStatCard = ({
                         )}
                     </div>
 
-                    {/* Icon with animations - SMALL INTERACTIVE ICON */}
+                    {/* Icon with animations */}
                     <motion.div
                         whileHover={{ rotate: [0, -10, 10, 0], scale: 1.1 }}
                         transition={{ duration: 0.5 }}
@@ -1554,11 +1268,11 @@ const UniversalStatCard = ({
                                 size={24}
                                 strokeWidth={2.5}
                                 className={
-                                    color.includes('blue') ? 'text-blue-500' :
-                                        color.includes('emerald') ? 'text-emerald-500' :
+                                    color.includes('emerald') ? 'text-emerald-500' :
+                                        color.includes('blue') ? 'text-blue-500' :
                                             color.includes('violet') ? 'text-violet-500' :
                                                 color.includes('amber') ? 'text-amber-500' :
-                                                    'text-blue-500'
+                                                    color.includes('rose') ? 'text-rose-500' : 'text-emerald-500'
                                 }
                             />
                         </motion.div>
@@ -1589,679 +1303,90 @@ const UniversalStatCard = ({
     );
 };
 
-// ==================== MODERN QUICK ACTIONS ====================
-const ModernQuickActions = ({ actions, isDark, onActionClick }) => {
-    const [activeAction, setActiveAction] = useState(null);
-
-    const handleActionClick = async (actionId, onClickHandler) => {
-        setActiveAction(actionId);
-        await new Promise(resolve => setTimeout(resolve, 500));
-        if (onClickHandler) {
-            onClickHandler(actionId);
-        }
-        setActiveAction(null);
-    };
-
-    return (
-        <GlassCard isDark={isDark} className="p-6 relative overflow-hidden">
-            {/* Background Pattern */}
-            <motion.div
-                className="absolute inset-0 opacity-[0.03]"
-                animate={{
-                    background: [
-                        'radial-gradient(circle at 10% 20%, #3b82f6 0%, transparent 40%)',
-                        'radial-gradient(circle at 90% 80%, #10b981 0%, transparent 40%)',
-                        'radial-gradient(circle at 50% 50%, #8b5cf6 0%, transparent 40%)',
-                    ]
-                }}
-                transition={{
-                    duration: 15,
-                    repeat: Infinity,
-                    repeatType: "reverse",
-                    ease: "easeInOut"
-                }}
-            />
-
-            <div className="relative z-10">
-                {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center justify-between mb-6"
-                >
-                    <div>
-                        <h3 className={`text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent mb-1`}>
-                            Quick Actions
-                        </h3>
-                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                            Frequently used actions at your fingertips
-                        </p>
-                    </div>
-
-                    <motion.div
-                        whileHover={{ scale: 1.05, rotate: 5 }}
-                        whileTap={{ scale: 0.95 }}
-                        className={`p-2 rounded-xl backdrop-blur-sm border ${isDark
-                            ? 'bg-gray-800/50 border-gray-700 text-blue-400'
-                            : 'bg-white/50 border-gray-200 text-blue-600'
-                            }`}
-                    >
-                        <Zap size={20} />
-                    </motion.div>
-                </motion.div>
-
-                {/* Actions Grid - Now 3 columns instead of 4 */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {actions.map((action, index) => (
-                        <motion.button
-                            key={action.id}
-                            onClick={() => handleActionClick(action.action, onActionClick)}
-                            disabled={activeAction === action.action}
-                            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            transition={{ delay: index * 0.1, duration: 0.5 }}
-                            whileHover={{
-                                y: -4,
-                                scale: 1.02,
-                                transition: { duration: 0.2 }
-                            }}
-                            whileTap={{ scale: 0.98 }}
-                            className={`relative p-4 rounded-2xl backdrop-blur-sm border-2 text-left group overflow-hidden ${isDark
-                                ? 'bg-gray-800/40 border-gray-700/50 hover:border-gray-600/70'
-                                : 'bg-white/60 border-gray-200/50 hover:border-gray-300/70'
-                                } ${activeAction === action.action ? 'opacity-50 cursor-not-allowed' : ''
-                                } transition-all duration-300`}
-                        >
-                            {/* Animated Background */}
-                            <motion.div
-                                className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-0 group-hover:opacity-10`}
-                                transition={{ duration: 0.3 }}
-                            />
-
-                            {/* Loading Overlay */}
-                            {activeAction === action.action && (
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-20 flex items-center justify-center`}
-                                >
-                                    <motion.div
-                                        animate={{ rotate: 360 }}
-                                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                        className="w-6 h-6 border-2 border-white border-t-transparent rounded-full"
-                                    />
-                                </motion.div>
-                            )}
-
-                            {/* Icon Container */}
-                            <motion.div
-                                whileHover={{ scale: 1.1 }}
-                                transition={{ duration: 0.3 }}
-                                className={`w-12 h-12 rounded-xl bg-gradient-to-r ${action.color} flex items-center justify-center mb-3 shadow-lg relative overflow-hidden group/icon`}
-                            >
-                                {/* Shine Effect */}
-                                <motion.div
-                                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 transform -translate-x-full group-hover/icon:translate-x-full"
-                                    transition={{ duration: 0.8 }}
-                                />
-
-                                {/* Icon */}
-                                <action.icon size={20} className="text-white relative z-10" />
-
-                                {/* Pulse Effect */}
-                                {activeAction === action.action && (
-                                    <motion.div
-                                        className="absolute inset-0 rounded-xl border-2 border-white/50"
-                                        animate={{
-                                            scale: [1, 1.2, 1],
-                                            opacity: [0.7, 0, 0.7],
-                                        }}
-                                        transition={{
-                                            duration: 1.5,
-                                            repeat: Infinity,
-                                        }}
-                                    />
-                                )}
-                            </motion.div>
-
-                            {/* Content */}
-                            <div className="relative z-10">
-                                <h4 className={`font-semibold text-sm mb-1 ${isDark ? 'text-white' : 'text-gray-900'
-                                    }`}>
-                                    {action.title}
-                                </h4>
-                                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'
-                                    }`}>
-                                    {action.description}
-                                </p>
-                            </div>
-
-                            {/* Hover Arrow */}
-                            <motion.div
-                                initial={{ opacity: 0, x: -5 }}
-                                whileHover={{ opacity: 1, x: 0 }}
-                                className={`absolute top-4 right-4 ${isDark ? 'text-gray-400' : 'text-gray-500'
-                                    }`}
-                            >
-                                <ChevronRight size={16} />
-                            </motion.div>
-
-                            {/* Subtle Floating Particles */}
-                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                                {[...Array(2)].map((_, i) => (
-                                    <motion.div
-                                        key={i}
-                                        className={`absolute w-1 h-1 rounded-full ${isDark ? 'bg-white/30' : 'bg-gray-600/30'
-                                            }`}
-                                        style={{
-                                            left: `${20 + i * 40}%`,
-                                            bottom: '20%',
-                                        }}
-                                        animate={{
-                                            y: [0, -8, 0],
-                                            opacity: [0, 0.6, 0],
-                                            scale: [0, 1, 0],
-                                        }}
-                                        transition={{
-                                            duration: 2 + i * 0.5,
-                                            repeat: Infinity,
-                                            delay: i * 0.3,
-                                        }}
-                                    />
-                                ))}
-                            </div>
-                        </motion.button>
-                    ))}
-                </div>
-
-                {/* Footer Help Text */}
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.8 }}
-                    className={`flex items-center justify-center gap-2 mt-6 pt-4 border-t ${isDark ? 'border-gray-700/50' : 'border-gray-200/50'
-                        }`}
-                >
-                    <Zap size={14} className={isDark ? 'text-amber-400' : 'text-amber-600'} />
-                    <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Click any action to navigate quickly
-                    </span>
-                </motion.div>
-            </div>
-        </GlassCard>
-    );
-};
-
-// ==================== PROGRESS CARD COMPONENT ====================
-const ProgressCard = ({ request, isDark, index }) => {
-    const [isHovered, setIsHovered] = useState(false);
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'approved':
-                return 'from-emerald-500 to-emerald-600';
-            case 'in-progress':
-                return 'from-blue-500 to-blue-600';
-            case 'pending':
-                return 'from-amber-500 to-amber-600';
-            default:
-                return 'from-gray-500 to-gray-600';
-        }
-    };
-
-    const getStatusText = (status) => {
-        switch (status) {
-            case 'approved':
-                return 'Approved';
-            case 'in-progress':
-                return 'In Progress';
-            case 'pending':
-                return 'Pending';
-            default:
-                return 'Unknown';
-        }
-    };
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{
-                delay: index * 0.05,
-                duration: 0.4,
-                type: "spring",
-                default: { duration: 0.2, ease: "easeOut" }
-            }}
-            whileHover={{
-                y: -2,
-                scale: 1.01,
-                transition: { duration: 0.15 }
-            }}
-            onHoverStart={() => setIsHovered(true)}
-            onHoverEnd={() => setIsHovered(false)}
-            className="relative"
-        >
-            <div className={`rounded-xl backdrop-blur-sm border ${isDark
-                ? 'bg-gray-800/50 border-gray-700'
-                : 'bg-white/60 border-gray-200'
-                } p-3 group cursor-pointer relative overflow-hidden`}>
-                <div className="relative z-10">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-2">
-                        <div className="flex-1 min-w-0">
-                            <motion.div
-                                whileHover={{ x: 1 }}
-                                transition={{ duration: 0.15 }}
-                            >
-                                <h4 className={`font-semibold text-sm mb-1 ${isDark ? 'text-white' : 'text-gray-900'} truncate`}>
-                                    {request.title}
-                                </h4>
-                            </motion.div>
-                            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                                <motion.span
-                                    whileHover={{ scale: 1.03 }}
-                                    className={`px-1.5 py-0.5 rounded-full font-medium ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
-                                        }`}
-                                >
-                                    {request.category}
-                                </motion.span>
-                                <span className={`flex items-center gap-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                    <Calendar size={10} />
-                                    {new Date(request.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                </span>
-                                <span className={`flex items-center gap-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                    <Users size={10} />
-                                    {request.donors}
-                                </span>
-                            </div>
-                        </div>
-
-                        <motion.span
-                            whileHover={{ scale: 1.05, rotate: 2 }}
-                            className={`px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gradient-to-r ${getStatusColor(request.status)} text-white shadow self-start`}
-                        >
-                            {getStatusText(request.status)}
-                        </motion.span>
-                    </div>
-
-                    <div className="space-y-1.5">
-                        <div className="flex justify-between text-[11px]">
-                            <motion.span
-                                whileHover={{ scale: 1.03 }}
-                                className={isDark ? 'text-gray-300' : 'text-gray-600'}
-                            >
-                                ₹ {request.receivedAmount.toLocaleString()}
-                            </motion.span>
-                            <motion.span
-                                whileHover={{ scale: 1.03 }}
-                                className={isDark ? 'text-gray-300' : 'text-gray-600'}
-                            >
-                                ₹ {request.targetAmount.toLocaleString()}
-                            </motion.span>
-                        </div>
-
-                        <div className={`w-full rounded-full h-1.5 ${isDark ? 'bg-gray-700' : 'bg-gray-200'} overflow-hidden relative`}>
-                            <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${request.progress}%` }}
-                                transition={{
-                                    delay: 0.2 + index * 0.05,
-                                    duration: 1,
-                                    type: "spring",
-                                    stiffness: 80,
-                                    damping: 20
-                                }}
-                                className={`h-full rounded-full bg-gradient-to-r ${getStatusColor(request.status)} relative`}
-                            />
-                        </div>
-
-                        <div className="flex justify-between items-center pt-0.5">
-                            <motion.div
-                                initial={{ opacity: 0, x: -5 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.3 + index * 0.05 }}
-                                className="flex items-center gap-1"
-                            >
-                                <motion.span
-                                    className={`text-[11px] font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
-                                    animate={isHovered ? { scale: 1.05 } : { scale: 1 }}
-                                >
-                                    {request.progress}%
-                                </motion.span>
-                                <TrendingUp size={8} className={
-                                    request.progress > 70 ? 'text-emerald-500' :
-                                        request.progress > 40 ? 'text-blue-500' : 'text-amber-500'
-                                } />
-                            </motion.div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </motion.div>
-    );
-};
-
-// ==================== TRANSACTION CARD COMPONENT ====================
-const TransactionCard = ({ transaction, isDark, index }) => {
-    const [isHovered, setIsHovered] = useState(false);
-
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'completed':
-                return {
-                    text: 'text-emerald-500',
-                    bg: 'bg-emerald-500/20',
-                    border: 'border-emerald-500/30',
-                    glow: 'from-emerald-500/10 to-emerald-600/10'
-                };
-            case 'pending':
-                return {
-                    text: 'text-amber-500',
-                    bg: 'bg-amber-500/20',
-                    border: 'border-amber-500/30',
-                    glow: 'from-amber-500/10 to-amber-600/10'
-                };
-            case 'failed':
-                return {
-                    text: 'text-rose-500',
-                    bg: 'bg-rose-500/20',
-                    border: 'border-rose-500/30',
-                    glow: 'from-rose-500/10 to-rose-600/10'
-                };
-            default:
-                return {
-                    text: 'text-gray-500',
-                    bg: 'bg-gray-500/20',
-                    border: 'border-gray-500/30',
-                    glow: 'from-gray-500/10 to-gray-600/10'
-                };
-        }
-    };
-
-    const statusColors = getStatusColor(transaction.status);
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, x: -10, scale: 0.98 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            transition={{
-                delay: index * 0.04,
-                duration: 0.4,
-                type: "spring",
-                default: { duration: 0.2, ease: "easeOut" }
-            }}
-            whileHover={{
-                y: -1,
-                scale: 1.008,
-                transition: { duration: 0.15 }
-            }}
-            onHoverStart={() => setIsHovered(true)}
-            onHoverEnd={() => setIsHovered(false)}
-            className="relative"
-        >
-            <div className={`p-2.5 rounded-lg border backdrop-blur-sm ${isDark
-                ? 'bg-gray-800/50 border-gray-700'
-                : 'bg-white/60 border-gray-200'
-                } group relative overflow-hidden`}>
-
-                <div className="relative z-10">
-                    <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <motion.div
-                                whileHover={{
-                                    scale: 1.05,
-                                }}
-                                transition={{
-                                    duration: 0.2,
-                                }}
-                                className={`p-1.5 rounded-md ${isDark ? 'bg-gray-700' : 'bg-gray-100'
-                                    } relative overflow-hidden flex-shrink-0`}
-                            >
-                                <Users size={12} className={isDark ? 'text-gray-300' : 'text-gray-600'} />
-                            </motion.div>
-
-                            <div className="flex-1 min-w-0">
-                                <motion.div
-                                    whileHover={{ x: 1 }}
-                                    transition={{ duration: 0.15 }}
-                                >
-                                    <h4 className={`font-medium text-[12px] truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                                        {transaction.donorName}
-                                    </h4>
-                                    <p className={`text-[11px] truncate ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                        {transaction.requestTitle}
-                                    </p>
-                                    <motion.p
-                                        initial={{ opacity: 0.6 }}
-                                        animate={{ opacity: isHovered ? 1 : 0.6 }}
-                                        className={`text-[10px] ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
-                                    >
-                                        {new Date(transaction.date).toLocaleDateString('en-US', {
-                                            month: 'short',
-                                            day: 'numeric',
-                                        })}
-                                    </motion.p>
-                                </motion.div>
-                            </div>
-                        </div>
-
-                        <div className="text-right flex-shrink-0">
-                            <motion.div
-                                whileHover={{ scale: 1.03 }}
-                                className="relative"
-                            >
-                                <motion.p
-                                    className={`text-[13px] font-bold ${isDark ? 'text-white' : 'text-gray-900'
-                                        }`}
-                                    animate={isHovered ? {
-                                        scale: [1, 1.02, 1],
-                                    } : {}}
-                                    transition={{
-                                        duration: 0.8,
-                                        repeat: Infinity
-                                    }}
-                                >
-                                    ₹ {transaction.amount.toLocaleString()}
-                                </motion.p>
-                            </motion.div>
-
-                            <motion.span
-                                whileHover={{
-                                    scale: 1.05,
-                                }}
-                                className={`text-[9px] px-1 py-0.5 rounded-full ${statusColors.text} ${statusColors.bg} border border-transparent mt-0.5 inline-block`}
-                            >
-                                {transaction.status}
-                            </motion.span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </motion.div>
-    );
-};
-
 // ==================== DASHBOARD CONTENT ====================
 const DashboardContent = ({ data, isDark, onActionClick }) => (
-    <div className="space-y-8">
-        {/* Stats Cards with UNIVERSAL solution */}
+    <div className="space-y-6 px-2 sm:px-0">
+        {/* Stats Cards with universal formatting */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             <UniversalStatCard
-                icon={FileText}
-                title="Total Requests"
-                value={data.stats.totalRequests}
-                change={8.3}
-                changeType="increase"
-                color="from-blue-500 to-blue-600"
+                icon={IndianRupee}
+                title="Total Donated"
+                value={data.stats.totalDonations}
+                subtitle="All time contributions"
+                color="from-emerald-500 to-emerald-600"
                 delay={0.1}
                 isDark={isDark}
-                subtitle="All time requests"
-            />
-            <UniversalStatCard
-                icon={CheckCircle}
-                title="Approved"
-                value={data.stats.approvedRequests}
-                subtitle="Successfully approved"
-                color="from-emerald-500 to-emerald-600"
-                delay={0.2}
-                isDark={isDark}
-                change={12.5}
-                changeType="increase"
-            />
-            <UniversalStatCard
-                icon={Clock}
-                title="Pending"
-                value={data.stats.pendingRequests}
-                subtitle="Under review"
-                color="from-amber-500 to-amber-600"
-                delay={0.3}
-                isDark={isDark}
-                change={-5.2}
-                changeType="decrease"
-            />
-            <UniversalStatCard
-                icon={IndianRupee}
-                title="Amount Received"
-                value={data.stats.totalAmountReceived}
-                subtitle="Total donations received"
-                color="from-violet-500 to-violet-600"
-                delay={0.4}
-                isDark={isDark}
-                change={15.7}
+                onClick={() => onActionClick?.('view-history')}
+                change={data.stats.monthlyChange}
                 changeType="increase"
                 isCurrency={true}
             />
-        </div>
-
-        {/* Quick Actions */}
-        <ModernQuickActions
-            actions={data.quickActions}
-            isDark={isDark}
-            onActionClick={onActionClick}
-        />
-
-        {/* Active Requests & Recent Transactions - WITH 500px HEIGHT */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            {/* Active Requests Card - 500px height */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-            >
-                <GlassCard isDark={isDark} className="p-4 h-[500px] flex flex-col">
-                    {/* Header */}
-                    <div className="mb-3 flex-shrink-0">
-                        <div>
-                            <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                                &nbsp;&nbsp;Active Requests
-                            </h2>
-                            <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                &nbsp;&nbsp;{data.activeRequests.length} active campaigns
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Scrollable content - 500px height container */}
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-                        <div className="space-y-2">
-                            {data.activeRequests.map((request, index) => (
-                                <motion.div
-                                    key={request.id}
-                                    initial={{ opacity: 0, y: 5 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.05 }}
-                                >
-                                    <ProgressCard
-                                        request={request}
-                                        isDark={isDark}
-                                        index={index}
-                                    />
-                                </motion.div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Footer - simple indicator */}
-                    <div className={`mt-3 pt-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'} flex-shrink-0`}>
-                    </div>
-                </GlassCard>
-            </motion.div>
-
-            {/* Recent Transactions Card - 500px height */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.1 }}
-            >
-                <GlassCard isDark={isDark} className="p-4 h-[500px] flex flex-col">
-                    {/* Header */}
-                    <div className="mb-3 flex-shrink-0">
-                        <div>
-                            <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                                &nbsp;&nbsp;Recent Transactions
-                            </h2>
-                            <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                &nbsp;&nbsp;{data.recentTransactions.length} recent donations
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Scrollable content - 500px height container */}
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-                        <div className="space-y-2">
-                            {data.recentTransactions.map((transaction, index) => (
-                                <motion.div
-                                    key={`${transaction.id}-${index}`}
-                                    initial={{ opacity: 0, x: -5 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.03 }}
-                                >
-                                    <TransactionCard
-                                        transaction={transaction}
-                                        isDark={isDark}
-                                        index={index}
-                                    />
-                                </motion.div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Footer - simple indicator */}
-                    <div className={`mt-3 pt-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'} flex-shrink-0`}>
-                        <div className="flex items-center justify-between">
-                        </div>
-                    </div>
-                </GlassCard>
-            </motion.div>
+            <UniversalStatCard
+                icon={Heart}
+                title="Donation Count"
+                value={data.stats.donationCount}
+                subtitle="Total donations made"
+                color="from-blue-500 to-blue-600"
+                delay={0.2}
+                isDark={isDark}
+                onClick={() => onActionClick?.('view-history')}
+                change={33.3}
+                changeType="increase"
+            />
+            <UniversalStatCard
+                icon={Users}
+                title="Recipients Helped"
+                value={data.stats.recipients}
+                subtitle="People you've supported"
+                color="from-violet-500 to-violet-600"
+                delay={0.3}
+                isDark={isDark}
+                change={50}
+                changeType="increase"
+            />
+            <UniversalStatCard
+                icon={Activity}
+                title="Impact Score"
+                value={data.stats.impactScore}
+                subtitle="Your contribution rating"
+                color="from-amber-500 to-amber-600"
+                delay={0.4}
+                isDark={isDark}
+                onClick={() => onActionClick?.('settings')}
+                change={12.5}
+                changeType="increase"
+            />
         </div>
     </div>
 );
 
-// ==================== MAIN RECIPIENTS DASHBOARD ====================
-const RecipientDashboard = () => {
+// ==================== MAIN DONORS DASHBOARD ====================
+const DonorDashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [isDark, setIsDark] = useState(false);
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [notifications, setNotifications] = useState(recipientData.notifications);
+    const [notifications, setNotifications] = useState(donorData.notifications);
     const [showNotifications, setShowNotifications] = useState(false);
 
     // Render function for active content
     const renderActiveContent = () => {
         switch (activeTab) {
             case 'dashboard':
-                return (<DashboardContent data={recipientData} isDark={isDark} onActionClick={(actionId) => handleQuickAction(actionId)} />);
-            case 'requests':
-                return <MyRequests isDark={isDark} />;
+                return <DashboardContent data={donorData} isDark={isDark} onActionClick={handleQuickAction} />;
+            case 'recipients':
+                return <BrowseRecipients isDark={isDark} />;
             case 'donations':
                 return <Donations isDark={isDark} />;
             case 'profile':
-                return <ProfileVerificationPage isDark={isDark} />;
+                return <DonorProfileVerificationPage isDark={isDark} />;
             case 'notifications':
                 return <NotificationsPage isDark={isDark} />;
             case 'settings':
                 return <RecipientSettings isDark={isDark} />;
             default:
-                return (<DashboardContent data={recipientData} isDark={isDark} onActionClick={handleQuickAction} />);
+                return <DashboardContent data={donorData} isDark={isDark} onActionClick={handleQuickAction} />;
         }
     };
 
@@ -2276,10 +1401,10 @@ const RecipientDashboard = () => {
                 await new Promise(resolve => setTimeout(resolve, 1500));
 
                 setUser({
-                    id: '1',
-                    name: recipientData.userInfo.name,
-                    email: recipientData.userInfo.email,
-                    role: 'RECIPIENT',
+                    id: '2',
+                    name: donorData.userInfo.name,
+                    email: donorData.userInfo.email,
+                    role: 'DONOR',
                 });
 
             } catch (error) {
@@ -2312,17 +1437,14 @@ const RecipientDashboard = () => {
 
     const handleQuickAction = (action) => {
         switch (action) {
-            case 'create-request':
-            setActiveTab('requests');
-            break;
-        case 'view-requests':
-            setActiveTab('donations');
-            break;
-        case 'upload-docs':
-            setActiveTab('profile');
-            break;
-        default:
-            console.log('Unknown action:', action);
+            case 'view-history':
+                setActiveTab('donations');
+                break;
+            case 'profile':
+                setActiveTab('profile');
+                break;
+            default:
+                console.log(`Action: ${action}`);
         }
     };
 
@@ -2330,7 +1452,7 @@ const RecipientDashboard = () => {
         return (
             <div className={`min-h-screen flex items-center justify-center ${isDark
                 ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
-                : 'bg-gradient-to-br from-gray-50 via-blue-50/30 to-cyan-50/30'
+                : 'bg-gradient-to-br from-gray-50 via-emerald-50/30 to-teal-50/30'
                 }`}>
                 <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
@@ -2340,7 +1462,7 @@ const RecipientDashboard = () => {
                     <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        className="w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-6"
+                        className="w-20 h-20 border-4 border-emerald-600 border-t-transparent rounded-full mx-auto mb-6"
                     />
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -2348,8 +1470,8 @@ const RecipientDashboard = () => {
                         transition={{ delay: 0.2 }}
                         className="space-y-3"
                     >
-                        <p className={`font-bold text-2xl ${isDark ? 'text-white' : 'text-gray-900'}`}>Loading Dashboard</p>
-                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Preparing your data...</p>
+                        <p className={`font-bold text-2xl ${isDark ? 'text-white' : 'text-gray-900'}`}>Loading Donor Dashboard</p>
+                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Preparing your impact data...</p>
                     </motion.div>
                 </motion.div>
             </div>
@@ -2359,7 +1481,7 @@ const RecipientDashboard = () => {
     return (
         <div className={`min-h-screen transition-colors duration-300 ${isDark
             ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
-            : 'bg-gradient-to-br from-gray-50 via-blue-50/30 to-cyan-50/30'
+            : 'bg-gradient-to-br from-gray-50 via-emerald-50/30 to-teal-50/30'
             }`}>
             <ModernSidebar
                 activeTab={activeTab}
@@ -2448,4 +1570,4 @@ const RecipientDashboard = () => {
     );
 };
 
-export default RecipientDashboard;
+export default DonorDashboard;

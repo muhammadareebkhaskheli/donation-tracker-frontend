@@ -580,7 +580,7 @@ const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm, isDark }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999]"
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[100]"
             onClick={handleCancel}
           />
 
@@ -776,7 +776,7 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
     sessionStorage.removeItem('userData');
 
     // Clear any app-specific data
-    localStorage.removeItem('donationDashboardSettings');
+    localStorage.removeItem('adminDashboardSettings');
     localStorage.removeItem('tablePreferences');
 
     console.log('User logged out successfully');
@@ -854,6 +854,22 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
             whileTap={{ scale: 0.95 }}
           >
             {isOpen ? (
+              <ChevronLeft size={14} className={isDark ? "text-white" : "text-gray-700"} />
+            ) : (
+              <ChevronRight size={14} className={isDark ? "text-white" : "text-gray-700"} />
+            )}
+          </motion.button>
+        )}
+
+        {((!isMobile && isOpen) || (isMobile && sidebarOpen)) && (
+          <motion.button
+            onClick={toggleSidebar}
+            className={`absolute top-5 ${isOpen ? 'right-[-14px]' : 'right-[-14px]'} ${isDark ? 'bg-slate-800 border-slate-600' : 'bg-white border-gray-300'
+              } backdrop-blur-sm rounded-full p-1.5 shadow-lg border z-10`}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            {isOpen || sidebarOpen ? (
               <ChevronLeft size={14} className={isDark ? "text-white" : "text-gray-700"} />
             ) : (
               <ChevronRight size={14} className={isDark ? "text-white" : "text-gray-700"} />
@@ -1687,7 +1703,7 @@ const TopDonorsCard = ({ data, isDark }) => (
 );
 
 // ==================== MAIN DASHBOARD ====================
-const DonationDashboard = () => {
+const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isDark, setIsDark] = useState(false);
@@ -2006,11 +2022,43 @@ const DonationDashboard = () => {
               </div>
 
               <div className="flex items-center gap-3">
-                <EnhancedNotificationIcon
-                  isDark={isDark}
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  unreadCount={unreadNotificationsCount}
-                />
+                {/* Mobile Menu/Notification Icon - Different behavior based on sidebar state */}
+                {typeof window !== 'undefined' && window.innerWidth < 768 && (
+                  <>
+                    {/* Menu Icon (when sidebar is closed) */}
+                    {!sidebarOpen && (
+                      <motion.button
+                        onClick={() => setSidebarOpen(true)}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        className={`p-3 rounded-2xl backdrop-blur-sm border ${isDark
+                          ? 'bg-gray-800/50 border-gray-700 text-white'
+                          : 'bg-white/50 border-gray-200 text-gray-700'
+                          }`}
+                      >
+                        <Menu size={20} />
+                      </motion.button>
+                    )}
+
+                    {/* Bell Icon (when sidebar is open) */}
+                    {sidebarOpen && (
+                      <EnhancedNotificationIcon
+                        isDark={isDark}
+                        onClick={() => setShowNotifications(!showNotifications)}
+                        unreadCount={unreadNotificationsCount}
+                      />
+                    )}
+                  </>
+                )}
+
+                {/* Desktop Notification Icon - Only shows on desktop */}
+                {typeof window !== 'undefined' && window.innerWidth >= 768 && (
+                  <EnhancedNotificationIcon
+                    isDark={isDark}
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    unreadCount={unreadNotificationsCount}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -2026,13 +2074,12 @@ const DonationDashboard = () => {
           isDark={isDark}
         />
 
-        {/* MAIN CONTENT - PROPERLY CENTERED */}
         <main
           className="p-6 lg:p-8 mx-auto max-w-7xl"
           style={{
             marginLeft: typeof window !== 'undefined' && window.innerWidth >= 768 ? (sidebarOpen ? 240 : 70) : 0,
             transition: 'margin-left 0.3s ease',
-            paddingTop: '110px' // Added padding to account for fixed header
+            paddingTop: '110px'
           }}
         >
           {renderActiveContent()}
@@ -2042,4 +2089,4 @@ const DonationDashboard = () => {
   );
 };
 
-export default DonationDashboard;
+export default AdminDashboard;

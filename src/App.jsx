@@ -2,12 +2,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/login';
 import AdminDashboard from './pages/AdminDashboard';
 import RecipientDashboard from './pages/RecipientDashboard';
+import DonorDashboard from './pages/DonorDashboard';
 import Signup from './pages/signup';
 import LandingPage from './pages/LandingPage';
 import ForgotPassword from './pages/ForgotPassword';
 import AdminSignup from './pages/adminSignup';
 
-// Add a simple route protection component
 const ProtectedRoute = ({ children }) => {
   const isAuthenticated = localStorage.getItem('userSession');
   return isAuthenticated ? children : <Navigate to="/login" />;
@@ -33,6 +33,14 @@ function App() {
           element={
             <ProtectedRoute>
               <RecipientDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/DonorDashboard" 
+          element={
+            <ProtectedRoute>
+              <DonorDashboard />
             </ProtectedRoute>
           } 
         />

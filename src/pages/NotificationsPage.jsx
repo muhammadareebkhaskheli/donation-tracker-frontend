@@ -556,7 +556,7 @@ const NotificationItem = ({ notification, isDark, onMarkAsRead, onMarkAsUnread, 
 };
 
 // Main Notifications Management Component
-const RecipientNotifications = ({ isDark }) => {
+const NotificationsPage = ({ isDark }) => {
   const [notifications, setNotifications] = useState(notificationsData);
   const [selectedNotifications, setSelectedNotifications] = useState([]);
   const [isAllSelected, setIsAllSelected] = useState(false);
@@ -892,4 +892,4 @@ const RecipientNotifications = ({ isDark }) => {
   );
 };
 
-export default RecipientNotifications;
+export default NotificationsPage;

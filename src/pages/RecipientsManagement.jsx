@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -11,9 +11,6 @@ import {
   MapPin,
   Calendar,
   CheckCircle2,
-  BarChart3,
-  FileUp,
-  Shield,
   AlertCircle,
   Send,
   RefreshCw,
@@ -30,392 +27,159 @@ import {
   X,
   Users,
   TrendingDown,
-  DollarSign,
   TrendingUp,
   Activity,
-  Award,
-  Target,
-  FileCheck,
   Upload,
-  File,
-  Paperclip,
-  Zap,
-  Sparkles,
-  Star,
-  Heart,
-  AlertTriangle,
   ChevronLeft,
   ChevronRight,
-  Menu,
+  CreditCard,
+  IdCard,
+  Briefcase,
+  Car,
+  Stethoscope,
+  Cpu,
+  ShoppingBag,
+  Sprout,
+  User,
+  Building,
+  Banknote,
+  GraduationCap,
+  IndianRupee
 } from 'lucide-react';
 
-// Enhanced Dummy data for recipients with 7 people
-const recipientsData = [
-  {
-    id: 'REC-001',
-    name: 'Ahmed Khan',
-    email: 'ahmed.khan@email.com',
-    phone: '+92-300-1234567',
-    address: 'Lahore, Pakistan',
-    category: 'Medical',
-    requiredAmount: 500000,
-    donatedAmount: 325000,
-    balanceAmount: 175000,
-    status: 'Approved',
-    registrationDate: '2024-01-15',
-    lastDonationDate: '2024-11-01',
-    documents: [
-      { name: 'id_card.pdf', size: '2.1 MB', type: 'application/pdf' },
-      { name: 'medical_report.pdf', size: '1.5 MB', type: 'application/pdf' }
-    ],
-    verificationStatus: 'Verified',
-    approver: 'Admin User',
-    completionRate: 65,
-    description: 'Medical treatment for heart surgery',
-    urgency: 'High',
-    age: 45,
-    familyMembers: 4,
-    assignee: 'admin1',
-    forwardingHistory: [
-      {
-        fromAdmin: 'admin2',
-        toAdmin: 'admin1',
-        reason: 'Medical expertise required for heart surgery case',
-        timestamp: '2024-01-20T14:30:00Z'
-      }
-    ]
-  },
-  {
-    id: 'REC-002',
-    name: 'Fatima Bibi',
-    email: 'fatima.bibi@email.com',
-    phone: '+92-301-2345678',
-    address: 'Karachi, Pakistan',
-    category: 'Education',
-    requiredAmount: 200000,
-    donatedAmount: 150000,
-    balanceAmount: 50000,
-    status: 'Pending-Validation',
-    registrationDate: '2024-02-20',
-    lastDonationDate: '2024-10-28',
-    documents: [
-      { name: 'id_card.pdf', size: '2.0 MB', type: 'application/pdf' },
-      { name: 'fee_structure.pdf', size: '0.8 MB', type: 'application/pdf' }
-    ],
-    verificationStatus: 'Pending',
-    approver: 'Approver 1',
-    completionRate: 75,
-    description: 'University tuition fees',
-    urgency: 'Medium',
-    age: 22,
-    familyMembers: 6,
-    assignee: 'admin2',
-    forwardingHistory: []
-  },
-  {
-    id: 'REC-003',
-    name: 'Ali Hassan',
-    email: 'ali.hassan@email.com',
-    phone: '+92-302-3456789',
-    address: 'Islamabad, Pakistan',
-    category: 'Emergency',
-    requiredAmount: 300000,
-    donatedAmount: 120000,
-    balanceAmount: 180000,
-    status: 'Pending-Validation',
-    registrationDate: '2024-03-10',
-    lastDonationDate: null,
-    documents: [
-      { name: 'id_card.pdf', size: '1.9 MB', type: 'application/pdf' }
-    ],
-    verificationStatus: 'Not Started',
-    approver: null,
-    completionRate: 40,
-    description: 'House fire emergency funds',
-    urgency: 'High',
-    age: 35,
-    familyMembers: 5,
-    assignee: 'admin3',
-    forwardingHistory: [
-      {
-        fromAdmin: 'admin1',
-        toAdmin: 'admin3',
-        reason: 'Emergency case needs specialized handling',
-        timestamp: '2024-03-15T09:15:00Z'
-      }
-    ]
-  },
-  {
-    id: 'REC-004',
-    name: 'Zainab Malik',
-    email: 'zainab.malik@email.com',
-    phone: '+92-303-4567890',
-    address: 'Rawalpindi, Pakistan',
-    category: 'Food',
-    requiredAmount: 150000,
-    donatedAmount: 75000,
-    balanceAmount: 75000,
-    status: 'In-Progress',
-    registrationDate: '2024-04-05',
-    lastDonationDate: '2024-10-25',
-    documents: [
-      { name: 'id_card.pdf', size: '2.2 MB', type: 'application/pdf' },
-      { name: 'utility_bills.pdf', size: '1.1 MB', type: 'application/pdf' }
-    ],
-    verificationStatus: 'Verified',
-    approver: 'Admin User',
-    completionRate: 50,
-    description: 'Monthly food supplies',
-    urgency: 'Medium',
-    age: 28,
-    familyMembers: 3,
-    assignee: 'admin1',
-    forwardingHistory: []
-  },
-  {
-    id: 'REC-005',
-    name: 'Hassan Ahmed',
-    email: 'hassan.ahmed@email.com',
-    phone: '+92-304-5678901',
-    address: 'Faisalabad, Pakistan',
-    category: 'Housing',
-    requiredAmount: 400000,
-    donatedAmount: 100000,
-    balanceAmount: 300000,
-    status: 'Rejected',
-    registrationDate: '2024-05-12',
-    lastDonationDate: null,
-    documents: [
-      { name: 'id_card.pdf', size: '2.0 MB', type: 'application/pdf' },
-      { name: 'house_documents.pdf', size: '3.2 MB', type: 'application/pdf' }
-    ],
-    verificationStatus: 'Rejected',
-    approver: 'Approver 2',
-    completionRate: 25,
-    description: 'Home renovation',
-    urgency: 'Low',
-    age: 50,
-    familyMembers: 7,
-    assignee: 'admin1',
-    forwardingHistory: [
-      {
-        fromAdmin: 'admin3',
-        toAdmin: 'admin1',
-        reason: 'Escalation for complex housing case review',
-        timestamp: '2024-05-18T16:45:00Z'
-      }
-    ]
-  },
-  {
-    id: 'REC-006',
-    name: 'Sara Javed',
-    email: 'sara.javed@email.com',
-    phone: '+92-305-6789012',
-    address: 'Multan, Pakistan',
-    category: 'Education',
-    requiredAmount: 180000,
-    donatedAmount: 90000,
-    balanceAmount: 90000,
-    status: 'Pending-Validation',
-    registrationDate: '2024-06-08',
-    lastDonationDate: '2024-10-20',
-    documents: [
-      { name: 'id_card.pdf', size: '1.8 MB', type: 'application/pdf' },
-      { name: 'admission_letter.pdf', size: '1.2 MB', type: 'application/pdf' }
-    ],
-    verificationStatus: 'Verified',
-    approver: 'Admin User',
-    completionRate: 50,
-    description: 'College tuition fees for engineering program',
-    urgency: 'Medium',
-    age: 20,
-    familyMembers: 5,
-    assignee: 'admin2',
-    forwardingHistory: []
-  },
-  {
-    id: 'REC-007',
-    name: 'Omar Farooq',
-    email: 'omar.farooq@email.com',
-    phone: '+92-306-7890123',
-    address: 'Peshawar, Pakistan',
-    category: 'Medical',
-    requiredAmount: 350000,
-    donatedAmount: 175000,
-    balanceAmount: 175000,
-    status: 'Pending-Validation',
-    registrationDate: '2024-07-15',
-    lastDonationDate: '2024-10-15',
-    documents: [
-      { name: 'id_card.pdf', size: '2.3 MB', type: 'application/pdf' },
-      { name: 'medical_bills.pdf', size: '2.8 MB', type: 'application/pdf' }
-    ],
-    verificationStatus: 'Pending',
-    approver: 'Approver 1',
-    completionRate: 50,
-    description: 'Cancer treatment and chemotherapy',
-    urgency: 'High',
-    age: 38,
-    familyMembers: 4,
-    assignee: 'admin3',
-    forwardingHistory: [
-      {
-        fromAdmin: 'admin1',
-        toAdmin: 'admin3',
-        reason: 'Specialized medical case handling required',
-        timestamp: '2024-07-20T11:20:00Z'
-      }
-    ]
-  },
-];
-
-// Available admins for forwarding
-const availableAdmins = [
-  { id: 'admin1', name: 'Super Admin', role: 'super_admin' },
-  { id: 'admin2', name: 'Approver 1', role: 'approver' },
-  { id: 'admin3', name: 'Co-Approver 1', role: 'co_approver' },
-  { id: 'admin4', name: 'Support Admin', role: 'support' },
-  { id: 'admin5', name: 'Finance Admin', role: 'finance' }
-];
-
-// Status options based on requirements
-const statusOptions = [
-  'All Status',
-  'Draft',
-  'Pending-Validation',
-  'Validated',
-  'Approved',
-  'Rejected',
-  'Closed',
-  'In-Progress'
-];
-
-const categoryOptions = [
-  'All Categories',
-  'Medical',
-  'Education',
-  'Emergency',
-  'Food',
-  'Housing'
-];
-
-const verificationOptions = [
-  'All Verification',
-  'Verified',
-  'Pending',
-  'Not Started',
-  'Rejected'
-];
-
-const urgencyOptions = [
-  'All Urgency',
-  'High',
-  'Medium',
-  'Low'
-];
-
-// Shake animation variants - GUARANTEED WORKING
-const shakeAnimation = {
-  initial: {
-    x: 0
-  },
-  shake: {
-    x: [0, -10, 10, -10, 10, 0],
-    transition: {
-      duration: 0.6,
-      ease: "easeInOut"
-    }
+// Add this function after the formatValue function
+const getFullFormattedNumber = (num, isCurrency = false) => {
+  if (num === null || num === undefined) {
+    return isCurrency ? '₹0' : '0';
   }
+
+  // Handle string numbers
+  const parsedNum = typeof num === 'string' ? parseFloat(num.replace(/[^0-9.-]+/g, '')) : num;
+
+  if (isNaN(parsedNum) || !isFinite(parsedNum)) {
+    return isCurrency ? '₹0' : '0';
+  }
+
+  const isNegative = parsedNum < 0;
+  const prefix = isNegative ? '-' : '';
+  const currencyPrefix = isCurrency ? '' : '';
+
+  // For extremely large numbers, use scientific notation
+  if (Math.abs(parsedNum) >= 1e15) {
+    return `${prefix}${currencyPrefix}${Math.abs(parsedNum).toExponential(2)}`;
+  }
+
+  return `${prefix}${currencyPrefix}${Math.abs(parsedNum).toLocaleString('en-IN')}`;
 };
 
-// Confirmation Dialog Component
-const ConfirmationDialog = ({ isDark, title, message, onConfirm, onCancel, confirmText = "Confirm", cancelText = "Cancel" }) => {
+// Format value function similar to the one you provided
+const formatValue = (val, isCurrency = false) => {
+  if (val === null || val === undefined) {
+    return isCurrency ? '₹0' : '0';
+  }
+
+  // Handle extremely large numbers with scientific notation for display
+  const num = typeof val === 'string' ? parseFloat(val.replace(/[^0-9.-]+/g, '')) : val;
+
+  if (isNaN(num) || !isFinite(num)) {
+    return isCurrency ? '₹0' : '0';
+  }
+
+  const absNum = Math.abs(num);
+  const isNegative = num < 0;
+  const prefix = isNegative ? '-' : '';
+  const currencyPrefix = isCurrency ? '₹' : '';
+
+  // For display - use compact format with dynamic scaling
+  let displayValue;
+  let suffix = '';
+
+  // Helper function to format with 2 decimal places without rounding
+  const formatWithTwoDecimals = (value) => {
+    // Convert to string, split by decimal point
+    const [whole, decimal] = value.toFixed(10).split('.');
+    // Take first 2 decimal places without rounding
+    const decimalPart = decimal ? decimal.slice(0, 2) : '00';
+    // Remove trailing zeros
+    const trimmedDecimal = decimalPart.replace(/0+$/, '');
+    return trimmedDecimal ? `${whole}.${trimmedDecimal}` : whole;
+  };
+
+  // Helper function to format with 1 decimal place without rounding
+  const formatWithOneDecimal = (value) => {
+    const [whole, decimal] = value.toFixed(10).split('.');
+    const decimalPart = decimal ? decimal.slice(0, 1) : '0';
+    // Remove trailing zeros
+    const trimmedDecimal = decimalPart.replace(/0+$/, '');
+    return trimmedDecimal ? `${whole}.${trimmedDecimal}` : whole;
+  };
+
+  if (absNum >= 1e24) {
+    displayValue = formatWithTwoDecimals(absNum / 1e24);
+    suffix = ' Y'; // Yotta
+  } else if (absNum >= 1e21) {
+    displayValue = formatWithTwoDecimals(absNum / 1e21);
+    suffix = ' Z'; // Zetta
+  } else if (absNum >= 1e18) {
+    displayValue = formatWithTwoDecimals(absNum / 1e18);
+    suffix = ' E'; // Exa
+  } else if (absNum >= 1e15) {
+    displayValue = formatWithTwoDecimals(absNum / 1e15);
+    suffix = ' P'; // Peta
+  } else if (absNum >= 1e12) {
+    displayValue = formatWithTwoDecimals(absNum / 1e12);
+    suffix = ' T'; // Tera
+  } else if (absNum >= 1e9) {
+    displayValue = formatWithTwoDecimals(absNum / 1e9);
+    suffix = ' B'; // Billion
+  } else if (absNum >= 1e7) {
+    // For crores, show 2 decimal places for values < 100Cr, 1 decimal for larger
+    const croreValue = absNum / 1e7;
+    if (croreValue < 100) {
+      displayValue = formatWithTwoDecimals(croreValue);
+    } else {
+      displayValue = formatWithOneDecimal(croreValue);
+    }
+    suffix = ' Cr'; // Crore
+  } else if (absNum >= 1e5) {
+    // For lakhs, show 2 decimal places for values < 10L, 1 decimal for larger
+    const lakhValue = absNum / 1e5;
+    if (lakhValue < 10) {
+      displayValue = formatWithTwoDecimals(lakhValue);
+    } else {
+      displayValue = formatWithOneDecimal(lakhValue);
+    }
+    suffix = ' L'; // Lakh
+  } else if (absNum >= 1e3) {
+    // For thousands, show 1 decimal place for values < 10K, whole number for larger
+    const thousandValue = absNum / 1e3;
+    if (thousandValue < 10) {
+      displayValue = formatWithOneDecimal(thousandValue);
+    } else {
+      displayValue = Math.floor(thousandValue).toString();
+    }
+    suffix = ' K'; // Thousand
+  } else {
+    // For numbers less than 1000, show full number
+    return `${prefix}${currencyPrefix}${absNum.toLocaleString('en-IN')}`;
+  }
+
+  // Remove trailing decimal point if no decimals
+  if (displayValue.endsWith('.')) {
+    displayValue = displayValue.slice(0, -1);
+  }
+
+  return `${prefix}${currencyPrefix}${displayValue}${suffix}`;
+};
+
+const SuccessDialog = memo(({ isDark, title, message, onClose }) => {
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
       style={{ margin: 0, padding: 0 }}
-      onClick={onCancel}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 30 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 30 }}
-        transition={{ type: "spring", damping: 25 }}
-        className={`rounded-3xl w-full max-w-md mx-4 ${isDark
-          ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
-          : 'bg-gradient-to-br from-white via-white to-gray-50'
-          }`}
-        style={{
-          boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="relative p-6 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-t-3xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-white mb-1">
-                {title}
-              </h2>
-              <p className="text-violet-100 text-sm font-medium">
-                Please confirm your action
-              </p>
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.1, rotate: 90 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={onCancel}
-              className="p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
-            >
-              <X size={20} className="text-white" />
-            </motion.button>
-          </div>
-        </div>
-
-        <div className="p-6">
-          <p className={`text-base font-medium mb-6 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-            {message}
-          </p>
-
-          <div className="flex gap-3 flex-col sm:flex-row">
-            <motion.button
-              onClick={onCancel}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={`flex-1 px-6 py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${isDark
-                ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
-                : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                }`}
-            >
-              {cancelText}
-            </motion.button>
-            <motion.button
-              onClick={onConfirm}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-2xl text-sm font-semibold shadow-xl"
-            >
-              {confirmText}
-            </motion.button>
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-};
-
-// Success Dialog Component
-const SuccessDialog = ({ isDark, title, message, onClose }) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4"
-      style={{ margin: 0, padding: 0 }}
-      onClick={onClose}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 30 }}
@@ -472,7 +236,7 @@ const SuccessDialog = ({ isDark, title, message, onClose }) => {
               onClick={onClose}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-2xl text-sm font-semibold shadow-xl"
+              className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-2xl text-sm font-semibold shadow-xl min-w-[120px]"
             >
               Okay
             </motion.button>
@@ -481,61 +245,232 @@ const SuccessDialog = ({ isDark, title, message, onClose }) => {
       </motion.div>
     </motion.div>
   );
-};
+});
 
-// Status Badge Component
-const StatusBadge = ({ status, isDark }) => {
-  const getStatusConfig = (status) => {
-    const configs = {
-      'Approved': { gradient: 'from-emerald-500 to-green-500', icon: CheckCircle },
-      'Validated': { gradient: 'from-blue-500 to-cyan-500', icon: Shield },
-      'Pending-Validation': { gradient: 'from-amber-500 to-orange-500', icon: Clock },
-      'In-Progress': { gradient: 'from-purple-500 to-pink-500', icon: Activity },
-      'Rejected': { gradient: 'from-rose-500 to-red-500', icon: XCircle },
-      'Closed': { gradient: 'from-gray-500 to-gray-600', icon: CheckCircle },
-      'Draft': { gradient: 'from-slate-500 to-slate-600', icon: FileText },
-    };
-    return configs[status] || { gradient: 'from-gray-500 to-gray-600', icon: FileText };
-  };
+const ConfirmationDialog = memo(({ isDark, title, message, onConfirm, onCancel, confirmText = "Confirm", cancelText = "Cancel" }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+      style={{ margin: 0, padding: 0 }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 30 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 30 }}
+        transition={{ type: "spring", damping: 25 }}
+        className={`rounded-3xl w-full max-w-md mx-4 ${isDark
+          ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
+          : 'bg-gradient-to-br from-white via-white to-gray-50'
+          }`}
+        style={{
+          boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="relative p-6 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-t-3xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-white mb-1">
+                {title}
+              </h2>
+              <p className="text-violet-100 text-sm font-medium">
+                Please confirm your action
+              </p>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={onCancel}
+              className="p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+            >
+              <X size={20} className="text-white" />
+            </motion.button>
+          </div>
+        </div>
 
-  const config = getStatusConfig(status);
-  const Icon = config.icon;
+        <div className="p-6">
+          <p className={`text-base font-medium mb-6 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            {message}
+          </p>
+
+          <div className="flex gap-2 sm:gap-3 flex-nowrap">
+            <motion.button
+              onClick={onCancel}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={`flex-1 min-w-[100px] px-4 py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${isDark
+                ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
+                : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                }`}
+            >
+              {cancelText}
+            </motion.button>
+            <motion.button
+              onClick={onConfirm}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex-1 min-w-[100px] px-4 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-2xl text-sm font-semibold shadow-xl"
+            >
+              {confirmText}
+            </motion.button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+});
+
+const EnhancedStatCard = memo(({
+  icon: Icon,
+  title,
+  value,
+  fullNumber,
+  change,
+  changeType,
+  color,
+  delay,
+  isDark,
+  subtitle,
+  isCurrency = false
+}) => {
+  const formattedValue = useMemo(() => {
+    if (typeof value === 'number' || typeof value === 'string') {
+      return formatValue(value, isCurrency);
+    }
+    return value;
+  }, [value, isCurrency]);
 
   return (
     <motion.div
-      whileHover={{ scale: 1.05 }}
-      className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-full bg-gradient-to-r ${config.gradient} text-white shadow-lg`}
+      initial={{ opacity: 0, y: 20, scale: 0.9 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ delay, duration: 0.5, type: "spring", default: { duration: 0.2, ease: "easeOut" } }}
+      whileHover={{
+        y: -5,
+        scale: 1.02,
+        transition: { duration: 0.2, ease: "easeOut" }
+      }}
+      className={`rounded-2xl p-6 shadow-xl border relative overflow-hidden group cursor-pointer ${isDark
+        ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700'
+        : 'bg-gradient-to-br from-white to-gray-50 border-gray-200'
+        }`}
+      style={{
+        willChange: 'transform, opacity',
+        contain: 'layout style',
+        transform: 'translateZ(0)',
+      }}
     >
-      <Icon size={14} />
-      {status}
+      <motion.div
+        className={`absolute inset-0 bg-gradient-to-br ${color} opacity-0 group-hover:opacity-10 transition-opacity duration-700`}
+        animate={{
+          scale: [1, 1.2, 1],
+          rotate: [0, 90, 0],
+        }}
+        transition={{
+          duration: 8,
+          repeat: Infinity,
+          ease: "linear"
+        }}
+      />
+
+      <motion.div
+        className="absolute -top-4 -right-4 opacity-10"
+        animate={{
+          rotate: [0, 10, -10, 0],
+          scale: [1, 1.1, 1],
+        }}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      >
+        <Icon size={80} />
+      </motion.div>
+
+      <div className="relative z-10">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <p className={`text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+              {title}
+            </p>
+            <motion.h3
+              className={`text-3xl font-bold mb-2 bg-gradient-to-r bg-clip-text text-transparent ${color.includes('blue') ? 'from-blue-500 to-cyan-500' :
+                color.includes('emerald') ? 'from-emerald-500 to-teal-500' :
+                  color.includes('violet') ? 'from-violet-500 to-purple-500' :
+                    color.includes('rose') ? 'from-rose-500 to-pink-500' :
+                      'from-amber-500 to-orange-500'
+                }`}
+              initial={{ scale: 0.5 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: delay + 0.2, type: "spring" }}
+              title={fullNumber}
+            >
+              {formattedValue}
+            </motion.h3>
+            {subtitle && (
+              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {subtitle}
+              </p>
+            )}
+          </div>
+
+          <motion.div
+            whileHover={{ rotate: [0, -10, 10, 0], scale: 1.1 }}
+            transition={{ duration: 0.5 }}
+            className="relative"
+          >
+            <motion.div
+              animate={{
+                rotate: [0, 5, -5, 0],
+                scale: [1, 1.05, 1]
+              }}
+              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+              className={`p-3 rounded-xl backdrop-blur-sm ${isDark ? 'bg-white/5' : 'bg-black/5'
+                }`}
+            >
+              <Icon
+                size={24}
+                strokeWidth={2.5}
+                className={
+                  color.includes('blue') ? 'text-blue-500' :
+                    color.includes('emerald') ? 'text-emerald-500' :
+                      color.includes('violet') ? 'text-violet-500' :
+                        color.includes('rose') ? 'text-rose-500' :
+                          'text-amber-500'
+                }
+              />
+            </motion.div>
+          </motion.div>
+        </div>
+
+        {change && (
+          <motion.div
+            className="flex items-center gap-1 mt-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: delay + 0.3 }}
+          >
+            {changeType === 'increase' ? (
+              <TrendingUp size={16} className="text-emerald-500" />
+            ) : (
+              <TrendingDown size={16} className="text-rose-500" />
+            )}
+            <span className={`text-sm font-semibold ${changeType === 'increase' ? 'text-emerald-500' : 'text-rose-500'}`}>
+              {change}%
+            </span>
+            <span className={`text-xs ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>vs last month</span>
+          </motion.div>
+        )}
+      </div>
     </motion.div>
   );
-};
+});
 
-// Urgency Badge Component
-const UrgencyBadge = ({ urgency, isDark }) => {
-  const getUrgencyConfig = (urgency) => {
-    const configs = {
-      'High': { bg: 'bg-rose-500/20', text: 'text-rose-600', border: 'border-rose-500/30', icon: AlertTriangle },
-      'Medium': { bg: 'bg-amber-500/20', text: 'text-amber-600', border: 'border-amber-500/30', icon: Zap },
-      'Low': { bg: 'bg-emerald-500/20', text: 'text-emerald-600', border: 'border-emerald-500/30', icon: CheckCircle },
-    };
-    return configs[urgency] || configs['Medium'];
-  };
-
-  const config = getUrgencyConfig(urgency);
-  const Icon = config.icon;
-
-  return (
-    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg ${config.bg} ${config.text} border ${config.border}`}>
-      <Icon size={12} />
-      {urgency}
-    </div>
-  );
-};
-
-// Simpler Continuous Progress Circle Component - Fixed Percentage Text
-const ProgressCircle = ({ percentage, size = 80, isDark }) => {
+const ProfileProgressCircle = memo(({ percentage, size = 100, isDark }) => {
   const radius = (size - 8) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
@@ -547,25 +482,25 @@ const ProgressCircle = ({ percentage, size = 80, isDark }) => {
     return '#ef4444';
   };
 
+  const color = getColor();
+
   return (
     <div className="relative inline-flex items-center justify-center">
       <svg width={size} height={size} className="transform -rotate-90">
-        {/* Background circle */}
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
           stroke={isDark ? '#374151' : '#e5e7eb'}
-          strokeWidth="6"
+          strokeWidth="8"
           fill="none"
         />
-        {/* Animated progress circle */}
         <motion.circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={getColor()}
-          strokeWidth="6"
+          stroke={color}
+          strokeWidth="8"
           fill="none"
           strokeDasharray={circumference}
           initial={{ strokeDashoffset: circumference }}
@@ -583,73 +518,596 @@ const ProgressCircle = ({ percentage, size = 80, isDark }) => {
         />
       </svg>
 
-      {/* Fixed percentage text - No animation */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className={`text-sm font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <div className="absolute inset-0 flex items-center justify-center flex-col">
+        <span className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
           {percentage}%
+        </span>
+        <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          Complete
         </span>
       </div>
     </div>
   );
+});
+
+const recipientsData = [
+  {
+    id: 'REC-001',
+    name: 'Rajesh Kumar',
+    email: 'rajesh.kumar@email.com',
+    phone: '+91-98765-43210',
+    aadhaarNumber: '1234-5678-9012',
+    panNumber: 'ABCDE1234F',
+    dateOfBirth: '1979-05-15',
+    address: 'Mumbai, Maharashtra',
+    occupation: 'Business Owner',
+    familyDetails: 'Wife and 2 children',
+    bankName: 'State Bank of India',
+    accountNumber: '123456789012',
+    ifscCode: 'SBIN0001234',
+    accountHolderName: 'Rajesh Kumar',
+    branchName: 'Mumbai Main Branch',
+    upiId: 'rajesh.kumar@upi',
+    accountType: 'Savings',
+    status: 'Verified',
+    registrationDate: '2024-01-15',
+    documents: [
+      { name: 'aadhaar_card.pdf', size: '2.1 MB', type: 'application/pdf' },
+      { name: 'pan_card.pdf', size: '1.5 MB', type: 'application/pdf' },
+      { name: 'address_proof.pdf', size: '1.2 MB', type: 'application/pdf' },
+      { name: 'income_proof.pdf', size: '1.8 MB', type: 'application/pdf' },
+      { name: 'bank_proof.pdf', size: '1.0 MB', type: 'application/pdf' }
+    ],
+    completionPercentage: 100,
+    submittedAt: '2024-01-15',
+    verificationStatus: 'Verified',
+    approver: 'Admin User',
+    assignee: 'admin1',
+    forwardingHistory: [
+      {
+        fromAdmin: 'admin2',
+        toAdmin: 'admin1',
+        reason: 'Medical expertise required for heart surgery case',
+        timestamp: '2024-01-20T14:30:00Z'
+      }
+    ],
+    totalAmountReceived: 5000000,
+    donationsCount: 15
+  },
+  {
+    id: 'REC-002',
+    name: 'Priya Sharma',
+    email: 'priya.sharma@email.com',
+    phone: '+91-98765-54321',
+    aadhaarNumber: '2345-6789-0123',
+    panNumber: 'BCDEF2345G',
+    dateOfBirth: '2002-03-20',
+    address: 'Delhi, NCR',
+    occupation: 'Student',
+    familyDetails: 'Parents and 3 siblings',
+    bankName: 'HDFC Bank',
+    accountNumber: '234567890123',
+    ifscCode: 'HDFC0002345',
+    accountHolderName: 'Priya Sharma',
+    branchName: 'Delhi Central',
+    upiId: '',
+    accountType: 'Savings',
+    status: 'Submitted',
+    registrationDate: '2024-02-20',
+    documents: [
+      { name: 'aadhaar_card.pdf', size: '2.0 MB', type: 'application/pdf' },
+      { name: 'pan_card.pdf', size: '0.8 MB', type: 'application/pdf' },
+      { name: 'address_proof.pdf', size: '1.1 MB', type: 'application/pdf' }
+    ],
+    completionPercentage: 85,
+    submittedAt: '2024-01-15',
+    verificationStatus: 'Pending',
+    approver: 'Approver 1',
+    assignee: 'admin2',
+    forwardingHistory: [],
+    totalAmountReceived: 1500000,
+    donationsCount: 8
+  },
+  {
+    id: 'REC-003',
+    name: 'Vikram Singh',
+    email: 'vikram.singh@email.com',
+    phone: '+91-98765-65432',
+    aadhaarNumber: '3456-7890-1234',
+    panNumber: 'CDEFG3456H',
+    dateOfBirth: '1989-07-10',
+    address: 'Bangalore, Karnataka',
+    occupation: 'Shopkeeper',
+    familyDetails: 'Wife and 3 children',
+    bankName: 'ICICI Bank',
+    accountNumber: '345678901234',
+    ifscCode: 'ICIC0003456',
+    accountHolderName: 'Vikram Singh',
+    branchName: 'Bangalore Branch',
+    upiId: 'vikram.singh@upi',
+    accountType: 'Current',
+    status: 'Under Review',
+    registrationDate: '2024-03-10',
+    documents: [
+      { name: 'aadhaar_card.pdf', size: '1.9 MB', type: 'application/pdf' },
+      { name: 'pan_card.pdf', size: '1.0 MB', type: 'application/pdf' }
+    ],
+    completionPercentage: 85,
+    submittedAt: '2024-01-15',
+    verificationStatus: 'Not Started',
+    approver: null,
+    assignee: 'admin3',
+    forwardingHistory: [
+      {
+        fromAdmin: 'admin1',
+        toAdmin: 'admin3',
+        reason: 'Emergency case needs specialized handling',
+        timestamp: '2024-03-15T09:15:00Z'
+      }
+    ],
+    totalAmountReceived: 3500000,
+    donationsCount: 22
+  },
+  {
+    id: 'REC-004',
+    name: 'Anjali Patel',
+    email: 'anjali.patel@email.com',
+    phone: '+91-98765-76543',
+    aadhaarNumber: '4567-8901-2345',
+    panNumber: 'DEFGH4567I',
+    dateOfBirth: '1996-11-25',
+    address: 'Ahmedabad, Gujarat',
+    occupation: 'Teacher',
+    familyDetails: 'Husband and 1 child',
+    bankName: 'Axis Bank',
+    accountNumber: '456789012345',
+    ifscCode: 'UTIB0004567',
+    accountHolderName: 'Anjali Patel',
+    branchName: 'Ahmedabad Main',
+    upiId: 'anjali.patel@upi',
+    accountType: 'Savings',
+    status: 'Under Review',
+    registrationDate: '2024-04-05',
+    documents: [
+      { name: 'aadhaar_card.pdf', size: '2.2 MB', type: 'application/pdf' },
+      { name: 'pan_card.pdf', size: '1.1 MB', type: 'application/pdf' },
+      { name: 'address_proof.pdf', size: '1.3 MB', type: 'application/pdf' }
+    ],
+    completionPercentage: 85,
+    submittedAt: '2024-01-15',
+    verificationStatus: 'Verified',
+    approver: 'Admin User',
+    assignee: 'admin1',
+    forwardingHistory: [],
+    totalAmountReceived: 12000000,
+    donationsCount: 45
+  },
+  {
+    id: 'REC-005',
+    name: 'Amit Verma',
+    email: 'amit.verma@email.com',
+    phone: '+91-98765-87654',
+    aadhaarNumber: '5678-9012-3456',
+    panNumber: 'EFGHI5678J',
+    dateOfBirth: '1974-08-12',
+    address: 'Lucknow, Uttar Pradesh',
+    occupation: 'Farmer',
+    familyDetails: 'Wife and 5 children',
+    bankName: 'Punjab National Bank',
+    accountNumber: '567890123456',
+    ifscCode: 'PUNB0005678',
+    accountHolderName: 'Amit Verma',
+    branchName: 'Lucknow Rural',
+    upiId: '',
+    accountType: 'Savings',
+    status: 'Rejected',
+    registrationDate: '2024-05-12',
+    documents: [
+      { name: 'aadhaar_card.pdf', size: '2.0 MB', type: 'application/pdf' },
+      { name: 'pan_card.pdf', size: '1.2 MB', type: 'application/pdf' }
+    ],
+    completionPercentage: 85,
+    submittedAt: '2024-01-15',
+    verificationStatus: 'Rejected',
+    approver: 'Approver 2',
+    assignee: 'admin1',
+    forwardingHistory: [
+      {
+        fromAdmin: 'admin3',
+        toAdmin: 'admin1',
+        reason: 'Escalation for complex housing case review',
+        timestamp: '2024-05-18T16:45:00Z'
+      }
+    ],
+    totalAmountReceived: 800000,
+    donationsCount: 5
+  },
+  {
+    id: 'REC-006',
+    name: 'Sneha Reddy',
+    email: 'sneha.reddy@email.com',
+    phone: '+91-98765-98765',
+    aadhaarNumber: '6789-0123-4567',
+    panNumber: 'FGHIJ6789K',
+    dateOfBirth: '2004-01-08',
+    address: 'Hyderabad, Telangana',
+    occupation: 'Student',
+    familyDetails: 'Parents and 2 siblings',
+    bankName: 'Bank of Baroda',
+    accountNumber: '678901234567',
+    ifscCode: 'BARB0006789',
+    accountHolderName: 'Sneha Reddy',
+    branchName: 'Hyderabad City',
+    upiId: 'sneha.reddy@upi',
+    accountType: 'Savings',
+    status: 'Submitted',
+    registrationDate: '2024-06-08',
+    documents: [
+      { name: 'aadhaar_card.pdf', size: '1.8 MB', type: 'application/pdf' },
+      { name: 'pan_card.pdf', size: '1.2 MB', type: 'application/pdf' }
+    ],
+    completionPercentage: 85,
+    submittedAt: '2024-01-15',
+    verificationStatus: 'Verified',
+    approver: 'Admin User',
+    assignee: 'admin2',
+    forwardingHistory: [],
+    totalAmountReceived: 25000000,
+    donationsCount: 78
+  },
+  {
+    id: 'REC-007',
+    name: 'Rahul Mehta',
+    email: 'rahul.mehta@email.com',
+    phone: '+91-98765-09876',
+    aadhaarNumber: '7890-1234-5678',
+    panNumber: 'GHIJK7890L',
+    dateOfBirth: '1986-09-30',
+    address: 'Chennai, Tamil Nadu',
+    occupation: 'Driver',
+    familyDetails: 'Wife and 2 children',
+    bankName: 'Kotak Mahindra Bank',
+    accountNumber: '789012345678',
+    ifscCode: 'KKBK0007890',
+    accountHolderName: 'Rahul Mehta',
+    branchName: 'Chennai Main',
+    upiId: '',
+    accountType: 'Savings',
+    status: 'Submitted',
+    registrationDate: '2024-07-15',
+    documents: [
+      { name: 'aadhaar_card.pdf', size: '2.3 MB', type: 'application/pdf' },
+      { name: 'pan_card.pdf', size: '1.4 MB', type: 'application/pdf' }
+    ],
+    completionPercentage: 85,
+    submittedAt: '2024-01-15',
+    verificationStatus: 'Pending',
+    approver: 'Approver 1',
+    assignee: 'admin3',
+    forwardingHistory: [
+      {
+        fromAdmin: 'admin1',
+        toAdmin: 'admin3',
+        reason: 'Specialized medical case handling required',
+        timestamp: '2024-07-20T11:20:00Z'
+      }
+    ],
+    totalAmountReceived: 500000000,
+    donationsCount: 1200
+  },
+];
+
+// Available admins for forwarding
+const availableAdmins = [
+  { id: 'admin1', name: 'Super Admin', role: 'super_admin' },
+  { id: 'admin2', name: 'Approver 1', role: 'approver' },
+  { id: 'admin3', name: 'Co-Approver 1', role: 'co_approver' },
+  { id: 'admin4', name: 'Support Admin', role: 'support' }
+];
+
+// Helper function to calculate profile completion percentage
+const calculateProfileCompletion = (formData) => {
+  let totalFields = 0;
+  let completedFields = 0;
+
+  const personalInfoFields = [
+    'name', 'email', 'phone', 'aadhaarNumber', 'panNumber',
+    'dateOfBirth', 'address', 'occupation'
+  ];
+
+  personalInfoFields.forEach(field => {
+    totalFields++;
+    if (formData[field] && formData[field].toString().trim() !== '') {
+      completedFields++;
+    }
+  });
+
+  const bankFields = [
+    'bankName', 'accountNumber', 'ifscCode', 'accountHolderName',
+    'branchName', 'accountType'
+  ];
+
+  bankFields.forEach(field => {
+    totalFields++;
+    if (formData[field] && formData[field].toString().trim() !== '') {
+      completedFields++;
+    }
+  });
+
+  totalFields++;
+  if (formData.documents && formData.documents.length > 0) {
+    completedFields++;
+  }
+
+  return Math.round((completedFields / totalFields) * 100);
 };
 
-// UPDATED RECIPIENT CARD COMPONENT WITH ANIMATIONS
-const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward, onStatusChange, onApprove, index }) => {
+// Occupation Configuration Function
+const getOccupationConfig = (occupation) => {
+  // Normalize occupation string for matching
+  const normalizedOccupation = occupation?.toString().toLowerCase().trim() || '';
+
+  const configs = {
+    // Business/Entrepreneur
+    'business': {
+      icon: Briefcase,
+      color: '#8b5cf6', // Violet
+      gradient: 'from-violet-500 to-purple-500',
+      textColor: 'text-violet-600',
+      bgColor: 'bg-violet-500/20',
+      borderColor: 'border-violet-500'
+    },
+    'entrepreneur': {
+      icon: Briefcase,
+      color: '#8b5cf6',
+      gradient: 'from-violet-500 to-purple-500',
+      textColor: 'text-violet-600',
+      bgColor: 'bg-violet-500/20',
+      borderColor: 'border-violet-500'
+    },
+    'business owner': {
+      icon: Briefcase,
+      color: '#8b5cf6',
+      gradient: 'from-violet-500 to-purple-500',
+      textColor: 'text-violet-600',
+      bgColor: 'bg-violet-500/20',
+      borderColor: 'border-violet-500'
+    },
+
+    // Student/Education
+    'student': {
+      icon: GraduationCap,
+      color: '#3b82f6', // Blue
+      gradient: 'from-blue-500 to-cyan-500',
+      textColor: 'text-blue-600',
+      bgColor: 'bg-blue-500/20',
+      borderColor: 'border-blue-500'
+    },
+    'education': {
+      icon: GraduationCap,
+      color: '#3b82f6',
+      gradient: 'from-blue-500 to-cyan-500',
+      textColor: 'text-blue-600',
+      bgColor: 'bg-blue-500/20',
+      borderColor: 'border-blue-500'
+    },
+
+    // Teacher/Professor
+    'teacher': {
+      icon: UserPlus,
+      color: '#10b981', // Emerald
+      gradient: 'from-emerald-500 to-green-500',
+      textColor: 'text-emerald-600',
+      bgColor: 'bg-emerald-500/20',
+      borderColor: 'border-emerald-500'
+    },
+    'professor': {
+      icon: UserPlus,
+      color: '#10b981',
+      gradient: 'from-emerald-500 to-green-500',
+      textColor: 'text-emerald-600',
+      bgColor: 'bg-emerald-500/20',
+      borderColor: 'border-emerald-500'
+    },
+
+    // Shopkeeper/Merchant
+    'shopkeeper': {
+      icon: ShoppingBag,
+      color: '#f59e0b', // Amber
+      gradient: 'from-amber-500 to-orange-500',
+      textColor: 'text-amber-600',
+      bgColor: 'bg-amber-500/20',
+      borderColor: 'border-amber-500'
+    },
+    'merchant': {
+      icon: ShoppingBag,
+      color: '#f59e0b',
+      gradient: 'from-amber-500 to-orange-500',
+      textColor: 'text-amber-600',
+      bgColor: 'bg-amber-500/20',
+      borderColor: 'border-amber-500'
+    },
+
+    // Farmer/Agriculture
+    'farmer': {
+      icon: Sprout,
+      color: '#22c55e', // Green
+      gradient: 'from-green-500 to-emerald-500',
+      textColor: 'text-green-600',
+      bgColor: 'bg-green-500/20',
+      borderColor: 'border-green-500'
+    },
+    'agriculture': {
+      icon: Sprout,
+      color: '#22c55e',
+      gradient: 'from-green-500 to-emerald-500',
+      textColor: 'text-green-600',
+      bgColor: 'bg-green-500/20',
+      borderColor: 'border-green-500'
+    },
+
+    // Driver/Transport
+    'driver': {
+      icon: Car,
+      color: '#6366f1', // Indigo
+      gradient: 'from-indigo-500 to-blue-500',
+      textColor: 'text-indigo-600',
+      bgColor: 'bg-indigo-500/20',
+      borderColor: 'border-indigo-500'
+    },
+    'transport': {
+      icon: Car,
+      color: '#6366f1',
+      gradient: 'from-indigo-500 to-blue-500',
+      textColor: 'text-indigo-600',
+      bgColor: 'bg-indigo-500/20',
+      borderColor: 'border-indigo-500'
+    },
+
+    // Doctor/Medical
+    'doctor': {
+      icon: Stethoscope,
+      color: '#ec4899', // Pink
+      gradient: 'from-pink-500 to-rose-500',
+      textColor: 'text-pink-600',
+      bgColor: 'bg-pink-500/20',
+      borderColor: 'border-pink-500'
+    },
+    'medical': {
+      icon: Stethoscope,
+      color: '#ec4899',
+      gradient: 'from-pink-500 to-rose-500',
+      textColor: 'text-pink-600',
+      bgColor: 'bg-pink-500/20',
+      borderColor: 'border-pink-500'
+    },
+
+    // Engineer/Tech
+    'engineer': {
+      icon: Cpu,
+      color: '#0ea5e9', // Sky Blue
+      gradient: 'from-sky-500 to-cyan-500',
+      textColor: 'text-sky-600',
+      bgColor: 'bg-sky-500/20',
+      borderColor: 'border-sky-500'
+    },
+    'tech': {
+      icon: Cpu,
+      color: '#0ea5e9',
+      gradient: 'from-sky-500 to-cyan-500',
+      textColor: 'text-sky-600',
+      bgColor: 'bg-sky-500/20',
+      borderColor: 'border-sky-500'
+    },
+
+    // Bank/Finance
+    'bank': {
+      icon: Banknote,
+      color: '#8b5cf6', // Violet
+      gradient: 'from-violet-500 to-purple-500',
+      textColor: 'text-violet-600',
+      bgColor: 'bg-violet-500/20',
+      borderColor: 'border-violet-500'
+    },
+    'finance': {
+      icon: Banknote,
+      color: '#8b5cf6',
+      gradient: 'from-violet-500 to-purple-500',
+      textColor: 'text-violet-600',
+      bgColor: 'bg-violet-500/20',
+      borderColor: 'border-violet-500'
+    },
+
+    // Government/Officer
+    'government': {
+      icon: Building,
+      color: '#6b7280', // Gray
+      gradient: 'from-gray-500 to-slate-500',
+      textColor: 'text-gray-600',
+      bgColor: 'bg-gray-500/20',
+      borderColor: 'border-gray-500'
+    },
+    'officer': {
+      icon: Building,
+      color: '#6b7280',
+      gradient: 'from-gray-500 to-slate-500',
+      textColor: 'text-gray-600',
+      bgColor: 'bg-gray-500/20',
+      borderColor: 'border-gray-500'
+    },
+
+    // Default
+    'default': {
+      icon: User,
+      color: '#8b5cf6', // Violet (default)
+      gradient: 'from-violet-500 to-purple-500',
+      textColor: 'text-violet-600',
+      bgColor: 'bg-violet-500/20',
+      borderColor: 'border-violet-500'
+    }
+  };
+
+  // Find matching config
+  for (const [key, config] of Object.entries(configs)) {
+    if (normalizedOccupation.includes(key)) {
+      return config;
+    }
+  }
+
+  // Return default if no match found
+  return configs.default;
+};
+
+// Helper function to check which sections are complete
+const getCompletionChecklist = (formData) => {
+  return {
+    personalInfo: ['name', 'email', 'phone', 'aadhaarNumber', 'panNumber',
+      'dateOfBirth', 'address', 'occupation'].every(
+        field => formData[field] && formData[field].toString().trim() !== ''
+      ),
+    bankDetails: ['bankName', 'accountNumber', 'ifscCode', 'accountHolderName',
+      'branchName', 'accountType'].every(
+        field => formData[field] && formData[field].toString().trim() !== ''
+      ),
+    requiredDocuments: formData.documents && formData.documents.length > 0
+  };
+};
+
+// Update the statusOptions array to match your actual data
+const statusOptions = [
+  'All Status',
+  'Submitted',
+  'Under Review',
+  'Verified',
+  'Rejected'
+];
+
+// Shake animation variants
+const shakeAnimation = {
+  initial: {
+    x: 0
+  },
+  shake: {
+    x: [0, -10, 10, -10, 10, 0],
+    transition: {
+      duration: 0.6,
+      ease: "easeInOut"
+    }
+  }
+};
+
+const RecipientCard = memo(({ recipient, isDark, onView, onEdit, onDelete, onForward, onStatusChange, onVerifyReject, index }) => {
   const [showActions, setShowActions] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const hoverRef = useRef(false);
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
+  const occupationConfig = useMemo(() => getOccupationConfig(recipient.occupation), [recipient.occupation]);
+  const Icon = occupationConfig.icon;
+  const primaryColor = occupationConfig.color;
+  const categoryColor = occupationConfig.gradient;
 
-  const getCategoryIcon = (category) => {
-    const icons = {
-      'Medical': Heart,
-      'Education': Award,
-      'Emergency': AlertTriangle,
-      'Food': Users,
-      'Housing': Shield,
-      'Business': BarChart3,
-      'Utilities': Zap,
-      'Transportation': Activity,
-      'Other': FileText
-    };
-    return icons[category] || Users;
-  };
-
-  const getCategoryColor = (category) => {
-    const colors = {
-      'Medical': 'from-rose-500 to-pink-600',
-      'Education': 'from-blue-500 to-cyan-600',
-      'Emergency': 'from-amber-500 to-orange-600',
-      'Food': 'from-emerald-500 to-teal-600',
-      'Housing': 'from-purple-500 to-violet-600',
-      'Business': 'from-indigo-500 to-blue-600',
-      'Utilities': 'from-yellow-500 to-amber-600',
-      'Transportation': 'from-cyan-500 to-blue-600'
-    };
-    return colors[category] || 'from-gray-500 to-gray-600';
-  };
-
-  const CategoryIcon = getCategoryIcon(recipient.category);
-  const categoryColor = getCategoryColor(recipient.category);
-
-  // Get primary color from gradient
-  const getPrimaryColor = (color) => {
-    if (color.includes('rose')) return '#f43f5e';
-    if (color.includes('blue')) return '#3b82f6';
-    if (color.includes('amber')) return '#f59e0b';
-    if (color.includes('emerald')) return '#10b981';
-    if (color.includes('violet')) return '#8b5cf6';
-    if (color.includes('purple')) return '#8b5cf6';
-    if (color.includes('cyan')) return '#06b6d4';
-    if (color.includes('yellow')) return '#eab308';
-    return '#6b7280';
-  };
-
-  const primaryColor = getPrimaryColor(categoryColor);
-
-  // Close menu when clicking outside
-  React.useEffect(() => {
+  useEffect(() => {
     const handleClickOutside = (event) => {
       if (
         showActions &&
@@ -673,7 +1131,6 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
     setShowActions(false);
   };
 
-  // Handle hover with immediate state update
   const handleMouseEnter = () => {
     hoverRef.current = true;
     setIsHovered(true);
@@ -684,24 +1141,69 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
     setIsHovered(false);
   };
 
+  const calculateAge = (dateOfBirth) => {
+    const dob = new Date(dateOfBirth);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const age = calculateAge(recipient.dateOfBirth);
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  // Get occupation icon based on category
+  const getOccupationIcon = (occupation) => {
+    const icons = {
+      'Business Owner': Briefcase,
+      'Student': Users,
+      'Shopkeeper': ShoppingBag,
+      'Teacher': UserPlus,
+      'Farmer': Sprout,
+      'Driver': Car,
+      'Doctor': Stethoscope,
+      'Engineer': Cpu,
+      'Bank Officer': Banknote,
+      'Government Officer': Building
+    };
+    return icons[occupation] || Users;
+  };
+
+  const OccupationIcon = getOccupationIcon(recipient.occupation);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay: index * 0.05, duration: 0.5, type: "spring", default: { duration: 0.2, ease: "easeOut" } }}
-    whileHover={{
-      y: -5,
-      scale: 1.02,
-      transition: { duration: 0.2, ease: "easeOut" }
-    }}
+      whileHover={{
+        y: -5,
+        scale: 1.02,
+        transition: { duration: 0.2, ease: "easeOut" }
+      }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={`rounded-2xl p-6 shadow-xl border relative overflow-hidden group cursor-pointer ${isDark
         ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700'
         : 'bg-gradient-to-br from-white to-gray-50 border-gray-200'
         }`}
+      style={{
+        willChange: 'transform',
+        contain: 'layout style paint',
+        transform: 'translateZ(0)'
+      }}
     >
-      {/* Floating Orbs Animation */}
+      {/* ========== FLOATING ORBS ANIMATION ========== */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(10)].map((_, i) => (
           <motion.div
@@ -733,7 +1235,7 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
         ))}
       </div>
 
-      {/* Floating Ring Animation */}
+      {/* ========== FLOATING RING ANIMATION ========== */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(4)].map((_, i) => (
           <motion.div
@@ -761,7 +1263,7 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
         ))}
       </div>
 
-      {/* Pulsing Glow Effect */}
+      {/* ========== PULSING GLOW EFFECT ========== */}
       <motion.div
         className="absolute inset-0 rounded-2xl"
         style={{
@@ -780,7 +1282,7 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
         }}
       />
 
-      {/* Shimmer Lines Animation */}
+      {/* ========== SHIMMER LINES ANIMATION ========== */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.div
           className="absolute top-0 left-0 right-0 h-1"
@@ -835,9 +1337,9 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
         />
       </div>
 
-      {/* Light Background Overlay */}
+      {/* ========== LIGHT BACKGROUND OVERLAY ========== */}
       <motion.div
-        className={`absolute inset-0 rounded-2xl ${categoryColor.split(' ')[0]}`}
+        className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${categoryColor}`}
         style={{
           opacity: 0,
         }}
@@ -850,7 +1352,7 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
         }}
       />
 
-      {/* Particle Dots */}
+      {/* ========== PARTICLE DOTS ========== */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(15)].map((_, i) => (
           <motion.div
@@ -880,7 +1382,7 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
       </div>
 
       <div className="relative z-10">
-        {/* Header Section */}
+        {/* ========== HEADER SECTION ========== */}
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-start gap-4 flex-1">
             <motion.div
@@ -905,7 +1407,7 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
                   boxShadow: isHovered ? `0 0 20px ${primaryColor}30` : 'none'
                 }}
               >
-                <CategoryIcon
+                <OccupationIcon
                   size={24}
                   strokeWidth={2.5}
                   style={{
@@ -935,13 +1437,13 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
                   {recipient.id}
                 </motion.span>
                 <span className={`text-xs font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  • {recipient.category}
+                  • {recipient.occupation}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Action Menu */}
+          {/* ========== ACTION MENU ========== */}
           <div className="relative">
             <motion.button
               ref={buttonRef}
@@ -969,7 +1471,7 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
                   className={`absolute right-0 top-12 w-56 rounded-2xl overflow-visible z-[9999] ${isDark ? 'bg-gray-800' : 'bg-white'
                     }`}
                   style={{
-                    boxShadow: '0 25px 50px rgba(0, 0, 0, 0.4), 0 10px 20px rgba(0, 0, 0, 0.3)'
+                    boxShadow: `0 25px 50px rgba(0, 0, 0, 0.4), 0 10px 20px ${primaryColor}20`
                   }}
                 >
                   <div className="p-2 space-y-1 relative z-[9999]">
@@ -982,15 +1484,15 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
                       View Details
                     </button>
 
-                    {/* Approve Button - Only show for pending validation recipients */}
-                    {(recipient.status === 'Pending-Validation' || recipient.status === 'Validated') && (
+                    {/* Show Verify/Reject option only for "Under Review" recipients */}
+                    {recipient.status === 'Under Review' && (
                       <button
-                        onClick={() => handleMenuAction(() => onApprove(recipient))}
-                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-emerald-500/20 text-gray-300' : 'hover:bg-emerald-100 text-gray-700'
+                        onClick={() => handleMenuAction(() => onVerifyReject(recipient))}
+                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-violet-500/20 text-gray-300' : 'hover:bg-violet-100 text-gray-700'
                           }`}
                       >
                         <CheckCircle size={16} />
-                        Approve
+                        Verify/Reject
                       </button>
                     )}
 
@@ -1002,6 +1504,7 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
                       <Edit size={16} />
                       Edit
                     </button>
+
                     <button
                       onClick={() => handleMenuAction(() => onForward(recipient))}
                       className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-violet-500/20 text-gray-300' : 'hover:bg-violet-100 text-gray-700'
@@ -1010,7 +1513,9 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
                       <Send size={16} />
                       Forward
                     </button>
+
                     <div className={`my-2 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`} />
+
                     <button
                       onClick={() => handleMenuAction(() => onDelete(recipient))}
                       className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-rose-500/20 text-rose-400' : 'hover:bg-rose-100 text-rose-700'
@@ -1026,106 +1531,90 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
           </div>
         </div>
 
-        {/* Description */}
+        {/* ========== IDENTIFICATION INFO ========== */}
         <div className="mb-6">
-          <p className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} line-clamp-2`}>
-            {recipient.description}
-          </p>
+          <div className={`p-3 sm:p-4 rounded-2xl space-y-2 sm:space-y-3 mb-4 ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <IdCard size={14} className={`${occupationConfig.textColor} flex-shrink-0`} />
+              <span className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} truncate`}>
+                Aadhaar: {recipient.aadhaarNumber}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <CreditCard size={14} className={`${occupationConfig.textColor} flex-shrink-0`} />
+              <span className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} truncate`}>
+                PAN: {recipient.panNumber}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Icon size={14} className={`${occupationConfig.textColor} flex-shrink-0`} />
+              <span className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} truncate`}>
+                {recipient.occupation}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Status & Urgency Row */}
+        {/* ========== STATUS & OCCUPATION BADGES ========== */}
         <div className="flex items-center gap-3 flex-wrap mb-6">
-          <StatusBadge status={recipient.status} isDark={isDark} />
-          <UrgencyBadge urgency={recipient.urgency} isDark={isDark} />
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            animate={{
+              y: isHovered ? [0, -2, 0] : 0,
+            }}
+            transition={{
+              duration: isHovered ? 1 : 0.1,
+              repeat: isHovered ? Infinity : 0
+            }}
+            className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-full bg-gradient-to-r ${getStatusColor(recipient.status).gradient} text-white shadow-lg`}
+            style={{
+              boxShadow: isHovered ? '0 8px 25px rgba(0, 0, 0, 0.2)' : '0 4px 12px rgba(0, 0, 0, 0.15)'
+            }}
+          >
+            {getStatusColor(recipient.status).icon && React.createElement(getStatusColor(recipient.status).icon, { size: 14 })}
+            {recipient.status}
+          </motion.div>
+          <motion.div
+            animate={{
+              scale: isHovered ? [1, 1.05, 1] : 1,
+            }}
+            transition={{
+              duration: isHovered ? 1.5 : 0.1,
+              repeat: isHovered ? Infinity : 0,
+              repeatDelay: isHovered ? 0.5 : 0
+            }}
+            className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-medium ${occupationConfig.bgColor} ${occupationConfig.textColor} border ${occupationConfig.borderColor}/30`}
+          >
+            <Icon size={12} className="flex-shrink-0" />
+            <span className="truncate max-w-[80px] xs:max-w-[100px] sm:max-w-none">
+              {recipient.occupation}
+            </span>
+          </motion.div>
         </div>
 
-        {/* Contact Information */}
-        <div className={`p-3 sm:p-4 rounded-2xl space-y-2 sm:space-y-3 mb-6 ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+        {/* ========== CONTACT INFO ========== */}
+        <div className={`p-3 sm:p-4 rounded-2xl space-y-2 sm:space-y-3 mb-6`}>
           <div className="flex items-center gap-2 sm:gap-3">
-            <Mail size={14} className="text-blue-500 flex-shrink-0" />
+            <Mail size={14} className={`${occupationConfig.textColor} flex-shrink-0`} />
             <span className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} truncate`}>
               {recipient.email}
             </span>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <Phone size={14} className="text-emerald-500 flex-shrink-0" />
+            <Phone size={14} className={`${occupationConfig.textColor} flex-shrink-0`} />
             <span className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} truncate`}>
               {recipient.phone}
             </span>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <MapPin size={14} className="text-rose-500 flex-shrink-0" />
+            <MapPin size={14} className={`${occupationConfig.textColor} flex-shrink-0`} />
             <span className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} truncate`}>
               {recipient.address}
             </span>
           </div>
         </div>
 
-        {/* Financial Info & Progress */}
-        <div className="flex items-center justify-between gap-6 mb-6">
-          <div className="flex-1 space-y-3 min-w-0">
-            <motion.div
-              animate={{
-                x: isHovered ? [0, 2, 0] : 0,
-              }}
-              transition={{
-                duration: isHovered ? 1.2 : 0.1,
-                repeat: isHovered ? Infinity : 0,
-                repeatDelay: isHovered ? 0.8 : 0
-              }}
-              className="flex justify-between items-center"
-            >
-              <span className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Required
-              </span>
-              <span className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'} truncate ml-2`}>
-                ₨{(recipient.requiredAmount / 1000).toFixed(0)}K
-              </span>
-            </motion.div>
-            <motion.div
-              animate={{
-                x: isHovered ? [0, 3, 0] : 0,
-              }}
-              transition={{
-                duration: isHovered ? 1.4 : 0.1,
-                repeat: isHovered ? Infinity : 0,
-                repeatDelay: isHovered ? 1 : 0
-              }}
-              className="flex justify-between items-center"
-            >
-              <span className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Donated
-              </span>
-              <span className="text-lg font-bold text-emerald-500 truncate ml-2">
-                ₨{(recipient.donatedAmount / 1000).toFixed(0)}K
-              </span>
-            </motion.div>
-            <motion.div
-              animate={{
-                x: isHovered ? [0, 2, 0] : 0,
-              }}
-              transition={{
-                duration: isHovered ? 1.6 : 0.1,
-                repeat: isHovered ? Infinity : 0,
-                repeatDelay: isHovered ? 1.2 : 0
-              }}
-              className="flex justify-between items-center"
-            >
-              <span className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Balance
-              </span>
-              <span className="text-lg font-bold text-rose-500 truncate ml-2">
-                ₨{(recipient.balanceAmount / 1000).toFixed(0)}K
-              </span>
-            </motion.div>
-          </div>
-
-          <div className="flex-shrink-0">
-            <ProgressCircle percentage={recipient.completionRate} size={80} isDark={isDark} />
-          </div>
-        </div>
-
-        {/* Additional Info Row */}
+        {/* ========== AGE & DOB INFO ========== */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <motion.div
             animate={{
@@ -1142,7 +1631,7 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
               Age
             </p>
             <p className={`text-base font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {recipient.age}
+              {age}
             </p>
           </motion.div>
           <motion.div
@@ -1157,15 +1646,15 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
             className={`p-3 rounded-xl text-center ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}
           >
             <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              Family
+              DOB
             </p>
-            <p className={`text-base font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {recipient.familyMembers}
+            <p className={`text-xs font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {new Date(recipient.dateOfBirth).toLocaleDateString('en-IN')}
             </p>
           </motion.div>
         </div>
 
-        {/* Assigned Admin & Documents */}
+        {/* ========== ADMIN & DOCUMENTS INFO ========== */}
         <div className="flex items-center justify-between gap-3 flex-wrap mb-6">
           <div className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-medium ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'
             }`}>
@@ -1181,9 +1670,9 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
           </div>
         </div>
 
-        {/* Registration Date */}
+        {/* ========== FOOTER ========== */}
         <div className="flex items-center gap-2 text-xs font-medium pt-4 border-t border-gray-700/20">
-          <Calendar size={14} className={`flex-shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+          <Calendar size={14} className={`flex-shrink-0 ${occupationConfig.textColor}`} />
           <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>
             Registered: {formatDate(recipient.registrationDate)}
           </span>
@@ -1191,160 +1680,331 @@ const RecipientCard = ({ recipient, isDark, onView, onEdit, onDelete, onForward,
       </div>
     </motion.div>
   );
+});
+
+const getStatusColor = (status) => {
+  const statusMap = {
+    'incomplete': { gradient: 'from-slate-500 to-gray-600', icon: FileText },
+    'pending': { gradient: 'from-amber-500 to-orange-500', icon: Clock },
+    'submitted': { gradient: 'from-blue-500 to-cyan-500', icon: Send },
+    'under review': { gradient: 'from-purple-500 to-pink-500', icon: Activity },
+    'verified': { gradient: 'from-emerald-500 to-green-500', icon: CheckCircle },
+    'rejected': { gradient: 'from-rose-500 to-red-500', icon: XCircle },
+  };
+  return statusMap[status.toLowerCase()] || { gradient: 'from-gray-500 to-gray-600', icon: FileText };
 };
 
-// Helper function to format date
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('en-PK', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  });
-};
+// Verification Modal Component
+const VerificationModal = ({ isDark, recipient, onClose, onVerify, onReject }) => {
+  const [action, setAction] = useState(''); // 'verify' or 'reject'
+  const [reason, setReason] = useState('');
+  const [comment, setComment] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [shakeFields, setShakeFields] = useState([]);
 
-// Enhanced Stat Card Component - SIMILAR TO MY REQUESTS
-const EnhancedStatCard = ({
-  icon: Icon,
-  title,
-  value,
-  change,
-  changeType,
-  color,
-  delay,
-  isDark,
-  subtitle
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20, scale: 0.9 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    transition={{ delay, duration: 0.5, type: "spring", default: { duration: 0.2, ease: "easeOut" } }}
-    whileHover={{
-      y: -5,
-      scale: 1.02,
-      transition: { duration: 0.2, ease: "easeOut" }
-    }}
-    className={`rounded-2xl p-6 shadow-xl border relative overflow-hidden group cursor-pointer ${isDark
-      ? 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700'
-      : 'bg-gradient-to-br from-white to-gray-50 border-gray-200'
-      }`}
-    style={{
-      willChange: 'transform, opacity',
-      contain: 'layout style',
-      transform: 'translateZ(0)',
-    }}
-  >
-    {/* ROTATING GRADIENT ANIMATION */}
-    <motion.div
-      className={`absolute inset-0 bg-gradient-to-br ${color} opacity-0 group-hover:opacity-10 transition-opacity duration-700`}
-      animate={{
-        scale: [1, 1.2, 1],
-        rotate: [0, 90, 0],
-      }}
-      transition={{
-        duration: 8,
-        repeat: Infinity,
-        ease: "linear"
-      }}
-    />
+  const validateForm = () => {
+    const errors = {};
+    const shake = [];
 
-    {/* Floating Icon */}
+    if (!action) {
+      errors.action = 'Please select an action';
+      shake.push('action');
+    }
+
+    if (action === 'reject' && !reason.trim()) {
+      errors.reason = 'Please provide a reason for rejection';
+      shake.push('reason');
+    }
+
+    setFieldErrors(errors);
+    setShakeFields(shake);
+
+    setTimeout(() => {
+      setShakeFields([]);
+    }, 600);
+
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!validateForm()) {
+      return;
+    }
+
+    if (action === 'verify') {
+      onVerify(recipient.id, comment.trim());
+    } else if (action === 'reject') {
+      onReject(recipient.id, reason.trim());
+    }
+  };
+
+  const handleFieldChange = (field, value) => {
+    if (field === 'action') setAction(value);
+    if (field === 'reason') setReason(value);
+    if (field === 'comment') setComment(value);
+
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  return (
     <motion.div
-      className="absolute -top-4 -right-4 opacity-10"
-      animate={{
-        rotate: [0, 10, -10, 0],
-        scale: [1, 1.1, 1],
-      }}
-      transition={{
-        duration: 4,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      style={{ margin: 0, padding: 0 }}
     >
-      <Icon size={80} />
-    </motion.div>
-
-    <div className="relative z-10">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className={`text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-            {title}
-          </p>
-          <motion.h3
-            className={`text-3xl font-bold mb-2 bg-gradient-to-r bg-clip-text text-transparent ${color.includes('blue') ? 'from-blue-500 to-cyan-500' :
-              color.includes('emerald') ? 'from-emerald-500 to-teal-500' :
-                color.includes('violet') ? 'from-violet-500 to-purple-500' :
-                  color.includes('rose') ? 'from-rose-500 to-pink-500' :
-                    'from-amber-500 to-orange-500'
-              }`}
-            initial={{ scale: 0.5 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: delay + 0.2, type: "spring" }}
-          >
-            {typeof value === 'number' ?
-              (title.includes('Amount') || title.includes('Total') ? `₨${value.toLocaleString()}` : value.toLocaleString())
-              : value
-            }
-          </motion.h3>
-          {subtitle && (
-            <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              {subtitle}
-            </p>
-          )}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 30 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, pointerEvents: 'none' }}
+        transition={{ type: "spring", damping: 25 }}
+        className={`rounded-3xl w-full max-w-md mx-4 ${isDark
+          ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
+          : 'bg-gradient-to-br from-white via-white to-gray-50'
+          }`}
+        style={{
+          boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
+          maxHeight: 'calc(100vh - 2rem)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={`relative p-4 sm:p-6 ${action === 'verify'
+          ? 'bg-gradient-to-r from-emerald-600 to-green-600'
+          : action === 'reject'
+            ? 'bg-gradient-to-r from-rose-600 to-red-600'
+            : 'bg-gradient-to-r from-violet-600 to-fuchsia-600'
+          } rounded-t-3xl`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold text-white mb-1">
+                {action === 'verify' ? 'Verify Recipient' :
+                  action === 'reject' ? 'Reject Recipient' :
+                    'Review Recipient'}
+              </h2>
+              <p className="text-white/80 text-xs sm:text-sm font-medium">
+                {action === 'verify' ? 'Approve this recipient' :
+                  action === 'reject' ? 'Reject this recipient' :
+                    'Select an action for this recipient'}
+              </p>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={onClose}
+              className="p-1.5 sm:p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+            >
+              <X size={18} className="text-white" />
+            </motion.button>
+          </div>
         </div>
 
-        {/* Icon with animations */}
-        <motion.div
-          whileHover={{ rotate: [0, -10, 10, 0], scale: 1.1 }}
-          transition={{ duration: 0.5 }}
-          className="relative"
-        >
-          <motion.div
-            animate={{
-              rotate: [0, 5, -5, 0],
-              scale: [1, 1.05, 1]
-            }}
-            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-            className={`p-3 rounded-xl backdrop-blur-sm ${isDark ? 'bg-white/5' : 'bg-black/5'
-              }`}
-          >
-            <Icon
-              size={24}
-              strokeWidth={2.5}
-              className={
-                color.includes('blue') ? 'text-blue-500' :
-                  color.includes('emerald') ? 'text-emerald-500' :
-                    color.includes('violet') ? 'text-violet-500' :
-                      color.includes('rose') ? 'text-rose-500' :
-                        'text-amber-500'
-              }
-            />
-          </motion.div>
-        </motion.div>
-      </div>
+        <div className="flex-1 overflow-y-auto">
+          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
+            <div>
+              <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                Recipient Details
+              </label>
+              <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'
+                }`}>
+                <p className={`text-sm sm:text-base font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {recipient.name}
+                </p>
+                <p className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                  {recipient.id} • {recipient.occupation}
+                </p>
+              </div>
+            </div>
 
-      {change && (
-        <motion.div
-          className="flex items-center gap-1 mt-3"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: delay + 0.3 }}
-        >
-          {changeType === 'increase' ? (
-            <TrendingUp size={16} className="text-emerald-500" />
-          ) : (
-            <TrendingDown size={16} className="text-rose-500" />
-          )}
-          <span className={`text-sm font-semibold ${changeType === 'increase' ? 'text-emerald-500' : 'text-rose-500'}`}>
-            {change}%
-          </span>
-          <span className={`text-xs ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>vs last month</span>
-        </motion.div>
-      )}
-    </div>
-  </motion.div>
-);
+            <div>
+              <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                Select Action <span className="text-rose-500 font-normal normal-case">*</span>
+              </label>
+              <div className="overflow-visible">
+                <motion.div
+                  animate={shakeFields.includes('action') ? "shake" : "initial"}
+                  variants={shakeAnimation}
+                  className="overflow-visible"
+                >
+                  <div className="grid grid-cols-2 gap-3">
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleFieldChange('action', 'verify')}
+                      className={`p-4 rounded-2xl border-2 text-center transition-all ${action === 'verify'
+                        ? 'bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-500 text-emerald-700'
+                        : isDark
+                          ? 'bg-gray-700 border-gray-600 text-gray-300 hover:border-emerald-500'
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-emerald-500'
+                        }`}
+                    >
+                      <CheckCircle size={24} className="mx-auto mb-2" />
+                      <span className="text-sm font-semibold">Verify</span>
+                      <p className="text-xs mt-1 opacity-80">Approve recipient</p>
+                    </motion.button>
 
-// Forward Modal Component - FIXED BACKDROP
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleFieldChange('action', 'reject')}
+                      className={`p-4 rounded-2xl border-2 text-center transition-all ${action === 'reject'
+                        ? 'bg-gradient-to-r from-rose-50 to-red-50 border-rose-500 text-rose-700'
+                        : isDark
+                          ? 'bg-gray-700 border-gray-600 text-gray-300 hover:border-rose-500'
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-rose-500'
+                        }`}
+                    >
+                      <XCircle size={24} className="mx-auto mb-2" />
+                      <span className="text-sm font-semibold">Reject</span>
+                      <p className="text-xs mt-1 opacity-80">Reject recipient</p>
+                    </motion.button>
+                  </div>
+                </motion.div>
+              </div>
+              {fieldErrors.action && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2 text-rose-600 text-xs font-medium mt-1"
+                >
+                  <AlertCircle size={12} />
+                  {fieldErrors.action}
+                </motion.div>
+              )}
+            </div>
+
+            {action === 'reject' && (
+              <div>
+                <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                  Reason for Rejection <span className="text-rose-500 font-normal normal-case">*</span>
+                </label>
+                <div className="overflow-visible">
+                  <motion.div
+                    animate={shakeFields.includes('reason') ? "shake" : "initial"}
+                    variants={shakeAnimation}
+                    className="overflow-visible"
+                  >
+                    <textarea
+                      value={reason}
+                      onChange={(e) => handleFieldChange('reason', e.target.value)}
+                      rows="3"
+                      placeholder="Explain why you're rejecting this recipient..."
+                      className={`w-full p-3 sm:p-4 rounded-2xl border-2 focus:ring-4 focus:ring-rose-500/30 focus:border-rose-500 focus:outline-none resize-none transition-all text-sm font-medium ${isDark
+                        ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
+                        : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                        } ${fieldErrors.reason ? 'border-rose-500' : ''}`}
+                    />
+                  </motion.div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className={`text-xs font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Quick reasons:
+                  </span>
+                  {['Identity Verification Failed', 'Invalid Information', 'Address Verification Failed', 'Document Verification Failed', 'Incomplete Documentation', 'Bank Details Mismatch'].map((quickReason) => (
+                    <button
+                      key={quickReason}
+                      type="button"
+                      onClick={() => handleFieldChange('reason', quickReason)}
+                      className={`text-xs px-3 py-1.5 rounded-full transition-all ${isDark
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                    >
+                      {quickReason}
+                    </button>
+                  ))}
+                </div>
+                {fieldErrors.reason && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2 text-rose-600 text-xs font-medium mt-1"
+                  >
+                    <AlertCircle size={12} />
+                    {fieldErrors.reason}
+                  </motion.div>
+                )}
+              </div>
+            )}
+
+            {action === 'verify' && (
+              <div>
+                <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                  Verification Comments (Optional)
+                </label>
+                <textarea
+                  value={comment}
+                  onChange={(e) => handleFieldChange('comment', e.target.value)}
+                  rows="3"
+                  placeholder="Add any comments about the verification..."
+                  className={`w-full p-3 sm:p-4 rounded-2xl border-2 focus:ring-4 focus:ring-emerald-500/30 focus:border-emerald-500 focus:outline-none resize-none transition-all text-sm font-medium ${isDark
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
+                    : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                    }`}
+                />
+              </div>
+            )}
+
+            <div className="flex gap-2 sm:gap-3 pt-4 flex-nowrap">
+              <motion.button
+                type="button"
+                onClick={onClose}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`flex-1 min-w-[100px] px-3 py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${isDark
+                  ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
+                  : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                  }`}
+              >
+                Cancel
+              </motion.button>
+              <motion.button
+                type="submit"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`flex-1 min-w-[100px] px-3 py-3 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 shadow-xl ${action === 'verify'
+                  ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white'
+                  : action === 'reject'
+                    ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white'
+                    : 'bg-gradient-to-r from-gray-600 to-gray-700 text-white cursor-not-allowed'
+                  }`}
+                disabled={!action}
+              >
+                {action === 'verify' ? (
+                  <>
+                    <CheckCircle size={16} />
+                    Verify Recipient
+                  </>
+                ) : action === 'reject' ? (
+                  <>
+                    <XCircle size={16} />
+                    Reject Recipient
+                  </>
+                ) : (
+                  'Select Action'
+                )}
+              </motion.button>
+            </div>
+          </form>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// Forward Modal Component
 const ForwardModal = ({ isDark, recipient, onClose, onForward, currentAdmin = 'admin1' }) => {
   const [selectedAdmin, setSelectedAdmin] = useState('');
   const [reason, setReason] = useState('');
@@ -1364,27 +2024,12 @@ const ForwardModal = ({ isDark, recipient, onClose, onForward, currentAdmin = 'a
       shake.push('reason');
     }
 
-    // Address validation - CANNOT START WITH NUMBER, ALLOW LIMITED SPECIAL CHARS
-    const isValidAddress = (address) => {
-      // Check if address starts with a letter
-      if (/^\d/.test(address.trim())) {
-        return false;
-      }
-
-      // Check if address contains only allowed characters
-      const addressRegex = /^[A-Za-z][A-Za-z0-9\s\-_/,'."]*$/;
-      return addressRegex.test(address.trim());
-    };
-
     setFieldErrors(errors);
     setShakeFields(shake);
 
-    // Trigger shake animation for invalid fields
-    if (shake.length > 0) {
-      setTimeout(() => {
-        setShakeFields([]);
-      }, 600);
-    }
+    setTimeout(() => {
+      setShakeFields([]);
+    }, 600);
 
     return Object.keys(errors).length === 0;
   };
@@ -1400,7 +2045,6 @@ const ForwardModal = ({ isDark, recipient, onClose, onForward, currentAdmin = 'a
     if (field === 'selectedAdmin') setSelectedAdmin(value);
     if (field === 'reason') setReason(value);
 
-    // Clear error when user starts typing
     if (fieldErrors[field]) {
       setFieldErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -1411,14 +2055,13 @@ const ForwardModal = ({ isDark, recipient, onClose, onForward, currentAdmin = 'a
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       style={{ margin: 0, padding: 0 }}
-      onClick={onClose}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 30 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 30 }}
+        exit={{ opacity: 0, pointerEvents: 'none' }}
         transition={{ type: "spring", damping: 25 }}
         className={`rounded-3xl w-full max-w-md mx-4 ${isDark
           ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
@@ -1466,8 +2109,8 @@ const ForwardModal = ({ isDark, recipient, onClose, onForward, currentAdmin = 'a
                 <p className={`text-sm sm:text-base font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   {recipient.name}
                 </p>
-                <p className={`text-xs sm:text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {recipient.id} • {recipient.category}
+                <p className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                  {recipient.id} • {recipient.occupation}
                 </p>
               </div>
             </div>
@@ -1475,7 +2118,7 @@ const ForwardModal = ({ isDark, recipient, onClose, onForward, currentAdmin = 'a
             <div>
               <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
                 }`}>
-                Forward To Admin *
+                Forward To Admin <span className="text-rose-500 font-normal normal-case">*</span>
               </label>
               <div className="overflow-visible">
                 <motion.div
@@ -1486,7 +2129,6 @@ const ForwardModal = ({ isDark, recipient, onClose, onForward, currentAdmin = 'a
                   <select
                     value={selectedAdmin}
                     onChange={(e) => handleFieldChange('selectedAdmin', e.target.value)}
-                    required
                     className={`w-full p-3 sm:p-4 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
                       ? 'bg-gray-700 border-gray-600 text-white'
                       : 'bg-white border-gray-200 text-gray-900'
@@ -1519,7 +2161,7 @@ const ForwardModal = ({ isDark, recipient, onClose, onForward, currentAdmin = 'a
             <div>
               <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
                 }`}>
-                Reason for Forwarding *
+                Reason for Forwarding <span className="text-rose-500 font-normal normal-case">*</span>
               </label>
               <div className="overflow-visible">
                 <motion.div
@@ -1530,9 +2172,8 @@ const ForwardModal = ({ isDark, recipient, onClose, onForward, currentAdmin = 'a
                   <textarea
                     value={reason}
                     onChange={(e) => handleFieldChange('reason', e.target.value)}
-                    required
                     rows="3"
-                    placeholder="Explain why you're forwarding this recipient request..."
+                    placeholder="Explain why you're forwarding this recipient..."
                     className={`w-full p-3 sm:p-4 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none resize-none transition-all text-sm font-medium ${isDark
                       ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                       : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
@@ -1552,13 +2193,13 @@ const ForwardModal = ({ isDark, recipient, onClose, onForward, currentAdmin = 'a
               )}
             </div>
 
-            <div className="flex gap-2 sm:gap-3 pt-4 flex-col sm:flex-row">
+            <div className="flex gap-2 sm:gap-3 pt-4 flex-nowrap">
               <motion.button
                 type="button"
                 onClick={onClose}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className={`flex-1 px-4 sm:px-6 py-3 sm:py-4 rounded-2xl border-2 text-sm font-semibold transition-all ${isDark
+                className={`flex-1 min-w-[100px] px-3 py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${isDark
                   ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                   : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
                   }`}
@@ -1569,7 +2210,7 @@ const ForwardModal = ({ isDark, recipient, onClose, onForward, currentAdmin = 'a
                 type="submit"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="flex-1 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 shadow-xl"
+                className="flex-1 min-w-[100px] px-3 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 shadow-xl"
               >
                 <Send size={16} />
                 Forward
@@ -1582,11 +2223,79 @@ const ForwardModal = ({ isDark, recipient, onClose, onForward, currentAdmin = 'a
   );
 };
 
-// Document Upload Component - FIXED: No confirmation message when deleting individual documents
-const DocumentUpload = ({ documents, onDocumentsChange, isDark, fieldErrors, onFieldError, shakeFields }) => {
+const DocumentUpload = React.memo(({ documents, onDocumentsChange, isDark, fieldErrors, onFieldError, shakeFields }) => {
   const [dragActive, setDragActive] = useState(false);
 
-  const handleDrag = (e) => {
+  const formatFileSize = useCallback((bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }, []);
+
+  const getUniqueFileName = useCallback((fileName, existingNames) => {
+    let newFileName = fileName;
+    let counter = 1;
+
+    // Check if file exists in the current list
+    const nameExists = (name) => {
+      return existingNames.some(existing =>
+        existing.toLowerCase() === name.toLowerCase()
+      );
+    };
+
+    // If name already exists, add suffix
+    while (nameExists(newFileName)) {
+      const dotIndex = fileName.lastIndexOf('.');
+      const nameWithoutExt = dotIndex === -1 ? fileName : fileName.substring(0, dotIndex);
+      const ext = dotIndex === -1 ? '' : fileName.substring(dotIndex);
+      newFileName = `${nameWithoutExt} (${counter})${ext}`;
+      counter++;
+    }
+
+    return newFileName;
+  }, []);
+
+  const handleFileChange = useCallback((e) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      const newFiles = [];
+      const existingNames = documents.map(doc => doc.name.toLowerCase());
+
+      files.forEach(file => {
+        let fileName = file.name;
+        let counter = 1;
+
+        // Check for duplicate names and add suffix if needed
+        while (existingNames.includes(fileName.toLowerCase())) {
+          const dotIndex = file.name.lastIndexOf('.');
+          const nameWithoutExt = dotIndex === -1 ? file.name : file.name.substring(0, dotIndex);
+          const ext = dotIndex === -1 ? '' : file.name.substring(dotIndex);
+          fileName = `${nameWithoutExt} (${counter})${ext}`;
+          counter++;
+        }
+
+        newFiles.push({
+          id: Date.now() + Math.random(),
+          name: fileName,
+          size: formatFileSize(file.size),
+          type: file.type
+        });
+        existingNames.push(fileName.toLowerCase());
+      });
+
+      onDocumentsChange([...documents, ...newFiles]);
+      if (onFieldError && newFiles.length > 0) {
+        onFieldError('documents', '');
+      }
+
+      // Reset the file input value to allow re-selection of the same file
+      e.target.value = '';
+    }
+  }, [documents, formatFileSize, onDocumentsChange, onFieldError]);
+
+  const handleDrag = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") {
@@ -1594,60 +2303,42 @@ const DocumentUpload = ({ documents, onDocumentsChange, isDark, fieldErrors, onF
     } else if (e.type === "dragleave") {
       setDragActive(false);
     }
-  };
+  }, []);
 
-  const handleDrop = (e) => {
+  const handleDrop = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const newFiles = Array.from(e.dataTransfer.files).map(file => ({
-        name: file.name,
-        size: formatFileSize(file.size),
-        type: file.type
-      }));
+      const files = Array.from(e.dataTransfer.files);
+      const existingNames = documents.map(doc => doc.name.toLowerCase());
+      const newFiles = files.map(file => {
+        const uniqueName = getUniqueFileName(file.name, existingNames);
+        existingNames.push(uniqueName.toLowerCase());
+
+        return {
+          id: Date.now() + Math.random(),
+          name: uniqueName,
+          size: formatFileSize(file.size),
+          type: file.type
+        };
+      });
+
       onDocumentsChange([...documents, ...newFiles]);
-      // Clear document error when files are added
       if (onFieldError && newFiles.length > 0) {
         onFieldError('documents', '');
       }
     }
-  };
+  }, [documents, onDocumentsChange, onFieldError, formatFileSize, getUniqueFileName]);
 
-  const handleFileChange = (e) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files).map(file => ({
-        name: file.name,
-        size: formatFileSize(file.size),
-        type: file.type
-      }));
-      onDocumentsChange([...documents, ...newFiles]);
-      // Clear document error when files are added
-      if (onFieldError && newFiles.length > 0) {
-        onFieldError('documents', '');
-      }
-    }
-  };
-
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const removeDocument = (index) => {
-    // FIXED: No confirmation message when deleting individual documents
-    // Directly remove the document without any confirmation
-    const newDocuments = documents.filter((_, i) => i !== index);
+  const removeDocument = useCallback((id) => {
+    const newDocuments = documents.filter(doc => doc.id !== id);
     onDocumentsChange(newDocuments);
-    // Set error if no documents left
     if (onFieldError && newDocuments.length === 0) {
       onFieldError('documents', 'Please upload at least one document');
     }
-  };
+  }, [documents, onDocumentsChange, onFieldError]);
 
   return (
     <div className="space-y-4">
@@ -1728,12 +2419,12 @@ const DocumentUpload = ({ documents, onDocumentsChange, isDark, fieldErrors, onF
             Uploaded Documents ({documents.length})
           </h4>
           <div className="space-y-2">
-            {documents.map((doc, index) => (
+            {documents.map((doc) => (
               <motion.div
-                key={index}
+                key={doc.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
+                transition={{ delay: 0.05 }}
                 whileHover={{ x: 5 }}
                 className={`flex items-center justify-between p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700' : 'bg-gray-100'
                   }`}
@@ -1753,7 +2444,7 @@ const DocumentUpload = ({ documents, onDocumentsChange, isDark, fieldErrors, onF
                   </div>
                 </div>
                 <motion.button
-                  onClick={() => removeDocument(index)}
+                  onClick={() => removeDocument(doc.id)}
                   whileHover={{ scale: 1.1, rotate: 90 }}
                   whileTap={{ scale: 0.9 }}
                   className={`p-1.5 sm:p-2 rounded-xl flex-shrink-0 ${isDark
@@ -1770,9 +2461,8 @@ const DocumentUpload = ({ documents, onDocumentsChange, isDark, fieldErrors, onF
       )}
     </div>
   );
-};
+});
 
-// Recipient Detail Modal Component - FIXED: Document deletion confirmation issue
 const RecipientDetailModal = ({ recipient, isDark, onClose, onStatusChange, onVerificationChange, availableAdmins }) => {
   const getAdminName = (adminId) => {
     const admin = availableAdmins.find(a => a.id === adminId);
@@ -1780,22 +2470,40 @@ const RecipientDetailModal = ({ recipient, isDark, onClose, onStatusChange, onVe
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString();
+    return new Date(dateString).toLocaleString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
+
+  const calculateAge = (dateOfBirth) => {
+    const dob = new Date(dateOfBirth);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const age = calculateAge(recipient.dateOfBirth);
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4"
+      className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
       style={{ margin: 0, padding: 0 }}
-      onClick={onClose}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 30 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 30 }}
+        exit={{ opacity: 0, pointerEvents: 'none' }}
         transition={{ type: "spring", damping: 25 }}
         className={`rounded-3xl w-full max-w-5xl mx-2 sm:mx-4 ${isDark
           ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
@@ -1810,7 +2518,7 @@ const RecipientDetailModal = ({ recipient, isDark, onClose, onStatusChange, onVe
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative p-4 sm:p-6 md:p-8 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 rounded-t-3xl">
+        <div className="relative p-4 sm:p-6 md:p-8 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-t-3xl">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-1 sm:mb-2 truncate">
@@ -1860,18 +2568,117 @@ const RecipientDetailModal = ({ recipient, isDark, onClose, onStatusChange, onVe
                   </div>
                   <div>
                     <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Aadhaar Number
+                    </label>
+                    <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{recipient.aadhaarNumber}</p>
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      PAN Number
+                    </label>
+                    <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{recipient.panNumber}</p>
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Date of Birth & Age
+                    </label>
+                    <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {new Date(recipient.dateOfBirth).toLocaleDateString('en-IN')} ({age} years)
+                    </p>
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                       Address
                     </label>
                     <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{recipient.address}</p>
                   </div>
                   <div>
                     <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Age & Family
+                      Occupation
+                    </label>
+                    <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{recipient.occupation}</p>
+                  </div>
+                  {recipient.familyDetails && (
+                    <div>
+                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Family Details
+                      </label>
+                      <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{recipient.familyDetails}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className={`p-4 sm:p-6 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+                <h3 className={`text-base sm:text-lg font-bold mb-4 sm:mb-6 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  <CreditCard size={18} className="text-blue-500" />
+                  Bank Information
+                </h3>
+                <div className="space-y-3 sm:space-y-4">
+                  <div>
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Bank Name
                     </label>
                     <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {recipient.age} years, {recipient.familyMembers} family members
+                      {recipient.bankName}
                     </p>
                   </div>
+
+                  <div>
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Account Number
+                    </label>
+                    <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {recipient.accountNumber}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      IFSC Code
+                    </label>
+                    <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {recipient.ifscCode}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Account Holder Name
+                    </label>
+                    <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {recipient.accountHolderName}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Branch Name
+                    </label>
+                    <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {recipient.branchName}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Account Type
+                    </label>
+                    <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {recipient.accountType}
+                    </p>
+                  </div>
+
+                  {recipient.upiId && (
+                    <div>
+                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        UPI ID
+                      </label>
+                      <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        {recipient.upiId}
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                       Assigned To
@@ -1884,53 +2691,106 @@ const RecipientDetailModal = ({ recipient, isDark, onClose, onStatusChange, onVe
                   </div>
                 </div>
               </div>
+            </div>
 
-              <div className={`p-4 sm:p-6 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
-                <h3 className={`text-base sm:text-lg font-bold mb-4 sm:mb-6 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  <DollarSign size={18} className="text-emerald-500" />
-                  Financial Information
-                </h3>
-                <div className="space-y-3 sm:space-y-5">
-                  <div>
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Category & Description
-                    </label>
-                    <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {recipient.category}
-                    </p>
-                    <p className={`text-xs font-medium mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {recipient.description}
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                    <div>
-                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Required Amount
-                      </label>
-                      <p className={`text-lg sm:text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                        ₨{recipient.requiredAmount.toLocaleString()}
-                      </p>
+            <div className={`p-4 sm:p-6 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+              <h3 className={`text-base sm:text-lg font-bold mb-4 sm:mb-6 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <Activity size={18} className="text-violet-500" />
+                Profile Completion Status
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <div className="flex flex-col items-center">
+                  <ProfileProgressCircle
+                    percentage={recipient.completionPercentage || calculateProfileCompletion(recipient)}
+                    size={120}
+                    isDark={isDark}
+                  />
+                  <p className={`text-xs font-medium mt-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Profile Completeness
+                  </p>
+
+                  {/* Status Overview - Simple Line Format */}
+                  <div className="mt-4 w-full max-w-xs">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Status
+                      </span>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${recipient.status === 'Unknown'
+                        ? 'bg-gray-500/20 text-gray-600'
+                        : recipient.status === 'Incomplete'
+                          ? 'bg-amber-500/20 text-amber-600'
+                          : recipient.status === 'Pending'
+                            ? 'bg-amber-500/20 text-amber-600'
+                            : recipient.status === 'Submitted'
+                              ? 'bg-blue-500/20 text-blue-600'
+                              : recipient.status === 'Under Review'
+                                ? 'bg-purple-500/20 text-purple-600'
+                                : recipient.status === 'Verified'
+                                  ? 'bg-emerald-500/20 text-emerald-600'
+                                  : recipient.status === 'Rejected'
+                                    ? 'bg-rose-500/20 text-rose-600'
+                                    : recipient.status === 'Approved'
+                                      ? 'bg-green-500/20 text-green-600'
+                                      : 'bg-gray-500/20 text-gray-600'
+                        }`}>
+                        {recipient.status}
+                      </span>
                     </div>
-                    <div>
-                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Donated Amount
-                      </label>
-                      <p className="text-lg sm:text-xl font-bold text-emerald-500">
-                        ₨{recipient.donatedAmount.toLocaleString()}
-                      </p>
+                    <div className="mt-2 text-xs text-gray-500">
+                      {recipient.status === 'Unknown'}
+                      {recipient.status === 'Incomplete'}
+                      {recipient.status === 'Pending'}
+                      {recipient.status === 'Submitted'}
+                      {recipient.status === 'Under Review'}
+                      {recipient.status === 'Verified'}
+                      {recipient.status === 'Rejected'}
+                      {recipient.status === 'Approved'}
                     </div>
                   </div>
-                  <div>
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Balance Amount
-                    </label>
-                    <p className="text-lg sm:text-xl font-bold text-rose-500">
-                      ₨{recipient.balanceAmount.toLocaleString()}
-                    </p>
+                </div>
+
+                <div>
+                  <h4 className={`text-xs font-semibold uppercase tracking-wide mb-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Completion Checklist
+                  </h4>
+                  <div className="space-y-3">
+                    {[
+                      { label: 'Personal Information', completed: getCompletionChecklist(recipient).personalInfo },
+                      { label: 'Bank Details', completed: getCompletionChecklist(recipient).bankDetails },
+                      { label: 'Required Documents', completed: getCompletionChecklist(recipient).requiredDocuments }
+                    ].map((item, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <div className={`w-4 h-4 rounded-full flex items-center justify-center ${item.completed
+                          ? 'bg-emerald-500'
+                          : isDark
+                            ? 'bg-gray-600'
+                            : 'bg-gray-300'
+                          }`}>
+                          {item.completed && (
+                            <CheckCircle size={12} className="text-white" />
+                          )}
+                        </div>
+                        <span className={`text-sm ${item.completed
+                          ? isDark ? 'text-emerald-400' : 'text-emerald-600'
+                          : isDark ? 'text-gray-400' : 'text-gray-600'
+                          }`}>
+                          {item.label}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex justify-center pt-3 sm:pt-4">
-                    <ProgressCircle percentage={recipient.completionRate} size={100} isDark={isDark} />
-                  </div>
+
+                  {recipient.submittedAt && (
+                    <div className={`mt-4 p-3 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+                      <div className="flex items-center gap-2">
+                        <Calendar size={14} className={isDark ? 'text-gray-400' : 'text-gray-500'} />
+                        <span className={`text-xs font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Submitted on: {new Date(recipient.submittedAt).toLocaleDateString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -2006,15 +2866,20 @@ const RecipientDetailModal = ({ recipient, isDark, onClose, onStatusChange, onVe
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
+
                         onClick={(e) => {
-                          e.stopPropagation(); // FIXED: Prevent event propagation
-                          // Real PDF download functionality
+                          e.stopPropagation();
+
                           const link = document.createElement('a');
                           link.href = `/api/documents/${doc.name}`;
                           link.download = doc.name;
                           document.body.appendChild(link);
                           link.click();
                           document.body.removeChild(link);
+
+                          if (onStatusChange && recipient.status === 'Submitted') {
+                            onStatusChange(recipient.id, 'Under Review');
+                          }
                         }}
                         className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-semibold ${isDark
                           ? 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
@@ -2038,32 +2903,145 @@ const RecipientDetailModal = ({ recipient, isDark, onClose, onStatusChange, onVe
   );
 };
 
-// Add/Edit Recipient Modal Component - COMPLETELY FIXED SHAKE ANIMATION
 const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdateRecipient }) => {
   const isEditing = !!recipient;
-
-  // Add these state variables
-  const [phoneCode, setPhoneCode] = useState('+92'); // Default to Pakistan
-  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Country codes with flags and phone formats
-  const countryCodes = [
-    { code: "+1", country: "United States", flag: "🇺🇸", format: "xxx-xxx-xxxx", length: 10 },
-    { code: "+44", country: "United Kingdom", flag: "🇬🇧", format: "xxxx-xxx-xxx", length: 10 },
-    { code: "+92", country: "Pakistan", flag: "🇵🇰", format: "xxx-xxx-xxxx", length: 10 },
-    { code: "+91", country: "India", flag: "🇮🇳", format: "xxxx-xxx-xxx", length: 10 },
-    { code: "+971", country: "UAE", flag: "🇦🇪", format: "xx-xxx-xxxx", length: 9 },
-    { code: "+966", country: "Saudi Arabia", flag: "🇸🇦", format: "x-xxx-xxxx", length: 9 },
-    { code: "+61", country: "Australia", flag: "🇦🇺", format: "x-xxxx-xxxx", length: 9 },
-    { code: "+49", country: "Germany", flag: "🇩🇪", format: "xxxx-xxx-xxx", length: 10 },
-    { code: "+33", country: "France", flag: "🇫🇷", format: "x-xx-xx-xx-xx", length: 9 },
-    { code: "+81", country: "Japan", flag: "🇯🇵", format: "xx-xxxx-xxxx", length: 10 },
-    { code: "+86", country: "China", flag: "🇨🇳", format: "xxx-xxxx-xxxx", length: 11 },
-    { code: "+65", country: "Singapore", flag: "🇸🇬", format: "xxxx-xxxx", length: 8 }
-  ];
+  // Function to get initial status for editing
+  const getInitialStatusForEdit = (existingRecipient) => {
+    // If it's already in a final state, keep it
+    const finalStatuses = ['Submitted', 'Verified', 'Rejected', 'Under Review', 'Approved'];
+    if (existingRecipient.status && finalStatuses.includes(existingRecipient.status)) {
+      return existingRecipient.status;
+    }
 
-  const selectedCountry = countryCodes.find(country => country.code === phoneCode);
+    // Otherwise calculate based on data
+    return determineStatus(existingRecipient);
+  };
+
+  // Initial form data
+  const initialFormData = isEditing ? {
+    ...recipient,
+    status: getInitialStatusForEdit(recipient)
+  } : {
+    name: '',
+    email: '',
+    phone: '',
+    aadhaarNumber: '',
+    panNumber: '',
+    dateOfBirth: '',
+    address: '',
+    occupation: '',
+    familyDetails: '',
+    bankName: '',
+    accountNumber: '',
+    ifscCode: '',
+    accountHolderName: '',
+    branchName: '',
+    upiId: '',
+    accountType: '',
+    status: 'Unknown',
+    verificationStatus: 'Not Started',
+    documents: []
+  };
+
+  const [formData, setFormData] = useState(initialFormData);
+  const [originalData] = useState(initialFormData);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [shakeFields, setShakeFields] = useState([]);
+  const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [completionChecklist, setCompletionChecklist] = useState({
+    personalInfo: false,
+    bankDetails: false,
+    requiredDocuments: false
+  });
+
+  // Function to check if status should be updated (for editing)
+  const shouldUpdateStatus = (currentStatus) => {
+    const finalStatuses = ['Submitted', 'Verified', 'Rejected', 'Under Review', 'Approved'];
+    return !finalStatuses.includes(currentStatus);
+  };
+
+  // Calculate completion percentage and update status
+  useEffect(() => {
+    const percentage = calculateProfileCompletion(formData);
+    const checklist = getCompletionChecklist(formData);
+
+    // For editing: only update status if it's not in a final state
+    if (isEditing && !shouldUpdateStatus(formData.status)) {
+      // Keep current status
+    } else {
+      // Determine new status based on current form data
+      const newStatus = determineStatus(formData);
+
+      // Update form data with new status (if changed)
+      if (formData.status !== newStatus) {
+        setFormData(prev => ({
+          ...prev,
+          status: newStatus
+        }));
+      }
+    }
+
+    setCompletionPercentage(percentage);
+    setCompletionChecklist(checklist);
+  }, [formData, isEditing]);
+
+  // Function to determine status based on form data
+  const determineStatus = (formData) => {
+    // Check if any field is filled
+    const hasAnyFieldFilled = () => {
+      const fieldsToCheck = [
+        'name', 'email', 'phone', 'aadhaarNumber', 'panNumber',
+        'dateOfBirth', 'address', 'occupation', 'familyDetails',
+        'bankName', 'accountNumber', 'ifscCode', 'accountHolderName',
+        'branchName', 'upiId', 'accountType'
+      ];
+
+      // Check if any field has content
+      const hasFieldContent = fieldsToCheck.some(field => {
+        const value = formData[field];
+        return value && value.toString().trim() !== '';
+      });
+
+      // Check if there are documents
+      const hasDocuments = formData.documents && formData.documents.length > 0;
+
+      return hasFieldContent || hasDocuments;
+    };
+
+    // Check if all required fields are filled
+    const areAllRequiredFieldsFilled = () => {
+      const requiredFields = [
+        'name', 'email', 'phone', 'aadhaarNumber', 'panNumber',
+        'dateOfBirth', 'address', 'occupation', 'bankName',
+        'accountNumber', 'ifscCode', 'accountHolderName',
+        'branchName', 'accountType'
+      ];
+
+      // Check all required fields
+      const allRequiredFilled = requiredFields.every(field => {
+        const value = formData[field];
+        return value && value.toString().trim() !== '';
+      });
+
+      // Check if there's at least one document
+      const hasAtLeastOneDocument = formData.documents && formData.documents.length > 0;
+
+      return allRequiredFilled && hasAtLeastOneDocument;
+    };
+
+    // Determine status
+    if (!hasAnyFieldFilled()) {
+      return 'Unknown';
+    } else if (areAllRequiredFieldsFilled()) {
+      return 'Pending';
+    } else {
+      return 'Incomplete';
+    }
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -2079,126 +3057,66 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
     };
   }, []);
 
-  // Phone number formatting function
   const formatPhoneNumber = (digits, countryCode) => {
     if (!digits) return '';
 
-    const country = countryCodes.find(c => c.code === countryCode);
-    const maxLength = country?.length || 10;
+    const digitsOnly = digits.replace(/\D/g, '');
 
-    let formatted = digits.slice(0, maxLength);
+    if (countryCode === '+91') {
+      const limitedDigits = digitsOnly.slice(0, 10);
 
-    // Apply formatting based on country
-    switch (countryCode) {
-      case '+1': // US: xxx-xxx-xxxx
-        if (formatted.length > 6) {
-          formatted = `${formatted.slice(0, 3)}-${formatted.slice(3, 6)}-${formatted.slice(6)}`;
-        } else if (formatted.length > 3) {
-          formatted = `${formatted.slice(0, 3)}-${formatted.slice(3)}`;
-        }
-        break;
-
-      case '+92': // Pakistan: xxx-xxx-xxxx
-        if (formatted.length > 6) {
-          formatted = `${formatted.slice(0, 3)}-${formatted.slice(3, 6)}-${formatted.slice(6)}`;
-        } else if (formatted.length > 3) {
-          formatted = `${formatted.slice(0, 3)}-${formatted.slice(3)}`;
-        }
-        break;
-
-      case '+44': // UK: xxxx-xxx-xxx
-        if (formatted.length > 7) {
-          formatted = `${formatted.slice(0, 4)}-${formatted.slice(4, 7)}-${formatted.slice(7)}`;
-        } else if (formatted.length > 4) {
-          formatted = `${formatted.slice(0, 4)}-${formatted.slice(4)}`;
-        }
-        break;
-
-      case '+971': // UAE: xx-xxx-xxxx
-        if (formatted.length > 5) {
-          formatted = `${formatted.slice(0, 2)}-${formatted.slice(2, 5)}-${formatted.slice(5)}`;
-        } else if (formatted.length > 2) {
-          formatted = `${formatted.slice(0, 2)}-${formatted.slice(2)}`;
-        }
-        break;
-
-      case '+966': // KSA: x-xxx-xxxx
-        if (formatted.length > 4) {
-          formatted = `${formatted.slice(0, 1)}-${formatted.slice(1, 4)}-${formatted.slice(4)}`;
-        } else if (formatted.length > 1) {
-          formatted = `${formatted.slice(0, 1)}-${formatted.slice(1)}`;
-        }
-        break;
-
-      default:
-        // Default formatting: xxx-xxx-xxxx
-        if (formatted.length > 6) {
-          formatted = `${formatted.slice(0, 3)}-${formatted.slice(3, 6)}-${formatted.slice(6)}`;
-        } else if (formatted.length > 3) {
-          formatted = `${formatted.slice(0, 3)}-${formatted.slice(3)}`;
-        }
+      if (limitedDigits.length <= 3) {
+        return limitedDigits;
+      } else if (limitedDigits.length <= 5) {
+        return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3)}`;
+      } else if (limitedDigits.length <= 6) {
+        return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3)}`;
+      } else if (limitedDigits.length <= 7) {
+        return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3)}`;
+      } else if (limitedDigits.length <= 8) {
+        return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3, 7)}-${limitedDigits.slice(7)}`;
+      } else if (limitedDigits.length <= 9) {
+        return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3, 7)}-${limitedDigits.slice(7)}`;
+      } else {
+        return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3, 6)}-${limitedDigits.slice(6, 10)}`;
+      }
     }
 
-    return formatted;
+    return digitsOnly;
   };
-
-  const initialFormData = isEditing ? recipient : {
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    category: '',
-    requiredAmount: 0,
-    donatedAmount: 0,
-    status: 'Draft',
-    verificationStatus: 'Not Started',
-    description: '',
-    urgency: '',
-    age: 0,
-    familyMembers: 0,
-    documents: []
-  };
-
-  const [formData, setFormData] = useState(initialFormData);
-  const [originalData] = useState(initialFormData);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [pendingAction, setPendingAction] = useState(null);
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [shakeFields, setShakeFields] = useState([]);
 
   // Create refs for all form fields for auto-scrolling
   const fieldRefs = {
     name: useRef(null),
     email: useRef(null),
     phone: useRef(null),
+    aadhaarNumber: useRef(null),
+    panNumber: useRef(null),
+    dateOfBirth: useRef(null),
     address: useRef(null),
-    category: useRef(null),
-    requiredAmount: useRef(null),
-    donatedAmount: useRef(null),
-    urgency: useRef(null),
-    age: useRef(null),
-    familyMembers: useRef(null),
-    description: useRef(null),
+    occupation: useRef(null),
+    familyDetails: useRef(null),
+    bankName: useRef(null),
+    accountNumber: useRef(null),
+    ifscCode: useRef(null),
+    accountHolderName: useRef(null),
+    branchName: useRef(null),
+    upiId: useRef(null),
+    accountType: useRef(null),
     documents: useRef(null)
   };
 
   const modalRef = useRef(null);
 
-  // Check if form data has changed
-  const hasFormDataChanged = () => {
-    return JSON.stringify(formData) !== JSON.stringify(originalData);
-  };
-
-  // Auto-scroll to first invalid field - FIXED VERSION
   const scrollToFirstInvalidField = (invalidFields) => {
     if (invalidFields.length > 0) {
-      // Define the order of fields as they appear in the form
       const fieldOrder = [
-        'name', 'email', 'phone', 'address', 'category', 'description',
-        'requiredAmount', 'donatedAmount', 'urgency', 'age', 'familyMembers', 'documents'
+        'name', 'email', 'phone', 'aadhaarNumber', 'panNumber', 'dateOfBirth',
+        'address', 'occupation', 'familyDetails', 'bankName', 'accountNumber',
+        'ifscCode', 'accountHolderName', 'branchName', 'upiId', 'accountType',
+        'documents'
       ];
 
-      // Find the first invalid field based on the form order
       const firstInvalidField = fieldOrder.find(field =>
         invalidFields.includes(field)
       );
@@ -2207,7 +3125,6 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
         const fieldRef = fieldRefs[firstInvalidField];
 
         if (fieldRef && fieldRef.current) {
-          // Use setTimeout to ensure the DOM has updated
           setTimeout(() => {
             fieldRef.current.scrollIntoView({
               behavior: 'smooth',
@@ -2215,11 +3132,9 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
               inline: 'nearest'
             });
 
-            // Focus the field for better UX
             const input = fieldRef.current.querySelector('input, select, textarea');
             if (input) {
               input.focus();
-              // Ensure the cursor blinks by selecting the content
               if (input.type !== 'file') {
                 input.select();
               }
@@ -2230,42 +3145,48 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
     }
   };
 
-  // Validation function - FIXED SHAKING FOR AGE AND FAMILY MEMBERS
   const validateForm = () => {
     const errors = {};
     const invalidFields = [];
 
-    // Clear previous shake animations
     setShakeFields([]);
 
-    // Helper function to check if string contains only alphabets and spaces
     const isValidName = (name) => {
       return /^[A-Za-z\s]+$/.test(name.trim());
     };
 
-    // Strong email validation
     const isValidEmail = (email) => {
       const emailRegex = /^[a-zA-Z0-9]([a-zA-Z0-9]*[._-]?[a-zA-Z0-9]+)*@[a-zA-Z0-9]([a-zA-Z0-9]*[-]?[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$/;
       return emailRegex.test(email.trim());
     };
 
-    // Phone validation (basic structure for country codes and dashes)
     const isValidPhone = (phone) => {
-      // Allows: +92-300-1234567, +1-800-123-4567, 0300-1234567
-      const phoneRegex = /^(\+\d{1,4}-)?\d{3,4}-\d{6,8}$/;
-      return phoneRegex.test(phone.trim());
+      const phoneWithoutCode = phone.replace('+91-', '');
+      const validChars = /^[\d\-]+$/.test(phoneWithoutCode);
+      if (!validChars) return false;
+      const digitCount = (phoneWithoutCode.match(/\d/g) || []).length;
+      return digitCount === 10;
     };
 
-    // Address validation
     const isValidAddress = (address) => {
-      // Allows: alphabets, numbers (not at start), spaces, - / , . ' "
       const addressRegex = /^[A-Za-z][A-Za-z\s.,'"/-]*([A-Za-z]|\d)*$/;
       return addressRegex.test(address.trim());
     };
 
-    // VALIDATION LOGIC:
+    const isValidAadhaar = (aadhaar) => {
+      const digits = aadhaar.replace(/\D/g, '');
+      return digits.length === 12;
+    };
 
-    // 1. Name - Only alphabets and spaces
+    const isValidPAN = (pan) => {
+      return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan);
+    };
+
+    const isValidIFSC = (ifsc) => {
+      return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc);
+    };
+
+    // VALIDATION LOGIC:
     if (!formData.name.trim()) {
       errors.name = 'Name is required';
       invalidFields.push('name');
@@ -2274,183 +3195,104 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
       invalidFields.push('name');
     }
 
-    // 2. Email - Strict validation with @gmail.com requirement
     if (!formData.email.trim()) {
       errors.email = 'Email is required';
       invalidFields.push('email');
-    } else {
-      // Enhanced email validation regex
-      const emailRegex = /^[a-zA-Z0-9]([a-zA-Z0-9]*[._-]?[a-zA-Z0-9]+)*@gmail\.com$/;
-
-      if (!emailRegex.test(formData.email.trim())) {
-        errors.email = 'Please enter a valid Gmail address (e.g., example123@gmail.com)';
-        invalidFields.push('email');
-      } else {
-        // Additional validation rules
-        const localPart = formData.email.split('@')[0];
-
-        // Local part cannot start or end with special characters
-        if (localPart.startsWith('.') || localPart.startsWith('_') || localPart.startsWith('-') ||
-          localPart.endsWith('.') || localPart.endsWith('_') || localPart.endsWith('-')) {
-          errors.email = 'Email cannot start or end with . _ -';
-          invalidFields.push('email');
-        }
-
-        // No consecutive special characters
-        if (/[._-]{2,}/.test(localPart)) {
-          errors.email = 'Email cannot have consecutive special characters (., _, -)';
-          invalidFields.push('email');
-        }
-
-        // Length validation
-        if (localPart.length < 3) {
-          errors.email = 'Email username must be at least 3 characters long';
-          invalidFields.push('email');
-        }
-
-        if (localPart.length > 30) {
-          errors.email = 'Email username cannot exceed 30 characters';
-          invalidFields.push('email');
-        }
-      }
+    } else if (!isValidEmail(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+      invalidFields.push('email');
     }
 
-    // 3. Phone - Enhanced validation with country codes
     if (!formData.phone.trim()) {
       errors.phone = 'Phone number is required';
       invalidFields.push('phone');
+    } else if (!isValidPhone(formData.phone)) {
+      errors.phone = 'Please enter a valid phone number';
+      invalidFields.push('phone');
+    }
+
+    if (!formData.aadhaarNumber.trim()) {
+      errors.aadhaarNumber = 'Aadhaar Number is required';
+      invalidFields.push('aadhaarNumber');
+    } else if (!isValidAadhaar(formData.aadhaarNumber)) {
+      errors.aadhaarNumber = 'Aadhaar Number must be 12 digits';
+      invalidFields.push('aadhaarNumber');
+    }
+
+    if (!formData.panNumber.trim()) {
+      errors.panNumber = 'PAN Number is required';
+      invalidFields.push('panNumber');
+    } else if (!isValidPAN(formData.panNumber)) {
+      errors.panNumber = 'Invalid PAN Number format (e.g., ABCDE1234F)';
+      invalidFields.push('panNumber');
+    }
+
+    if (!formData.dateOfBirth) {
+      errors.dateOfBirth = 'Date of Birth is required';
+      invalidFields.push('dateOfBirth');
     } else {
-      const fullPhoneNumber = phoneCode + formData.phone.replace(/\D/g, '');
-      const country = countryCodes.find(c => c.code === phoneCode);
-      const expectedLength = country?.length || 10;
+      const dob = new Date(formData.dateOfBirth);
+      const today = new Date();
+      const age = today.getFullYear() - dob.getFullYear();
 
-      // Check if phone number has correct length for the country
-      const actualLength = formData.phone.replace(/\D/g, '').length;
-
-      if (actualLength !== expectedLength) {
-        errors.phone = `Phone number must be ${expectedLength} digits for ${country?.country}`;
-        invalidFields.push('phone');
-      } else if (!/^\+?[\d\s-()]+$/.test(fullPhoneNumber)) {
-        errors.phone = 'Please enter a valid phone number';
-        invalidFields.push('phone');
+      if (dob > today) {
+        errors.dateOfBirth = 'Date of Birth cannot be in the future';
+        invalidFields.push('dateOfBirth');
+      } else if (age < 18) {
+        errors.dateOfBirth = 'Must be at least 18 years old';
+        invalidFields.push('dateOfBirth');
       }
     }
 
-    // 4. Address - CANNOT START WITH NUMBER, ALLOW LIMITED SPECIAL CHARS
     if (!formData.address.trim()) {
       errors.address = 'Address is required';
       invalidFields.push('address');
     } else if (!isValidAddress(formData.address)) {
-      errors.address = 'Address must start with a letter and can only contain letters and numbers';
+      errors.address = 'Address must start with a letter';
       invalidFields.push('address');
     }
 
-    // 5. Category
-    if (!formData.category || formData.category === '') {
-      errors.category = 'Please select a category';
-      invalidFields.push('category');
+    if (!formData.occupation.trim()) {
+      errors.occupation = 'Occupation is required';
+      invalidFields.push('occupation');
     }
 
-    // 6. Description
-    if (!formData.description.trim()) {
-      errors.description = 'Description is required';
-      invalidFields.push('description');
+    if (!formData.bankName.trim()) {
+      errors.bankName = 'Bank Name is required';
+      invalidFields.push('bankName');
     }
 
-    // 7. Required Amount
-    if (formData.requiredAmount === '' || formData.requiredAmount === null || formData.requiredAmount === undefined) {
-      errors.requiredAmount = 'Required amount is required';
-      invalidFields.push('requiredAmount');
-    } else {
-      const reqAmount = Number(formData.requiredAmount);
-      if (reqAmount <= 0) {
-        errors.requiredAmount = 'Required amount must be greater than 0';
-        invalidFields.push('requiredAmount');
-      } else if (!/^\d+$/.test(formData.requiredAmount.toString())) {
-        errors.requiredAmount = 'Required amount must be a valid number';
-        invalidFields.push('requiredAmount');
-      } else if (!Number.isInteger(reqAmount)) {
-        errors.requiredAmount = 'Amount must be a whole number without decimals';
-        invalidFields.push('requiredAmount');
-      } else if (reqAmount > 10000000) {
-        errors.requiredAmount = 'Amount cannot exceed 10,000,000';
-        invalidFields.push('requiredAmount');
-      }
+    if (!formData.accountNumber.trim()) {
+      errors.accountNumber = 'Account Number is required';
+      invalidFields.push('accountNumber');
+    } else if (formData.accountNumber.length < 9 || formData.accountNumber.length > 18) {
+      errors.accountNumber = 'Account Number must be 9-18 digits';
+      invalidFields.push('accountNumber');
     }
 
-    // 8. Donated Amount
-    if (formData.donatedAmount === '' || formData.donatedAmount === null || formData.donatedAmount === undefined) {
-      errors.donatedAmount = 'Donated amount is required';
-      invalidFields.push('donatedAmount');
-    } else {
-      const donAmount = Number(formData.donatedAmount);
-      if (donAmount < 0) {
-        errors.donatedAmount = 'Donated amount must be 0 or greater';
-        invalidFields.push('donatedAmount');
-      } else if (!/^\d+$/.test(formData.donatedAmount.toString())) {
-        errors.donatedAmount = 'Donated amount must be a valid number';
-        invalidFields.push('donatedAmount');
-      } else if (!Number.isInteger(donAmount)) {
-        errors.donatedAmount = 'Amount must be a whole number without decimals';
-        invalidFields.push('donatedAmount');
-      } else if (formData.requiredAmount && donAmount > Number(formData.requiredAmount)) {
-        errors.donatedAmount = 'Donated amount cannot exceed required amount';
-        invalidFields.push('donatedAmount');
-      } else if (donAmount > 10000000) {
-        errors.donatedAmount = 'Amount cannot exceed 10,000,000';
-        invalidFields.push('donatedAmount');
-      }
+    if (!formData.ifscCode.trim()) {
+      errors.ifscCode = 'IFSC Code is required';
+      invalidFields.push('ifscCode');
+    } else if (!isValidIFSC(formData.ifscCode)) {
+      errors.ifscCode = 'Invalid IFSC Code format (e.g., SBIN0001234)';
+      invalidFields.push('ifscCode');
     }
 
-    // 9. Urgency
-    if (!formData.urgency || formData.urgency === '') {
-      errors.urgency = 'Please select urgency level';
-      invalidFields.push('urgency');
+    if (!formData.accountHolderName.trim()) {
+      errors.accountHolderName = 'Account Holder Name is required';
+      invalidFields.push('accountHolderName');
     }
 
-    // 10. Age
-    if (formData.age === '' || formData.age === null || formData.age === undefined) {
-      errors.age = 'Age is required';
-      invalidFields.push('age');
-    } else {
-      const ageValue = parseInt(formData.age, 10);
-      if (isNaN(ageValue)) {
-        errors.age = 'Age must be a valid number';
-        invalidFields.push('age');
-      } else if (ageValue <= 0) {
-        errors.age = 'Age must be at least 1';
-        invalidFields.push('age');
-      } else if (ageValue > 120) {
-        errors.age = 'Age cannot exceed 120';
-        invalidFields.push('age');
-      } else if (!Number.isInteger(ageValue)) {
-        errors.age = 'Age must be a whole number';
-        invalidFields.push('age');
-      }
+    if (!formData.branchName.trim()) {
+      errors.branchName = 'Branch Name is required';
+      invalidFields.push('branchName');
     }
 
-    // 11. Family Members
-    if (formData.familyMembers === '' || formData.familyMembers === null || formData.familyMembers === undefined) {
-      errors.familyMembers = 'Family members is required';
-      invalidFields.push('familyMembers');
-    } else {
-      const familyValue = parseInt(formData.familyMembers, 10);
-      if (isNaN(familyValue)) {
-        errors.familyMembers = 'Family members must be a valid number';
-        invalidFields.push('familyMembers');
-      } else if (familyValue <= 0) {
-        errors.familyMembers = 'Family members must be at least 1';
-        invalidFields.push('familyMembers');
-      } else if (familyValue > 20) {
-        errors.familyMembers = 'Family members cannot exceed 20';
-        invalidFields.push('familyMembers');
-      } else if (!Number.isInteger(familyValue)) {
-        errors.familyMembers = 'Family members must be a whole number';
-        invalidFields.push('familyMembers');
-      }
+    if (!formData.accountType) {
+      errors.accountType = 'Account Type is required';
+      invalidFields.push('accountType');
     }
 
-    // 12. Documents
     if (formData.documents.length === 0) {
       errors.documents = 'Please upload at least one document';
       invalidFields.push('documents');
@@ -2458,43 +3300,66 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
 
     setFieldErrors(errors);
 
-    // Trigger shake animation for invalid fields
     if (invalidFields.length > 0) {
       setShakeFields([...invalidFields]);
-
-      // Auto-scroll to first invalid field based on form order
       scrollToFirstInvalidField(invalidFields);
 
-      // Reset shake animation after delay
       setTimeout(() => {
         setShakeFields([]);
       }, 600);
 
-      return false; // Validation failed
+      return false;
     }
 
-    return true; // Validation passed
+    return true;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    e.stopPropagation(); // Important: Prevent browser validation
+    e.stopPropagation();
 
-    // Use ONLY your custom validation
     if (!validateForm()) {
-      return; // Show shaking + your error messages, no browser dialogs
+      return;
     }
 
-    // Only proceed if validation passes
     if (isEditing) {
-      onUpdateRecipient(formData);
-    } else {
-      onAddRecipient(formData);
+      const hasChanges = Object.keys(formData).some(key => {
+
+        if (key === 'completionPercentage' || key === 'status') {
+          return false;
+        }
+
+        if (key === 'documents') {
+          return JSON.stringify(formData[key]) !== JSON.stringify(originalData[key]);
+        }
+
+        return formData[key] !== originalData[key];
+      });
+
+      if (!hasChanges) {
+        setTimeout(() => {
+          onClose();
+        }, 0);
+        return;
+      }
     }
 
-    onClose();
-    setSuccessMessage(isEditing ? 'Recipient updated successfully' : 'Recipient added successfully');
-    setShowSuccessDialog(true);
+    const recipientToSubmit = {
+      ...formData,
+      verificationStatus: formData.verificationStatus === 'Verified' ? 'Verified' : 'Pending',
+      status: shouldUpdateStatus(formData.status) ? 'Submitted' : formData.status,
+      submittedAt: isEditing ? formData.submittedAt : new Date().toISOString().split('T')[0]
+    };
+
+    setPendingAction(() => () => {
+      if (isEditing) {
+        onUpdateRecipient(recipientToSubmit);
+      } else {
+        onAddRecipient(recipientToSubmit);
+      }
+    });
+
+    setShowConfirmation(true);
   };
 
   const handleConfirm = () => {
@@ -2510,107 +3375,78 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
     setPendingAction(null);
   };
 
-  // UPDATED handleChange function with address field restrictions
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // For numeric fields
-    const numericFields = ['requiredAmount', 'donatedAmount', 'age', 'familyMembers'];
-
     let newValue = value;
 
-    // SPECIAL HANDLING FOR NAME FIELD - ONLY ALLOW ALPHABETS AND SPACES
     if (name === 'name') {
-      // Only allow letters (a-z, A-Z) and spaces
       newValue = value.replace(/[^a-zA-Z\s]/g, '');
     }
-    // SPECIAL HANDLING FOR EMAIL FIELD - ONLY ALLOW VALID EMAIL CHARACTERS
-    else if (name === 'email') {
-      // Allow only: letters, numbers, and these special characters: . _ -
-      // Also allow @ symbol but only once and only for gmail.com
-      newValue = value.toLowerCase(); // Convert to lowercase for consistency
-
-      // Remove any characters that are not allowed in email
-      newValue = newValue.replace(/[^a-zA-Z0-9.@_-]/g, '');
-
-      // Ensure only one @ symbol
-      const atCount = (newValue.match(/@/g) || []).length;
-      if (atCount > 1) {
-        newValue = newValue.replace(/@+$/, '@'); // Remove extra @ symbols
-      }
-
-      // Auto-complete @gmail.com when user types @
-      if (newValue.includes('@') && !newValue.endsWith('@gmail.com')) {
-        const localPart = newValue.split('@')[0];
-        const afterAt = newValue.split('@')[1] || '';
-
-        // If user just typed @, auto-complete to @gmail.com
-        if (afterAt === '') {
-          newValue = localPart + '@gmail.com';
-        }
-        // If user is typing after @, guide them to gmail.com
-        else if (!afterAt.startsWith('gmail.com')) {
-          // Only allow typing that leads to gmail.com
-          const validGMailChars = afterAt.replace(/[^a-zA-Z0-9.]/g, '');
-          if (validGMailChars.startsWith('gmail') || validGMailChars === 'g' || validGMailChars === 'gm' ||
-            validGMailChars === 'gma' || validGMailChars === 'gmai') {
-            newValue = localPart + '@' + validGMailChars;
-          } else {
-            newValue = localPart + '@gmail.com';
-          }
-        }
-      }
-    }
-    // SPECIAL HANDLING FOR PHONE FIELD - ALLOW NUMBERS AND DASHES ONLY
-    else if (name === 'phone') {
-      // Remove all non-digit and non-dash characters
+    else if (name === 'aadhaarNumber') {
       newValue = value.replace(/[^\d-]/g, '');
-
-      // Ensure proper phone format (xxx-xxx-xxxx)
       const digitsOnly = newValue.replace(/\D/g, '');
-      if (digitsOnly.length <= 3) {
+      if (digitsOnly.length <= 4) {
         newValue = digitsOnly;
-      } else if (digitsOnly.length <= 6) {
-        newValue = `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3)}`;
+      } else if (digitsOnly.length <= 8) {
+        newValue = `${digitsOnly.slice(0, 4)}-${digitsOnly.slice(4)}`;
       } else {
-        newValue = `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3, 6)}-${digitsOnly.slice(6, 10)}`;
+        newValue = `${digitsOnly.slice(0, 4)}-${digitsOnly.slice(4, 8)}-${digitsOnly.slice(8, 12)}`;
       }
     }
-    // SPECIAL HANDLING FOR ADDRESS FIELD - CANNOT START WITH NUMBER, ALLOW LIMITED SPECIAL CHARS
-    else if (name === 'address') {
-      // Remove any characters that are not allowed in address
-      // Allowed: letters (a-z, A-Z), numbers (0-9), spaces, and these special characters: - _ / , . ' "
-      newValue = value.replace(/[^a-zA-Z0-9\s\-_/,'."]/g, '');
-
-      // Prevent address from starting with a number
-      if (/^\d/.test(newValue)) {
-        newValue = newValue.replace(/^\d+/, '');
-      }
-
-      // Remove multiple consecutive spaces
-      newValue = newValue.replace(/\s+/g, ' ');
+    else if (name === 'panNumber') {
+      newValue = value.toUpperCase().replace(/\s/g, '');
+      newValue = newValue.replace(/[^A-Z0-9]/g, '').slice(0, 10);
     }
-    // For numeric fields
-    else if (numericFields.includes(name)) {
-      if (value === '') {
-        newValue = '0';
-      } else if (/^\d+$/.test(value)) {
-        const numValue = parseInt(value, 10);
-        newValue = numValue.toString();
-        if (numValue < 0) {
-          newValue = '0';
-        }
+    else if (name === 'accountNumber') {
+      newValue = value.replace(/\D/g, '').slice(0, 18);
+    }
+    else if (name === 'ifscCode') {
+      newValue = value.toUpperCase().replace(/\s/g, '');
+      newValue = newValue.replace(/[^A-Z0-9]/g, '').slice(0, 11);
+    }
+    else if (name === 'email') {
+      newValue = value.toLowerCase();
+    }
+    else if (name === 'phone') {
+      let processedValue = value;
+
+      if (value.startsWith('+91-')) {
+        const afterCode = value.slice(4);
+        const cleaned = afterCode.replace(/[^\d\-]/g, '');
+        processedValue = '+91-' + cleaned;
       } else {
-        return; // Don't update if invalid
+        processedValue = value.replace(/[^\d\-]/g, '');
+      }
+
+      newValue = formatPhoneNumber(processedValue.replace(/\D/g, ''), '+91');
+
+      if (value.startsWith('+91-')) {
+        newValue = '+91-' + newValue;
       }
     }
+    else {
+      newValue = value;
+    }
 
-    setFormData(prev => ({
-      ...prev,
+    // Update form data
+    const updatedFormData = {
+      ...formData,
       [name]: newValue
-    }));
+    };
 
-    // Clear error when user starts typing/changing
+    // For editing: only update status if it's not in a final state
+    let newStatus = formData.status;
+    if (!isEditing || shouldUpdateStatus(formData.status)) {
+      newStatus = determineStatus(updatedFormData);
+    }
+
+    setFormData({
+      ...updatedFormData,
+      status: newStatus
+    });
+
+    // Clear field error if exists
     if (fieldErrors[name]) {
       setFieldErrors(prev => {
         const newErrors = { ...prev };
@@ -2620,13 +3456,24 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
     }
   };
 
+  // Update handleDocumentsChange
   const handleDocumentsChange = (documents) => {
-    setFormData(prev => ({
-      ...prev,
+    const updatedFormData = {
+      ...formData,
       documents
-    }));
+    };
 
-    // Clear document error when documents are added
+    // For editing: only update status if it's not in a final state
+    let newStatus = formData.status;
+    if (!isEditing || shouldUpdateStatus(formData.status)) {
+      newStatus = determineStatus(updatedFormData);
+    }
+
+    setFormData({
+      ...updatedFormData,
+      status: newStatus
+    });
+
     if (fieldErrors.documents && documents.length > 0) {
       setFieldErrors(prev => {
         const newErrors = { ...prev };
@@ -2648,21 +3495,23 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
     }
   };
 
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
   return (
     <>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4"
+        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
         style={{ margin: 0, padding: 0 }}
-        onClick={onClose}
       >
         <motion.div
           ref={modalRef}
           initial={{ opacity: 0, scale: 0.9, y: 30 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 30 }}
+          exit={{ opacity: 0, pointerEvents: 'none' }}
           transition={{ type: "spring", damping: 25 }}
           className={`rounded-3xl w-full max-w-4xl mx-2 sm:mx-4 ${isDark
             ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
@@ -2677,7 +3526,7 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="relative p-4 sm:p-6 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 rounded-t-3xl">
+          <div className="relative p-4 sm:p-6 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-t-3xl">
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
                 <h2 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">
@@ -2700,513 +3549,636 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
 
           <div className="flex-1 overflow-y-auto">
             <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                {/* PERSONAL INFORMATION SECTION - COMPLETELY FIXED SHAKE */}
-                <div className={`p-3 sm:p-4 rounded-2xl space-y-3 sm:space-y-4 ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
-                  <h3 className={`text-sm sm:text-base font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    <Users size={16} className="text-violet-500" />
-                    Personal Information
-                  </h3>
+              <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+                <h3 className={`text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  <Users size={16} className="text-violet-500" />
+                  Personal Information <span className="text-rose-500 font-normal normal-case">*</span>
+                </h3>
 
-                  {/* Name Field - FIXED SHAKE */}
-                  <div ref={fieldRefs.name} className="overflow-visible">
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Full Name *
-                    </label>
-                    <motion.div
-                      animate={shakeFields.includes('name') ? "shake" : "initial"}
-                      variants={shakeAnimation}
-                      className="overflow-visible"
-                    >
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-200 text-gray-900'
-                          } ${fieldErrors.name ? 'border-rose-500' : ''}`}
-                      />
-                    </motion.div>
-                    {fieldErrors.name && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+                <div className="space-y-4 sm:space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div ref={fieldRefs.name} className="overflow-visible">
+                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        &nbsp;Full Name <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+                      </label>
+                      <motion.div
+                        animate={shakeFields.includes('name') ? "shake" : "initial"}
+                        variants={shakeAnimation}
+                        className="overflow-visible relative"
                       >
-                        <XCircle size={12} />
-                        {fieldErrors.name}
-                      </motion.p>
-                    )}
+                        <input
+                          type="text"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleChange}
+                          placeholder="Rajesh Kumar"
+                          maxLength={50}
+                          autoComplete="off"
+                          readOnly
+                          onFocus={(e) => e.target.removeAttribute('readonly')}
+                          className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                            ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                            } ${fieldErrors.name ? 'border-rose-500' : ''}`}
+                        />
+                        <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {formData.name.length}/50
+                        </div>
+                      </motion.div>
+                      {fieldErrors.name && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+                        >
+                          <XCircle size={12} />
+                          {fieldErrors.name}
+                        </motion.p>
+                      )}
+                    </div>
+
+                    <div ref={fieldRefs.email} className="overflow-visible">
+                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        &nbsp;Email <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+                      </label>
+                      <motion.div
+                        animate={shakeFields.includes('email') ? "shake" : "initial"}
+                        variants={shakeAnimation}
+                        className="overflow-visible relative"
+                      >
+                        <input
+                          name="email"
+                          value={formData.email}
+                          onChange={handleChange}
+                          placeholder="rajesh.kumar@email.com"
+                          maxLength={100}
+                          autoComplete="off"
+                          readOnly
+                          onFocus={(e) => e.target.removeAttribute('readonly')}
+                          className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                            ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                            } ${fieldErrors.email ? 'border-rose-500' : ''}`}
+                        />
+                        <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {formData.email.length}/100
+                        </div>
+                      </motion.div>
+                      {fieldErrors.email && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+                        >
+                          <XCircle size={12} />
+                          {fieldErrors.email}
+                        </motion.p>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Email Field - FIXED SHAKE */}
-                  <div ref={fieldRefs.email} className="overflow-visible">
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Email *
-                    </label>
-                    <motion.div
-                      animate={shakeFields.includes('email') ? "shake" : "initial"}
-                      variants={shakeAnimation}
-                      className="overflow-visible"
-                    >
-                      <input
-                        type="text"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        onKeyPress={(e) => {
-                          // Only allow: letters, numbers, and . _ - @
-                          const allowedChars = /[a-zA-Z0-9.@_-]/;
-                          if (!allowedChars.test(e.key)) {
-                            e.preventDefault();
-                          }
-
-                          // Additional validation for @ symbol
-                          if (e.key === '@') {
-                            const currentValue = e.target.value;
-                            // Prevent multiple @ symbols
-                            if (currentValue.includes('@')) {
-                              e.preventDefault();
-                            }
-                            // If @ is pressed and no @ exists, auto-complete to @gmail.com
-                            else if (!currentValue.includes('@')) {
-                              e.preventDefault();
-                              const newValue = currentValue + '@gmail.com';
-                              setFormData(prev => ({ ...prev, email: newValue }));
-                            }
-                          }
-                        }}
-                        onBlur={(e) => {
-                          // Auto-format on blur if @ is present but domain is incomplete
-                          const emailValue = e.target.value;
-                          if (emailValue.includes('@') && !emailValue.endsWith('@gmail.com')) {
-                            const localPart = emailValue.split('@')[0];
-                            const afterAt = emailValue.split('@')[1] || '';
-
-                            // If domain is incomplete or wrong, auto-correct to @gmail.com
-                            if (!afterAt || !afterAt.startsWith('gmail.com')) {
-                              setFormData(prev => ({ ...prev, email: localPart + '@gmail.com' }));
-                            }
-                          }
-                        }}
-                        className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-200 text-gray-900'
-                          } ${fieldErrors.email ? 'border-rose-500' : ''}`}
-                      />
-                    </motion.div>
-                    {fieldErrors.email && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div ref={fieldRefs.phone} className="overflow-visible">
+                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        &nbsp;Phone <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+                      </label>
+                      <motion.div
+                        animate={shakeFields.includes('phone') ? "shake" : "initial"}
+                        variants={shakeAnimation}
+                        className="overflow-visible"
                       >
-                        <XCircle size={12} />
-                        {fieldErrors.email}
-                      </motion.p>
-                    )}
-                  </div>
-
-                  {/* Phone Field - Fixed with proper theme styling and no placeholder */}
-                  <div ref={fieldRefs.phone} className="overflow-visible">
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Phone *
-                    </label>
-                    <motion.div
-                      animate={shakeFields.includes('phone') ? "shake" : "initial"}
-                      variants={shakeAnimation}
-                      className="overflow-visible"
-                    >
-                      <div className="flex gap-2 sm:gap-3">
-                        {/* Country Code Dropdown */}
-                        <div className="flex-shrink-0 w-28 sm:w-32" ref={dropdownRef}>
-                          <div className="relative">
-                            <motion.button
-                              type="button"
-                              onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              className={`w-full p-2 sm:p-3 rounded-2xl border-2 text-sm font-medium flex items-center justify-between ${isDark
-                                ? 'bg-gray-800 border-gray-600 text-white hover:border-gray-500'
-                                : 'bg-white border-gray-200 text-gray-900 hover:border-gray-300'
-                                } ${fieldErrors.phone ? 'border-rose-500' : ''}`}
-                            >
-                              <div className="flex items-center gap-1 sm:gap-2">
-                                <span className="text-sm">{selectedCountry?.flag}</span>
-                                <span className="text-xs sm:text-sm">{selectedCountry?.code}</span>
+                        <div className="flex gap-2 sm:gap-1">
+                          <div className="flex-shrink-0">
+                            <div className={`h-[48px] flex items-center px-3 rounded-2xl border-2 text-sm font-medium ${isDark
+                              ? 'bg-gray-800 border-gray-600'
+                              : 'bg-white border-gray-200'
+                              } ${fieldErrors.phone ? 'border-rose-500' : ''}`}>
+                              <div className={`flex items-center gap-2 ${formData.phone && formData.phone.replace(/\D/g, '').length > 0
+                                ? (isDark ? 'text-white' : 'text-gray-900')
+                                : (isDark ? 'text-gray-400' : 'text-gray-500')
+                                }`}>
+                                <span className="text-lg">🇮🇳</span>
+                                <span className="text-sm font-semibold">+91</span>
                               </div>
-                              <ChevronDown size={14} className={`transition-transform ${showCountryDropdown ? 'rotate-180' : ''}`} />
-                            </motion.button>
+                            </div>
+                          </div>
 
-                            {/* Country Dropdown Menu */}
-                            {showCountryDropdown && (
-                              <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className={`absolute top-full left-0 mt-1 w-48 sm:w-56 rounded-2xl shadow-xl z-30 max-h-60 overflow-y-auto ${isDark
-                                  ? 'bg-gray-800 border border-gray-600'
-                                  : 'bg-white border border-gray-200'
-                                  }`}
-                              >
-                                {countryCodes.map((country) => (
-                                  <motion.button
-                                    key={country.code}
-                                    type="button"
-                                    onClick={() => {
-                                      setPhoneCode(country.code);
-                                      setShowCountryDropdown(false);
-                                    }}
-                                    whileHover={{
-                                      backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)'
-                                    }}
-                                    className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 border-b ${isDark
-                                      ? 'border-gray-700 text-gray-300'
-                                      : 'border-gray-100 text-gray-700'
-                                      } last:border-b-0 ${phoneCode === country.code
-                                        ? isDark
-                                          ? 'bg-blue-900/20 text-blue-400'
-                                          : 'bg-blue-50 text-blue-600'
-                                        : ''}`}
-                                  >
-                                    <span className="text-base">{country.flag}</span>
-                                    <div className="flex-1 text-left">
-                                      <div className="text-sm font-medium">{country.country}</div>
-                                      <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                                        {country.code}
-                                      </div>
-                                    </div>
-                                  </motion.button>
-                                ))}
-                              </motion.div>
-                            )}
+                          <div className="flex-1 relative">
+                            <input
+                              type="tel"
+                              name="phone"
+                              value={formData.phone}
+                              onChange={handleChange}
+                              placeholder="98765-43210"
+                              maxLength={12}
+                              autoComplete="off"
+                              readOnly
+                              onFocus={(e) => e.target.removeAttribute('readonly')}
+                              className={`w-full h-[48px] p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                                ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                                : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                                } ${fieldErrors.phone ? 'border-rose-500' : ''}`}
+                            />
+                            <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                              {formData.phone.replace(/\D/g, '').length}/10
+                            </div>
                           </div>
                         </div>
+                      </motion.div>
+                      {fieldErrors.phone && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+                        >
+                          <XCircle size={12} />
+                          {fieldErrors.phone}
+                        </motion.p>
+                      )}
+                    </div>
 
-                        {/* Phone Number Input - WHITE BACKGROUND IN LIGHT MODE, DARK IN DARK MODE, NO PLACEHOLDER */}
-                        <div className="flex-1">
-                          <input
-                            type="tel"
-                            name="phone"
-                            value={formData.phone}
-                            onChange={handleChange}
-                            onKeyPress={(e) => {
-                              // Only allow numbers and dashes
-                              if (!/[0-9-]/.test(e.key)) {
-                                e.preventDefault();
-                              }
-                            }}
-                            className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                              ? 'bg-gray-800 border-gray-600 text-white' // Dark theme
-                              : 'bg-white border-gray-200 text-gray-900' // Light theme - WHITE background
-                              } ${fieldErrors.phone ? 'border-rose-500' : ''}`}
-                          // No placeholder attribute
-                          />
+                    <div ref={fieldRefs.aadhaarNumber} className="overflow-visible">
+                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        &nbsp;Aadhaar Number <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+                      </label>
+                      <motion.div
+                        animate={shakeFields.includes('aadhaarNumber') ? "shake" : "initial"}
+                        variants={shakeAnimation}
+                        className="overflow-visible relative"
+                      >
+                        <input
+                          type="text"
+                          name="aadhaarNumber"
+                          value={formData.aadhaarNumber}
+                          onChange={handleChange}
+                          placeholder="XXXX-XXXX-XXXX"
+                          maxLength={14}
+                          autoComplete="off"
+                          readOnly
+                          onFocus={(e) => e.target.removeAttribute('readonly')}
+                          className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                            ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                            } ${fieldErrors.aadhaarNumber ? 'border-rose-500' : ''}`}
+                        />
+                        <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {formData.aadhaarNumber.replace(/\D/g, '').length}/12
                         </div>
+                      </motion.div>
+                      {fieldErrors.aadhaarNumber && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+                        >
+                          <XCircle size={12} />
+                          {fieldErrors.aadhaarNumber}
+                        </motion.p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div ref={fieldRefs.panNumber} className="overflow-visible">
+                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        &nbsp;PAN Number <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+                      </label>
+                      <motion.div
+                        animate={shakeFields.includes('panNumber') ? "shake" : "initial"}
+                        variants={shakeAnimation}
+                        className="overflow-visible relative"
+                      >
+                        <input
+                          type="text"
+                          name="panNumber"
+                          value={formData.panNumber}
+                          onChange={handleChange}
+                          placeholder="ABCDE1234F"
+                          maxLength={10}
+                          autoComplete="off"
+                          readOnly
+                          onFocus={(e) => e.target.removeAttribute('readonly')}
+                          className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                            ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                            } ${fieldErrors.panNumber ? 'border-rose-500' : ''}`}
+                        />
+                        <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {formData.panNumber.length}/10
+                        </div>
+                      </motion.div>
+                      {fieldErrors.panNumber && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+                        >
+                          <XCircle size={12} />
+                          {fieldErrors.panNumber}
+                        </motion.p>
+                      )}
+                    </div>
+
+                    <div ref={fieldRefs.dateOfBirth} className="overflow-visible">
+                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        &nbsp;Date of Birth <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+                      </label>
+                      <motion.div
+                        animate={shakeFields.includes('dateOfBirth') ? "shake" : "initial"}
+                        variants={shakeAnimation}
+                        className="overflow-visible"
+                      >
+                        <input
+                          type="date"
+                          name="dateOfBirth"
+                          value={formData.dateOfBirth}
+                          onChange={handleChange}
+                          autoComplete="off"
+                          onFocus={(e) => e.target.removeAttribute('readonly')}
+                          className={`date-field w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                            ? 'bg-gray-800 border-gray-600 text-white'
+                            : 'bg-white border-gray-200 text-gray-900'
+                            } ${fieldErrors.dateOfBirth ? 'border-rose-500' : ''} 
+                            ${formData.dateOfBirth ? (isDark ? 'text-white' : 'text-gray-900') : (isDark ? 'text-gray-400' : 'text-gray-500')}`}
+                          style={{
+                            color: formData.dateOfBirth ? '' : (isDark ? '#9CA3AF' : '#6B7280')
+                          }}
+                        />
+                        <style jsx>{`
+                            .date-field::-webkit-calendar-picker-indicator {
+                          ${isDark
+                            ? 'filter: invert(39%) sepia(6%) saturate(1199%) hue-rotate(182deg) brightness(94%) contrast(87%);'
+                            : 'filter: invert(39%) sepia(6%) saturate(1199%) hue-rotate(182deg) brightness(94%) contrast(87%);'
+                          }
+                          `}</style>
+                      </motion.div>
+                      {fieldErrors.dateOfBirth && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+                        >
+                          <XCircle size={12} />
+                          {fieldErrors.dateOfBirth}
+                        </motion.p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div ref={fieldRefs.address} className="overflow-visible">
+                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        &nbsp;Address <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+                      </label>
+                      <motion.div
+                        animate={shakeFields.includes('address') ? "shake" : "initial"}
+                        variants={shakeAnimation}
+                        className="overflow-visible relative"
+                      >
+                        <input
+                          type="text"
+                          name="address"
+                          value={formData.address}
+                          onChange={handleChange}
+                          placeholder="Mumbai, Maharashtra"
+                          maxLength={200}
+                          autoComplete="off"
+                          readOnly
+                          onFocus={(e) => e.target.removeAttribute('readonly')}
+                          className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                            ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                            } ${fieldErrors.address ? 'border-rose-500' : ''}`}
+                        />
+                        <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {formData.address.length}/200
+                        </div>
+                      </motion.div>
+                      {fieldErrors.address && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+                        >
+                          <XCircle size={12} />
+                          {fieldErrors.address}
+                        </motion.p>
+                      )}
+                    </div>
+
+                    <div ref={fieldRefs.occupation} className="overflow-visible">
+                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        &nbsp;Occupation <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+                      </label>
+                      <motion.div
+                        animate={shakeFields.includes('occupation') ? "shake" : "initial"}
+                        variants={shakeAnimation}
+                        className="overflow-visible relative"
+                      >
+                        <input
+                          type="text"
+                          name="occupation"
+                          value={formData.occupation}
+                          onChange={handleChange}
+                          placeholder="Business Owner, Teacher, Student"
+                          maxLength={50}
+                          autoComplete="off"
+                          readOnly
+                          onFocus={(e) => e.target.removeAttribute('readonly')}
+                          className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                            ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                            } ${fieldErrors.occupation ? 'border-rose-500' : ''}`}
+                        />
+                        <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {formData.occupation.length}/50
+                        </div>
+                      </motion.div>
+                      {fieldErrors.occupation && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+                        >
+                          <XCircle size={12} />
+                          {fieldErrors.occupation}
+                        </motion.p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div ref={fieldRefs.familyDetails} className="overflow-visible">
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      &nbsp;Family Details (Optional)
+                    </label>
+                    <motion.div className="overflow-visible relative">
+                      <textarea
+                        name="familyDetails"
+                        value={formData.familyDetails}
+                        onChange={handleChange}
+                        rows="2"
+                        placeholder="Wife and 2 children"
+                        maxLength={500}
+                        autoComplete="off"
+                        readOnly
+                        onFocus={(e) => e.target.removeAttribute('readonly')}
+                        className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium resize-none ${isDark
+                          ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                          : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                          }`}
+                      />
+                      <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {formData.familyDetails.length}/500
                       </div>
                     </motion.div>
-                    {fieldErrors.phone && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                      >
-                        <XCircle size={12} />
-                        {fieldErrors.phone}
-                      </motion.p>
-                    )}
-                  </div>
-
-                  {/* Address Field - FIXED SHAKE */}
-                  <div ref={fieldRefs.address} className="overflow-visible">
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Address *
-                    </label>
-                    <motion.div
-                      animate={shakeFields.includes('address') ? "shake" : "initial"}
-                      variants={shakeAnimation}
-                      className="overflow-visible"
-                    >
-                      <input
-                        type="text"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                        className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-200 text-gray-900'
-                          } ${fieldErrors.address ? 'border-rose-500' : ''}`}
-                      />
-                    </motion.div>
-                    {fieldErrors.address && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                      >
-                        <XCircle size={12} />
-                        {fieldErrors.address}
-                      </motion.p>
-                    )}
-                  </div>
-                </div>
-
-                {/* REQUEST INFORMATION SECTION - COMPLETELY FIXED SHAKE */}
-                <div className={`p-3 sm:p-4 rounded-2xl space-y-3 sm:space-y-4 ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
-                  <h3 className={`text-sm sm:text-base font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    <DollarSign size={16} className="text-emerald-500" />
-                    Request Information
-                  </h3>
-
-                  {/* Category Field - FIXED SHAKE */}
-                  <div ref={fieldRefs.category} className="overflow-visible">
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Category *
-                    </label>
-                    <motion.div
-                      animate={shakeFields.includes('category') ? "shake" : "initial"}
-                      variants={shakeAnimation}
-                      className="overflow-visible"
-                    >
-                      <select
-                        name="category"
-                        value={formData.category}
-                        onChange={handleChange}
-                        className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-200 text-gray-900'
-                          } ${fieldErrors.category ? 'border-rose-500' : ''}`}
-                      >
-                        <option value="">Select Category</option>
-                        {categoryOptions.filter(opt => opt !== 'All Categories').map(option => (
-                          <option key={option} value={option}>{option}</option>
-                        ))}
-                      </select>
-                    </motion.div>
-                    {fieldErrors.category && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                      >
-                        <XCircle size={12} />
-                        {fieldErrors.category}
-                      </motion.p>
-                    )}
-                  </div>
-
-                  {/* Description Field - FIXED SHAKE */}
-                  <div ref={fieldRefs.description} className="overflow-visible">
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Description *
-                    </label>
-                    <motion.div
-                      animate={shakeFields.includes('description') ? "shake" : "initial"}
-                      variants={shakeAnimation}
-                      className="overflow-visible"
-                    >
-                      <textarea
-                        name="description"
-                        value={formData.description}
-                        onChange={handleChange}
-                        rows="3"
-                        className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium resize-none ${isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-200 text-gray-900'
-                          } ${fieldErrors.description ? 'border-rose-500' : ''}`}
-                      />
-                    </motion.div>
-                    {fieldErrors.description && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                      >
-                        <XCircle size={12} />
-                        {fieldErrors.description}
-                      </motion.p>
-                    )}
-                  </div>
-
-                  {/* Required Amount Field - FIXED SHAKE */}
-                  <div ref={fieldRefs.requiredAmount} className="overflow-visible">
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Required Amount (₨) *
-                    </label>
-                    <motion.div
-                      animate={shakeFields.includes('requiredAmount') ? "shake" : "initial"}
-                      variants={shakeAnimation}
-                      className="overflow-visible"
-                    >
-                      <input
-                        type="number"
-                        name="requiredAmount"
-                        value={formData.requiredAmount}
-                        onChange={handleChange}
-                        required
-                        min="0"
-                        className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-200 text-gray-900'
-                          } ${fieldErrors.requiredAmount ? 'border-rose-500' : ''}`}
-                      />
-                    </motion.div>
-                    {fieldErrors.requiredAmount && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                      >
-                        <XCircle size={12} />
-                        {fieldErrors.requiredAmount}
-                      </motion.p>
-                    )}
-                  </div>
-
-                  {/* Donated Amount Field - FIXED */}
-                  <div ref={fieldRefs.donatedAmount} className="overflow-visible">
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Donated Amount (₨)
-                    </label>
-                    <motion.div
-                      animate={shakeFields.includes('donatedAmount') ? "shake" : "initial"}
-                      variants={shakeAnimation}
-                      className="overflow-visible"
-                    >
-                      <input
-                        type="number"
-                        name="donatedAmount"
-                        value={formData.donatedAmount}
-                        onChange={handleChange}
-                        min="0"
-                        className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-200 text-gray-900'
-                          } ${fieldErrors.donatedAmount ? 'border-rose-500' : ''}`}
-                      />
-                    </motion.div>
-                    {fieldErrors.donatedAmount && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                      >
-                        <XCircle size={12} />
-                        {fieldErrors.donatedAmount}
-                      </motion.p>
-                    )}
                   </div>
                 </div>
               </div>
 
               <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                 <h3 className={`text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  <Target size={16} className="text-blue-500" />
-                  Additional Information
+                  <CreditCard size={16} className="text-blue-500" />
+                  Bank Details <span className="text-rose-500 font-normal normal-case">*</span>
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                  {/* Urgency Field - FIXED SHAKE */}
-                  <div ref={fieldRefs.urgency} className="overflow-visible">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                  <div ref={fieldRefs.bankName} className="overflow-visible">
                     <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Urgency *
+                      &nbsp;Bank Name <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
                     </label>
                     <motion.div
-                      animate={shakeFields.includes('urgency') ? "shake" : "initial"}
+                      animate={shakeFields.includes('bankName') ? "shake" : "initial"}
                       variants={shakeAnimation}
-                      className="overflow-visible"
-                    >
-                      <select
-                        name="urgency"
-                        value={formData.urgency}
-                        onChange={handleChange}
-                        className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-200 text-gray-900'
-                          } ${fieldErrors.urgency ? 'border-rose-500' : ''}`}
-                      >
-                        <option value="">Select Urgency</option>
-                        {urgencyOptions.filter(opt => opt !== 'All Urgency').map(option => (
-                          <option key={option} value={option}>{option}</option>
-                        ))}
-                      </select>
-                    </motion.div>
-                    {fieldErrors.urgency && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                      >
-                        <XCircle size={12} />
-                        {fieldErrors.urgency}
-                      </motion.p>
-                    )}
-                  </div>
-
-                  {/* Age Field - FIXED: Now allows increasing beyond limits for validation */}
-                  <div ref={fieldRefs.age} className="overflow-visible">
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Age *
-                    </label>
-                    <motion.div
-                      animate={shakeFields.includes('age') ? "shake" : "initial"}
-                      variants={shakeAnimation}
-                      className="overflow-visible"
+                      className="overflow-visible relative"
                     >
                       <input
-                        type="number"
-                        name="age"
-                        value={formData.age}
+                        type="text"
+                        name="bankName"
+                        value={formData.bankName}
                         onChange={handleChange}
+                        placeholder="State Bank of India"
+                        maxLength={100}
+                        autoComplete="off"
+                        readOnly
+                        onFocus={(e) => e.target.removeAttribute('readonly')}
                         className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-200 text-gray-900'
-                          } ${fieldErrors.age ? 'border-rose-500' : ''}`}
+                          ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                          : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                          } ${fieldErrors.bankName ? 'border-rose-500' : ''}`}
                       />
+                      <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {formData.bankName.length}/100
+                      </div>
                     </motion.div>
-                    {fieldErrors.age && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                      >
-                        <XCircle size={12} />
-                        {fieldErrors.age}
-                      </motion.p>
-                    )}
                   </div>
 
-                  {/* Family Members Field - FIXED: Now allows increasing beyond limits for validation */}
-                  <div ref={fieldRefs.familyMembers} className="overflow-visible">
+                  <div ref={fieldRefs.accountNumber} className="overflow-visible">
                     <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Family Members *
+                      &nbsp;Account Number <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
                     </label>
                     <motion.div
-                      animate={shakeFields.includes('familyMembers') ? "shake" : "initial"}
+                      animate={shakeFields.includes('accountNumber') ? "shake" : "initial"}
                       variants={shakeAnimation}
-                      className="overflow-visible"
+                      className="overflow-visible relative"
                     >
                       <input
-                        type="number"
-                        name="familyMembers"
-                        value={formData.familyMembers}
+                        type="text"
+                        name="accountNumber"
+                        value={formData.accountNumber}
                         onChange={handleChange}
+                        placeholder="123456789012"
+                        maxLength={18}
+                        autoComplete="off"
+                        readOnly
+                        onFocus={(e) => e.target.removeAttribute('readonly')}
                         className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-200 text-gray-900'
-                          } ${fieldErrors.familyMembers ? 'border-rose-500' : ''}`}
+                          ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                          : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                          } ${fieldErrors.accountNumber ? 'border-rose-500' : ''}`}
                       />
+                      <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {formData.accountNumber.length}/18
+                      </div>
                     </motion.div>
-                    {fieldErrors.familyMembers && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+                  </div>
+
+                  <div ref={fieldRefs.ifscCode} className="overflow-visible">
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      &nbsp;IFSC Code <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+                    </label>
+                    <motion.div
+                      animate={shakeFields.includes('ifscCode') ? "shake" : "initial"}
+                      variants={shakeAnimation}
+                      className="overflow-visible relative"
+                    >
+                      <input
+                        type="text"
+                        name="ifscCode"
+                        value={formData.ifscCode}
+                        onChange={handleChange}
+                        placeholder="SBIN0001234"
+                        maxLength={11}
+                        autoComplete="off"
+                        readOnly
+                        onFocus={(e) => e.target.removeAttribute('readonly')}
+                        className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                          ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                          : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                          } ${fieldErrors.ifscCode ? 'border-rose-500' : ''}`}
+                      />
+                      <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {formData.ifscCode.length}/11
+                      </div>
+                    </motion.div>
+                  </div>
+
+                  <div ref={fieldRefs.accountHolderName} className="overflow-visible">
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      &nbsp;Account Holder Name <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+                    </label>
+                    <motion.div
+                      animate={shakeFields.includes('accountHolderName') ? "shake" : "initial"}
+                      variants={shakeAnimation}
+                      className="overflow-visible relative"
+                    >
+                      <input
+                        type="text"
+                        name="accountHolderName"
+                        value={formData.accountHolderName}
+                        onChange={handleChange}
+                        placeholder="Rajesh Kumar"
+                        maxLength={50}
+                        autoComplete="off"
+                        readOnly
+                        onFocus={(e) => e.target.removeAttribute('readonly')}
+                        className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                          ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                          : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                          } ${fieldErrors.accountHolderName ? 'border-rose-500' : ''}`}
+                      />
+                      <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {formData.accountHolderName.length}/50
+                      </div>
+                    </motion.div>
+                  </div>
+
+                  <div ref={fieldRefs.branchName} className="overflow-visible">
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      &nbsp;Branch Name <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+                    </label>
+                    <motion.div
+                      animate={shakeFields.includes('branchName') ? "shake" : "initial"}
+                      variants={shakeAnimation}
+                      className="overflow-visible relative"
+                    >
+                      <input
+                        type="text"
+                        name="branchName"
+                        value={formData.branchName}
+                        onChange={handleChange}
+                        placeholder="Mumbai Main Branch"
+                        maxLength={50}
+                        autoComplete="off"
+                        readOnly
+                        onFocus={(e) => e.target.removeAttribute('readonly')}
+                        className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                          ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                          : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                          } ${fieldErrors.branchName ? 'border-rose-500' : ''}`}
+                      />
+                      <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {formData.branchName.length}/50
+                      </div>
+                    </motion.div>
+                  </div>
+
+                  <div ref={fieldRefs.upiId} className="overflow-visible">
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      &nbsp;UPI ID (Optional)
+                    </label>
+                    <motion.div className="overflow-visible relative">
+                      <input
+                        type="text"
+                        name="upiId"
+                        value={formData.upiId}
+                        onChange={handleChange}
+                        placeholder="rajesh.kumar@upi"
+                        maxLength={50}
+                        autoComplete="off"
+                        readOnly
+                        onFocus={(e) => e.target.removeAttribute('readonly')}
+                        className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                          ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                          : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                          }`}
+                      />
+                      <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {formData.upiId.length}/50
+                      </div>
+                    </motion.div>
+                  </div>
+
+                  <div className="md:col-span-2" ref={fieldRefs.accountType}>
+                    <div className="relative">
+                      <label className={`text-xs font-semibold uppercase tracking-wide flex items-center gap-2 mb-3 pl-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        &nbsp;Account Type <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+                      </label>
+
+                      <motion.div
+                        animate={shakeFields.includes('accountType') ? "shake" : "initial"}
+                        variants={shakeAnimation}
+                        className="relative"
                       >
-                        <XCircle size={12} />
-                        {fieldErrors.familyMembers}
-                      </motion.p>
-                    )}
+                        <select
+                          name="accountType"
+                          value={formData.accountType}
+                          onChange={handleChange}
+                          autoComplete="off"
+                          readOnly
+                          onFocus={(e) => e.target.removeAttribute('readonly')}
+                          className={`w-full p-2 sm:p-3 rounded-2xl text-sm font-medium transition-all appearance-none ${isDark
+                            ? 'bg-gray-800 border-gray-600'
+                            : 'bg-white border-gray-200'
+                            } border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none ${formData.accountType === ""
+                              ? (isDark ? 'text-[#9CA3AF]' : 'text-[#6B7280]')
+                              : (isDark ? 'text-white' : 'text-gray-900')
+                            } ${fieldErrors.accountType ? 'border-rose-500' : ''}`}
+                        >
+                          <option value="">
+                            &nbsp;Select Account Type...
+                          </option>
+                          <option value="Savings" className={isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'}>
+                            &nbsp;Savings Account
+                          </option>
+                          <option value="Current" className={isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'}>
+                            &nbsp;Current Account
+                          </option>
+                          <option value="Salary" className={isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'}>
+                            &nbsp;Salary Account
+                          </option>
+                          <option value="Joint" className={isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'}>
+                            &nbsp;Joint Account
+                          </option>
+                          <option value="NRI" className={isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'}>
+                            &nbsp;NRI Account
+                          </option>
+                        </select>
+
+                        <div className={`absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          <ChevronDown size={16} />
+                        </div>
+                      </motion.div>
+
+                      {fieldErrors.accountType && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-center gap-2 text-rose-600 text-xs text-xs font-medium mt-1"
+                        >
+                          <AlertCircle size={12} />
+                          {fieldErrors.accountType}
+                        </motion.p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3214,7 +4186,7 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
               <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                 <h3 className={`text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   <FileText size={16} className="text-amber-500" />
-                  Document Upload *
+                  Document Upload <span className="text-rose-500 font-normal normal-case">*</span>
                 </h3>
                 <div ref={fieldRefs.documents} className="overflow-visible">
                   <DocumentUpload
@@ -3228,13 +4200,123 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
                 </div>
               </div>
 
-              <div className="flex gap-3 sm:gap-4 pt-4 flex-col sm:flex-row">
+              <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+                <h3 className={`text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  <Activity size={16} className="text-violet-500" />
+                  Profile Completion Status
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="flex flex-col items-center">
+                    <ProfileProgressCircle
+                      percentage={completionPercentage}
+                      size={120}
+                      isDark={isDark}
+                    />
+                    <p className={`text-xs font-medium mt-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {completionPercentage === 100 ? 'Ready to submit!' : 'Complete all fields to submit'}
+                    </p>
+
+                    {/* Status Overview - Simple Line Format */}
+                    <div className="mt-4 w-full max-w-xs">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Status
+                        </span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${formData.status === 'Unknown'
+                          ? 'bg-gray-500/20 text-gray-600'
+                          : formData.status === 'Incomplete'
+                            ? 'bg-amber-500/20 text-amber-600'
+                            : formData.status === 'Pending'
+                              ? 'bg-amber-500/20 text-amber-600'
+                              : formData.status === 'Submitted'
+                                ? 'bg-blue-500/20 text-blue-600'
+                                : formData.status === 'Under Review'
+                                  ? 'bg-purple-500/20 text-purple-600'
+                                  : formData.status === 'Verified'
+                                    ? 'bg-emerald-500/20 text-emerald-600'
+                                    : formData.status === 'Rejected'
+                                      ? 'bg-rose-500/20 text-rose-600'
+                                      : formData.status === 'Approved'
+                                        ? 'bg-green-500/20 text-green-600'
+                                        : 'bg-gray-500/20 text-gray-600'
+                          }`}>
+                          {formData.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className={`text-xs font-semibold uppercase tracking-wide mb-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Completion Checklist
+                    </h4>
+                    <div className="space-y-3">
+                      {[
+                        { label: 'Personal Information', completed: completionChecklist.personalInfo },
+                        { label: 'Bank Details', completed: completionChecklist.bankDetails },
+                        { label: 'Required Documents', completed: completionChecklist.requiredDocuments }
+                      ].map((item, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center ${item.completed
+                            ? 'bg-emerald-500'
+                            : isDark
+                              ? 'bg-gray-600'
+                              : 'bg-gray-300'
+                            }`}>
+                            {item.completed && (
+                              <CheckCircle size={12} className="text-white" />
+                            )}
+                          </div>
+                          <span className={`text-sm ${item.completed
+                            ? isDark ? 'text-emerald-400' : 'text-emerald-600'
+                            : isDark ? 'text-gray-400' : 'text-gray-600'
+                            }`}>
+                            {item.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className={`mt-4 p-3 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Documents Uploaded
+                        </span>
+                        <span className={`text-xs font-bold ${formData.documents.length >= 5
+                          ? isDark ? 'text-emerald-400' : 'text-emerald-600'
+                          : isDark ? 'text-rose-400' : 'text-rose-600'
+                          }`}>
+                          {formData.documents.length} / Required: {formData.documents.length >= 5 ? '5 ✓' : '5'}
+                        </span>
+                      </div>
+                      <div className="mt-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+                            Required Documents:
+                          </span>
+                          <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>
+                            5 total (Aadhaar Front/Back counts as 1)
+                          </span>
+                        </div>
+                        {formData.documents.length < 5 && (
+                          <p className={`text-xs mt-1 ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
+                            Need {5 - formData.documents.length} more document(s)
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 sm:gap-3 pt-4 flex-nowrap">
                 <motion.button
                   type="button"
                   onClick={onClose}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`flex-1 px-4 sm:px-6 py-2 sm:py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${isDark
+                  className={`flex-1 min-w-[100px] px-3 py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${isDark
                     ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
                     : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
                     }`}
@@ -3245,7 +4327,7 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
                   type="submit"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="flex-1 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-2xl text-sm font-semibold shadow-xl flex items-center justify-center gap-2"
+                  className="flex-1 min-w-[100px] px-3 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-2xl text-sm font-semibold shadow-xl flex items-center justify-center gap-2"
                 >
                   {isEditing ? (
                     <>
@@ -3265,7 +4347,6 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
         </motion.div>
       </motion.div>
 
-      {/* Confirmation Dialog - Only show if data has changed for editing */}
       <AnimatePresence>
         {showConfirmation && (
           <ConfirmationDialog
@@ -3281,114 +4362,149 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
           />
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showSuccessDialog && (
+          <SuccessDialog
+            isDark={isDark}
+            title="Success"
+            message={successMessage}
+            onClose={() => setShowSuccessDialog(false)}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 };
 
-// Pagination Component
-const Pagination = ({ currentPage, totalPages, onPageChange, isDark }) => {
-  const pages = [];
-  const maxVisiblePages = 5;
+const Pagination = React.memo(({ currentPage, totalPages, onPageChange, isDark, totalItems, itemsPerPage }) => {
+  if (totalPages <= 1) return null;
 
-  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+  const handlePageChange = useCallback((page) => {
+    if (page !== currentPage && page >= 1 && page <= totalPages) {
+      onPageChange(page);
 
-  if (endPage - startPage + 1 < maxVisiblePages) {
-    startPage = Math.max(1, endPage - maxVisiblePages + 1);
-  }
+      // Add smooth scroll to top of recipients section after page change
+      setTimeout(() => {
+        const recipientsSection = document.querySelector('.recipients-grid-container')?.parentElement;
+        if (recipientsSection) {
+          const yOffset = -100;
+          const y = recipientsSection.getBoundingClientRect().top + window.pageYOffset + yOffset;
 
-  for (let i = startPage; i <= endPage; i++) {
-    pages.push(i);
+          window.scrollTo({
+            top: Math.max(0, y),
+            behavior: 'smooth'
+          });
+        } else {
+          // Fallback to scrolling to top of page
+          window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        }
+      }, 100);
+    }
+  }, [currentPage, totalPages, onPageChange]);
+
+  const startItem = ((currentPage - 1) * itemsPerPage) + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+  const dots = [];
+  const maxDots = 5;
+
+  if (totalPages <= maxDots) {
+    for (let i = 1; i <= totalPages; i++) {
+      dots.push(i);
+    }
+  } else {
+    dots.push(1);
+    if (currentPage > 3) {
+      dots.push('...');
+    }
+
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+
+    for (let i = start; i <= end; i++) {
+      if (!dots.includes(i)) {
+        dots.push(i);
+      }
+    }
+
+    if (currentPage < totalPages - 2) {
+      dots.push('...');
+    }
+
+    if (!dots.includes(totalPages)) {
+      dots.push(totalPages);
+    }
   }
 
   return (
-    <div className="flex items-center justify-center gap-1 sm:gap-2 mt-6 sm:mt-8">
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
-        className={`p-1.5 sm:p-2 rounded-xl ${isDark
-          ? 'bg-gray-700 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-600'
-          : 'bg-white text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100'
-          } border ${isDark ? 'border-gray-600' : 'border-gray-200'}`}
-      >
-        <ChevronLeft size={14} className="sm:w-4 sm:h-4" />
-      </motion.button>
+    <div className="flex flex-col items-center gap-6 mt-8">
+      <div className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        Page {currentPage} of {totalPages} • Showing {startItem}-{endItem} recipients from {totalItems}
+      </div>
 
-      {startPage > 1 && (
-        <>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => onPageChange(1)}
-            className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium ${isDark
-              ? 'bg-gray-700 text-white hover:bg-gray-600'
-              : 'bg-white text-gray-700 hover:bg-gray-100'
-              } border ${isDark ? 'border-gray-600' : 'border-gray-200'}`}
-          >
-            1
-          </motion.button>
-          {startPage > 2 && <span className={`px-1 sm:px-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>...</span>}
-        </>
-      )}
-
-      {pages.map(page => (
+      <div className="flex items-center gap-4">
         <motion.button
-          key={page}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => onPageChange(page)}
-          className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium ${currentPage === page
-            ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
-            : isDark
-              ? 'bg-gray-700 text-white hover:bg-gray-600'
-              : 'bg-white text-gray-700 hover:bg-gray-100'
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className={`p-2 rounded-xl ${isDark
+            ? 'bg-gray-700 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-600'
+            : 'bg-white text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100'
             } border ${isDark ? 'border-gray-600' : 'border-gray-200'}`}
         >
-          {page}
+          <ChevronLeft size={16} />
         </motion.button>
-      ))}
 
-      {endPage < totalPages && (
-        <>
-          {endPage < totalPages - 1 && <span className={`px-1 sm:px-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>...</span>}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => onPageChange(totalPages)}
-            className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium ${isDark
-              ? 'bg-gray-700 text-white hover:bg-gray-600'
-              : 'bg-white text-gray-700 hover:bg-gray-100'
-              } border ${isDark ? 'border-gray-600' : 'border-gray-200'}`}
-          >
-            {totalPages}
-          </motion.button>
-        </>
-      )}
+        <div className="flex items-center gap-2">
+          {dots.map((dot, index) => (
+            <React.Fragment key={`dot-${index}-${dot}`}>
+              {dot === '...' ? (
+                <span className={`px-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>•••</span>
+              ) : (
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => handlePageChange(dot)}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${currentPage === dot
+                    ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
+                    : isDark
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  {dot}
+                </motion.button>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
 
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages}
-        className={`p-1.5 sm:p-2 rounded-xl ${isDark
-          ? 'bg-gray-700 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-600'
-          : 'bg-white text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100'
-          } border ${isDark ? 'border-gray-600' : 'border-gray-200'}`}
-      >
-        <ChevronRight size={14} className="sm:w-4 sm:h-4" />
-      </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className={`p-2 rounded-xl ${isDark
+            ? 'bg-gray-700 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-600'
+            : 'bg-white text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100'
+            } border ${isDark ? 'border-gray-600' : 'border-gray-200'}`}
+        >
+          <ChevronRight size={16} />
+        </motion.button>
+      </div>
     </div>
   );
-};
+});
 
-// MAIN COMPONENT - Recipients Management with Card Layout
 const RecipientsManagement = ({ isDark }) => {
   const [recipients, setRecipients] = useState(recipientsData);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
-  const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedVerification, setSelectedVerification] = useState('All Verification');
   const [selectedUrgency, setSelectedUrgency] = useState('All Urgency');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
@@ -3399,8 +4515,6 @@ const RecipientsManagement = ({ isDark }) => {
   const [editingRecipient, setEditingRecipient] = useState(null);
   const [showForwardModal, setShowForwardModal] = useState(false);
   const [recipientToForward, setRecipientToForward] = useState(null);
-
-  // New state for confirmation dialogs and pagination
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [recipientToDelete, setRecipientToDelete] = useState(null);
   const [showForwardConfirmDialog, setShowForwardConfirmDialog] = useState(false);
@@ -3411,34 +4525,111 @@ const RecipientsManagement = ({ isDark }) => {
   const [successMessage, setSuccessMessage] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(6);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [recipientToVerifyReject, setRecipientToVerifyReject] = useState(null);
+  const [verificationAction, setVerificationAction] = useState(null);
+
+  const scrollPosition = useRef(0);
+
+  useEffect(() => {
+    const isAnyModalOpen =
+      showAddRecipientModal || showRecipientModal || showForwardModal || showVerificationModal || showDeleteDialog || showForwardConfirmDialog || showApproveDialog || showSuccessDialog;
+
+    if (isAnyModalOpen) {
+      scrollPosition.current = window.pageYOffset || document.documentElement.scrollTop;
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'relative';
+      document.body.style.height = '100%';
+      const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.paddingRight = `${scrollBarWidth}px`;
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.height = '';
+      document.body.style.paddingRight = '';
+      document.body.classList.remove('modal-open');
+
+      if (scrollPosition.current !== undefined) {
+        window.scrollTo(0, scrollPosition.current);
+      }
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.height = '';
+      document.body.style.paddingRight = '';
+      document.body.classList.remove('modal-open');
+    };
+  }, [showAddRecipientModal, showRecipientModal, showForwardModal, showVerificationModal, showDeleteDialog, showForwardConfirmDialog, showApproveDialog, showSuccessDialog]);
+
+
+
+  const handleVerifyReject = useCallback((recipient) => {
+    setRecipientToVerifyReject(recipient);
+    setShowVerificationModal(true);
+  }, []);
+
+  const handleVerify = useCallback((recipientId, comment = '') => {
+    setRecipients(prev => prev.map(recipient =>
+      recipient.id === recipientId ? {
+        ...recipient,
+        status: 'Verified',
+        verificationStatus: 'Verified',
+        verificationComment: comment,
+        approver: 'Admin User'
+      } : recipient
+    ));
+
+    setShowVerificationModal(false);
+    setRecipientToVerifyReject(null);
+    setSuccessMessage('Recipient verified successfully');
+    setShowSuccessDialog(true);
+  }, []);
+
+  const handleReject = useCallback((recipientId, reason = '') => {
+    setRecipients(prev => prev.map(recipient =>
+      recipient.id === recipientId ? {
+        ...recipient,
+        status: 'Rejected',
+        verificationStatus: 'Rejected',
+        rejectionReason: reason,
+        approver: 'Admin User'
+      } : recipient
+    ));
+
+    setShowVerificationModal(false);
+    setRecipientToVerifyReject(null);
+    setSuccessMessage('Recipient rejected successfully');
+    setShowSuccessDialog(true);
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+  }, [currentPage]);
 
-  // Filter recipients
   const filteredRecipients = useMemo(() => {
     return recipients.filter(recipient => {
       const matchesSearch =
         recipient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         recipient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         recipient.phone.includes(searchTerm) ||
-        recipient.id.toLowerCase().includes(searchTerm.toLowerCase());
+        recipient.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        recipient.aadhaarNumber.includes(searchTerm) ||
+        recipient.panNumber.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesStatus = selectedStatus === 'All Status' || recipient.status === selectedStatus;
-      const matchesCategory = selectedCategory === 'All Categories' || recipient.category === selectedCategory;
       const matchesVerification = selectedVerification === 'All Verification' || recipient.verificationStatus === selectedVerification;
-      const matchesUrgency = selectedUrgency === 'All Urgency' || recipient.urgency === selectedUrgency;
 
       const matchesDateRange =
         (!dateRange.start || recipient.registrationDate >= dateRange.start) &&
         (!dateRange.end || recipient.registrationDate <= dateRange.end);
 
-      return matchesSearch && matchesStatus && matchesCategory && matchesVerification && matchesUrgency && matchesDateRange;
+      return matchesSearch && matchesStatus && matchesVerification && matchesDateRange;
     });
-  }, [recipients, searchTerm, selectedStatus, selectedCategory, selectedVerification, selectedUrgency, dateRange]);
+  }, [recipients, searchTerm, selectedStatus, selectedVerification, dateRange]);
 
-  // Paginate recipients
   const paginatedRecipients = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredRecipients.slice(startIndex, startIndex + itemsPerPage);
@@ -3446,50 +4637,48 @@ const RecipientsManagement = ({ isDark }) => {
 
   const totalPages = Math.ceil(filteredRecipients.length / itemsPerPage);
 
-  // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedStatus, selectedCategory, selectedVerification, selectedUrgency, dateRange]);
+  }, [searchTerm, selectedStatus, selectedVerification, selectedUrgency, dateRange]);
 
-  // Calculate statistics
   const stats = useMemo(() => {
     const totalRecipients = recipients.length;
-    const approvedRecipients = recipients.filter(r => r.status === 'Approved').length;
-    const pendingRecipients = recipients.filter(r => r.status === 'Pending-Validation').length;
-    const totalAmountRequired = recipients.reduce((sum, r) => sum + r.requiredAmount, 0);
-    const totalAmountDonated = recipients.reduce((sum, r) => sum + r.donatedAmount, 0);
-    const verifiedRecipients = recipients.filter(r => r.verificationStatus === 'Verified').length;
-    const highUrgencyRecipients = recipients.filter(r => r.urgency === 'High').length;
+    const incompleteRecipients = recipients.filter(r => r.status === 'Incomplete').length;
+    const pendingRecipients = recipients.filter(r => r.status === 'Pending').length;
+    const submittedRecipients = recipients.filter(r => r.status === 'Submitted').length;
+    const underReviewRecipients = recipients.filter(r => r.status === 'Under Review').length;
+    const verifiedRecipients = recipients.filter(r => r.status === 'Verified').length;
+    const rejectedRecipients = recipients.filter(r => r.status === 'Rejected').length;
 
     return {
       totalRecipients,
-      approvedRecipients,
+      incompleteRecipients,
       pendingRecipients,
-      totalAmountRequired,
-      totalAmountDonated,
+      submittedRecipients,
+      underReviewRecipients,
       verifiedRecipients,
-      highUrgencyRecipients
+      rejectedRecipients
     };
   }, [recipients]);
 
-  const handleStatusChange = (recipientId, newStatus) => {
+  const handleStatusChange = useCallback((recipientId, newStatus) => {
     setRecipients(prev => prev.map(recipient =>
       recipient.id === recipientId ? { ...recipient, status: newStatus } : recipient
     ));
-  };
+  }, []);
 
-  const handleVerificationChange = (recipientId, newVerification) => {
+  const handleVerificationChange = useCallback((recipientId, newVerification) => {
     setRecipients(prev => prev.map(recipient =>
       recipient.id === recipientId ? { ...recipient, verificationStatus: newVerification } : recipient
     ));
-  };
+  }, []);
 
-  const handleDeleteRecipient = (recipient) => {
+  const handleDeleteRecipient = useCallback((recipient) => {
     setRecipientToDelete(recipient);
     setShowDeleteDialog(true);
-  };
+  }, []);
 
-  const confirmDelete = () => {
+  const confirmDelete = useCallback(() => {
     if (recipientToDelete) {
       setRecipients(prev => prev.filter(recipient => recipient.id !== recipientToDelete.id));
       setShowDeleteDialog(false);
@@ -3497,53 +4686,51 @@ const RecipientsManagement = ({ isDark }) => {
       setSuccessMessage('Recipient deleted successfully');
       setShowSuccessDialog(true);
     }
-  };
+  }, [recipientToDelete]);
 
-  const handleViewRecipient = (recipient) => {
+  const handleViewRecipient = useCallback((recipient) => {
     setSelectedRecipient(recipient);
     setShowRecipientModal(true);
-  };
+  }, []);
 
-  const handleEditRecipient = (recipient) => {
+  const handleEditRecipient = useCallback((recipient) => {
     setEditingRecipient(recipient);
     setShowAddRecipientModal(true);
-  };
+  }, []);
 
-  const handleAddRecipient = (newRecipient) => {
+  const handleAddRecipient = useCallback((newRecipient) => {
+    const currentDate = new Date().toISOString().split('T')[0];
+
     const recipient = {
       ...newRecipient,
       id: `REC-${String(recipients.length + 1).padStart(3, '0')}`,
-      registrationDate: new Date().toISOString().split('T')[0],
-      balanceAmount: newRecipient.requiredAmount - newRecipient.donatedAmount,
-      completionRate: Math.round((newRecipient.donatedAmount / newRecipient.requiredAmount) * 100),
-      lastDonationDate: newRecipient.donatedAmount > 0 ? new Date().toISOString().split('T')[0] : null,
+      registrationDate: currentDate,
+      submittedAt: currentDate,
+      completionPercentage: calculateProfileCompletion(newRecipient),
       assignee: 'admin1',
       forwardingHistory: []
     };
+
     setRecipients(prev => [...prev, recipient]);
     setSuccessMessage('Recipient added successfully');
     setShowSuccessDialog(true);
-  };
+  }, [recipients.length]);
 
-  const handleUpdateRecipient = (updatedRecipient) => {
+  const handleUpdateRecipient = useCallback((updatedRecipient) => {
     setRecipients(prev => prev.map(recipient =>
-      recipient.id === updatedRecipient.id ? {
-        ...updatedRecipient,
-        balanceAmount: updatedRecipient.requiredAmount - updatedRecipient.donatedAmount,
-        completionRate: Math.round((updatedRecipient.donatedAmount / updatedRecipient.requiredAmount) * 100),
-      } : recipient
+      recipient.id === updatedRecipient.id ? updatedRecipient : recipient
     ));
     setEditingRecipient(null);
     setSuccessMessage('Recipient updated successfully');
     setShowSuccessDialog(true);
-  };
+  }, []);
 
-  const handleApproveRecipient = (recipient) => {
+  const handleApproveRecipient = useCallback((recipient) => {
     setRecipientToApprove(recipient);
     setShowApproveDialog(true);
-  };
+  }, []);
 
-  const confirmApprove = () => {
+  const confirmApprove = useCallback(() => {
     if (recipientToApprove) {
       setRecipients(prev => prev.map(recipient =>
         recipient.id === recipientToApprove.id ? {
@@ -3557,9 +4744,9 @@ const RecipientsManagement = ({ isDark }) => {
       setSuccessMessage('Recipient approved successfully');
       setShowSuccessDialog(true);
     }
-  };
+  }, [recipientToApprove]);
 
-  const handleForwardRequest = (recipientId, targetAdminId, reason) => {
+  const handleForwardRequest = useCallback((recipientId, targetAdminId, reason) => {
     const currentAdmin = 'admin1';
 
     setRecipients(prev => prev.map(recipient => {
@@ -3582,53 +4769,57 @@ const RecipientsManagement = ({ isDark }) => {
 
     setSuccessMessage(`Recipient successfully forwarded to ${availableAdmins.find(a => a.id === targetAdminId)?.name}`);
     setShowSuccessDialog(true);
-  };
+  }, []);
 
-  const handleOpenForwardModal = (recipient) => {
+  const handleOpenForwardModal = useCallback((recipient) => {
     setRecipientToForward(recipient);
     setShowForwardModal(true);
-  };
+  }, []);
 
-  const handleForwardConfirm = (recipientId, targetAdminId, reason) => {
+  const handleForwardConfirm = useCallback((recipientId, targetAdminId, reason) => {
     setForwardData({ recipientId, targetAdminId, reason });
     setShowForwardConfirmDialog(true);
-  };
+  }, []);
 
-  const confirmForward = () => {
+  const confirmForward = useCallback(() => {
     if (forwardData) {
       handleForwardRequest(forwardData.recipientId, forwardData.targetAdminId, forwardData.reason);
       setShowForwardConfirmDialog(false);
       setForwardData(null);
       setShowForwardModal(false);
     }
-  };
+  }, [forwardData, handleForwardRequest]);
 
-  // Real Excel export functionality
-  const handleExportExcel = () => {
+  const handleExportExcel = useCallback(() => {
     const data = filteredRecipients.map(recipient => ({
       ID: recipient.id,
       Name: recipient.name,
       Email: recipient.email,
       Phone: recipient.phone,
-      Category: recipient.category,
+      'Aadhaar Number': recipient.aadhaarNumber,
+      'PAN Number': recipient.panNumber,
+      'Date of Birth': recipient.dateOfBirth,
+      Address: recipient.address,
+      Occupation: recipient.occupation,
+      'Family Details': recipient.familyDetails,
+      'Bank Name': recipient.bankName,
+      'Account Number': recipient.accountNumber,
+      'IFSC Code': recipient.ifscCode,
+      'Account Holder Name': recipient.accountHolderName,
+      'Branch Name': recipient.branchName,
+      'UPI ID': recipient.upiId,
+      'Account Type': recipient.accountType,
       Status: recipient.status,
-      'Required Amount': recipient.requiredAmount,
-      'Donated Amount': recipient.donatedAmount,
-      'Balance Amount': recipient.balanceAmount,
-      'Completion Rate': `${recipient.completionRate}%`,
       'Registration Date': recipient.registrationDate,
-      Urgency: recipient.urgency,
       'Verification Status': recipient.verificationStatus
     }));
 
-    // Create CSV content
     const headers = Object.keys(data[0] || {});
     const csvContent = [
       headers.join(','),
       ...data.map(row => headers.map(header => `"${row[header]}"`).join(','))
     ].join('\n');
 
-    // Create and download file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -3638,11 +4829,9 @@ const RecipientsManagement = ({ isDark }) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
+  }, [filteredRecipients]);
 
-  // Real PDF export functionality
-  const handleExportPDF = () => {
-    // Create a printable version of the data
+  const handleExportPDF = useCallback(() => {
     const printContent = `
       <html>
         <head>
@@ -3661,8 +4850,8 @@ const RecipientsManagement = ({ isDark }) => {
           <div class="summary">
             <strong>Generated on:</strong> ${new Date().toLocaleDateString()}<br>
             <strong>Total Recipients:</strong> ${filteredRecipients.length}<br>
-            <strong>Total Required Amount:</strong> ₨${filteredRecipients.reduce((sum, r) => sum + r.requiredAmount, 0).toLocaleString()}<br>
-            <strong>Total Donated Amount:</strong> ₨${filteredRecipients.reduce((sum, r) => sum + r.donatedAmount, 0).toLocaleString()}
+<strong>Approved Recipients:</strong> ${stats.approvedRecipients}<br>
+<strong>Pending Validation:</strong> ${stats.pendingRecipients}
           </div>
           <table>
             <thead>
@@ -3670,11 +4859,10 @@ const RecipientsManagement = ({ isDark }) => {
                 <th>ID</th>
                 <th>Name</th>
                 <th>Email</th>
-                <th>Category</th>
+                <th>Phone</th>
+                <th>Aadhaar</th>
+                <th>PAN</th>
                 <th>Status</th>
-                <th>Required Amount</th>
-                <th>Donated Amount</th>
-                <th>Completion</th>
               </tr>
             </thead>
             <tbody>
@@ -3683,11 +4871,10 @@ const RecipientsManagement = ({ isDark }) => {
                   <td>${recipient.id}</td>
                   <td>${recipient.name}</td>
                   <td>${recipient.email}</td>
-                  <td>${recipient.category}</td>
+                  <td>${recipient.phone}</td>
+                  <td>${recipient.aadhaarNumber}</td>
+                  <td>${recipient.panNumber}</td>
                   <td>${recipient.status}</td>
-                  <td>₨${recipient.requiredAmount.toLocaleString()}</td>
-                  <td>₨${recipient.donatedAmount.toLocaleString()}</td>
-                  <td>${recipient.completionRate}%</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -3700,36 +4887,32 @@ const RecipientsManagement = ({ isDark }) => {
     printWindow.document.write(printContent);
     printWindow.document.close();
     printWindow.print();
-  };
+  }, [filteredRecipients, stats]);
 
-  const handleResetFilters = () => {
+  const handleResetFilters = useCallback(() => {
     setSearchTerm('');
     setSelectedStatus('All Status');
-    setSelectedCategory('All Categories');
     setSelectedVerification('All Verification');
     setSelectedUrgency('All Urgency');
     setDateRange({ start: '', end: '' });
-  };
+  }, []);
 
-  const closeModals = () => {
+  const closeModals = useCallback(() => {
     setShowRecipientModal(false);
     setShowAddRecipientModal(false);
     setShowForwardModal(false);
     setEditingRecipient(null);
     setSelectedRecipient(null);
     setRecipientToForward(null);
-  };
+  }, []);
 
   return (
     <div className="space-y-4 sm:space-y-6 md:space-y-8 px-3 sm:px-4">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 sm:gap-6">
         <div className="flex-1 min-w-0">
-
         </div>
 
-        {/* Mobile View: Stack buttons vertically */}
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
-          {/* Add New Recipient Button - Full width on mobile */}
           <motion.button
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
@@ -3740,7 +4923,6 @@ const RecipientsManagement = ({ isDark }) => {
             <span className="truncate">Add New Recipient</span>
           </motion.button>
 
-          {/* Export Buttons - Side by side on mobile, full width */}
           <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
             <motion.button
               whileHover={{ scale: 1.05, y: -2 }}
@@ -3757,14 +4939,13 @@ const RecipientsManagement = ({ isDark }) => {
               onClick={handleExportPDF}
               className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-rose-600 to-pink-600 text-white rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold shadow-xl flex-1 sm:flex-none"
             >
-              <FileText size={16} />
+              <Download size={16} />
               <span className="truncate">PDF</span>
             </motion.button>
           </div>
         </div>
       </div>
 
-      {/* Statistics Cards - Using EnhancedStatCard design */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -3775,6 +4956,7 @@ const RecipientsManagement = ({ isDark }) => {
           icon={Users}
           title="Total Recipients"
           value={stats.totalRecipients}
+          fullNumber={getFullFormattedNumber(stats.totalRecipients, true)}
           change={8.3}
           changeType="increase"
           color="from-blue-500 to-blue-600"
@@ -3782,38 +4964,40 @@ const RecipientsManagement = ({ isDark }) => {
           isDark={isDark}
         />
         <EnhancedStatCard
-          icon={UserCheck}
-          title="Approved"
-          value={stats.approvedRecipients}
+          icon={CheckCircle}
+          title="Verified"
+          value={stats.verifiedRecipients}
+          fullNumber={getFullFormattedNumber(stats.verifiedRecipients, true)}
           change={12.5}
           changeType="increase"
-          color="from-emerald-500 to-emerald-600"
+          color="from-emerald-500 to-green-500"
           delay={0.2}
           isDark={isDark}
         />
         <EnhancedStatCard
-          icon={Clock}
-          title="Pending"
-          value={stats.pendingRecipients}
+          icon={Send}
+          title="Submitted"
+          value={stats.submittedRecipients}
+          fullNumber={getFullFormattedNumber(stats.submittedRecipients, true)}
           change={5.2}
-          changeType="decrease"
-          color="from-amber-500 to-amber-600"
+          changeType="increase"
+          color="from-amber-500 to-orange-500"
           delay={0.3}
           isDark={isDark}
         />
         <EnhancedStatCard
-          icon={Shield}
-          title="Verified"
-          value={stats.verifiedRecipients}
-          change={15.7}
-          changeType="increase"
-          color="from-violet-500 to-violet-600"
+          icon={XCircle}
+          title="Rejected"
+          value={stats.rejectedRecipients}
+          fullNumber={getFullFormattedNumber(stats.rejectedRecipients, true)}
+          change={3.7}
+          changeType="decrease"
+          color="from-rose-500 to-pink-600"
           delay={0.4}
           isDark={isDark}
         />
       </motion.div>
 
-      {/* Search and Filter Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -3837,7 +5021,7 @@ const RecipientsManagement = ({ isDark }) => {
               <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-violet-500" size={18} />
               <input
                 type="text"
-                placeholder="Search recipients by name, email, phone, or ID..."
+                placeholder="Search recipients by name, email, phone, Aadhaar, PAN, or ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className={`w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium transition-all ${isDark
@@ -3873,114 +5057,69 @@ const RecipientsManagement = ({ isDark }) => {
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden"
             >
+
               <div className={`p-4 sm:p-6 rounded-2xl mb-4 ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'
                 }`}>
-                {/* First row of filters */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4">
-                  <div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
+                  <div className="relative">
                     <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
                       }`}>
                       Status
                     </label>
-                    <select
-                      value={selectedStatus}
-                      onChange={(e) => setSelectedStatus(e.target.value)}
-                      className={`w-full p-2.5 sm:p-3 rounded-xl border-2 focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                        ? 'bg-gray-800 border-gray-600 text-white'
-                        : 'bg-white border-gray-200 text-gray-900'
-                        }`}
-                    >
-                      {statusOptions.map(option => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
-                      }`}>
-                      Category
-                    </label>
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className={`w-full p-2.5 sm:p-3 rounded-xl border-2 focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                        ? 'bg-gray-800 border-gray-600 text-white'
-                        : 'bg-white border-gray-200 text-gray-900'
-                        }`}
-                    >
-                      {categoryOptions.map(option => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
-                      }`}>
-                      Verification
-                    </label>
-                    <select
-                      value={selectedVerification}
-                      onChange={(e) => setSelectedVerification(e.target.value)}
-                      className={`w-full p-2.5 sm:p-3 rounded-xl border-2 focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                        ? 'bg-gray-800 border-gray-600 text-white'
-                        : 'bg-white border-gray-200 text-gray-900'
-                        }`}
-                    >
-                      {verificationOptions.map(option => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Second row of filters */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
-                  <div>
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
-                      }`}>
-                      Urgency
-                    </label>
-                    <select
-                      value={selectedUrgency}
-                      onChange={(e) => setSelectedUrgency(e.target.value)}
-                      className={`w-full p-2.5 sm:p-3 rounded-xl border-2 focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                        ? 'bg-gray-800 border-gray-600 text-white'
-                        : 'bg-white border-gray-200 text-gray-900'
-                        }`}
-                    >
-                      {urgencyOptions.map(option => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
-                      }`}>
-                      Date Range
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="date"
-                        value={dateRange.start}
-                        onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                        className={`w-full p-2.5 sm:p-3 rounded-xl border-2 focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                    <div className="relative">
+                      <select
+                        value={selectedStatus}
+                        onChange={(e) => setSelectedStatus(e.target.value)}
+                        className={`w-full p-2.5 sm:p-3 rounded-xl border-2 focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium appearance-none ${isDark
                           ? 'bg-gray-800 border-gray-600 text-white'
                           : 'bg-white border-gray-200 text-gray-900'
                           }`}
-                      />
-                      <input
-                        type="date"
-                        value={dateRange.end}
-                        onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                        className={`w-full p-2.5 sm:p-3 rounded-xl border-2 focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-200 text-gray-900'
-                          }`}
-                      />
+                        style={{
+                          paddingRight: '2.5rem' // Make room for the icon
+                        }}
+                      >
+                        {statusOptions.map(option => (
+                          <option key={option} value={option}>
+                            {option === 'All Status' ? 'All Status' : option.replace('_', ' ').charAt(0).toUpperCase() + option.slice(1).replace('_', ' ')}
+                          </option>
+                        ))}
+                      </select>
+                      <div className={`absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <ChevronDown size={16} />
+                      </div>
                     </div>
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={dateRange.start}
+                      onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                      className={`w-full p-2.5 sm:p-3 rounded-xl border-2 focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                        ? 'bg-gray-800 border-gray-600 text-white'
+                        : 'bg-white border-gray-200 text-gray-900'
+                        }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={dateRange.end}
+                      onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                      className={`w-full p-2.5 sm:p-3 rounded-xl border-2 focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                        ? 'bg-gray-800 border-gray-600 text-white'
+                        : 'bg-white border-gray-200 text-gray-900'
+                        }`}
+                    />
                   </div>
                 </div>
 
@@ -4007,10 +5146,8 @@ const RecipientsManagement = ({ isDark }) => {
         </AnimatePresence>
       </motion.div>
 
-      {/* Recipients Card Grid */}
       {paginatedRecipients.length > 0 ? (
         <>
-          {/* Add this wrapper div with class name */}
           <div className="requests-grid-container">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -4027,7 +5164,7 @@ const RecipientsManagement = ({ isDark }) => {
                   onEdit={handleEditRecipient}
                   onDelete={handleDeleteRecipient}
                   onForward={handleOpenForwardModal}
-                  onApprove={handleApproveRecipient}
+                  onVerifyReject={handleVerifyReject}
                   onStatusChange={handleStatusChange}
                   index={index}
                 />
@@ -4035,13 +5172,14 @@ const RecipientsManagement = ({ isDark }) => {
             </motion.div>
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
               isDark={isDark}
+              totalItems={filteredRecipients.length}
+              itemsPerPage={itemsPerPage}
             />
           )}
         </>
@@ -4080,57 +5218,27 @@ const RecipientsManagement = ({ isDark }) => {
         </motion.div>
       )}
 
-      {/* Tips Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-        className={`rounded-3xl p-6 ${isDark
-          ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
-          : 'bg-gradient-to-br from-white via-white to-gray-50'
-          }`}
-        style={{
-          boxShadow: isDark
-            ? '0 10px 40px rgba(0, 0, 0, 0.3)'
-            : '0 10px 40px rgba(0, 0, 0, 0.08)'
-        }}
-      >
-        <div>
-          <h4 className={`font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Tips for Managing Recipients
-          </h4>
-          <p className={`text-sm mb-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Here's how to effectively manage recipients:
-          </p>
-          <ul className={`text-sm space-y-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-            <li className="flex items-start gap-2">
-              <CheckCircle2 size={16} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-              <span>Review all documents before approving recipient requests</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle2 size={16} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-              <span>Forward complex cases to specialized admin teams</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle2 size={16} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-              <span>Regularly update recipient status to reflect current progress</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle2 size={16} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-              <span>Monitor high-urgency cases closely for timely assistance</span>
-            </li>
-          </ul>
-        </div>
-      </motion.div>
-
-      {/* Modals */}
       <AnimatePresence>
+        {/* Add this with your other modals */}
+        {showVerificationModal && recipientToVerifyReject && (
+          <VerificationModal
+            isDark={isDark}
+            recipient={recipientToVerifyReject}
+            onClose={() => {
+              setShowVerificationModal(false);
+              setRecipientToVerifyReject(null);
+            }}
+            onVerify={handleVerify}
+            onReject={handleReject}
+          />
+        )}
+
         {showRecipientModal && selectedRecipient && (
           <RecipientDetailModal
             recipient={selectedRecipient}
             isDark={isDark}
             onClose={closeModals}
-            onStatusChange={handleStatusChange}
+            onStatusChange={handleStatusChange} // Make sure this is passed
             onVerificationChange={handleVerificationChange}
             availableAdmins={availableAdmins}
           />
@@ -4143,8 +5251,14 @@ const RecipientsManagement = ({ isDark }) => {
             isDark={isDark}
             recipient={editingRecipient}
             onClose={closeModals}
-            onAddRecipient={handleAddRecipient}
-            onUpdateRecipient={handleUpdateRecipient}
+            onAddRecipient={(recipient) => {
+              handleAddRecipient(recipient);
+              closeModals(); // Close the modal
+            }}
+            onUpdateRecipient={(recipient) => {
+              handleUpdateRecipient(recipient);
+              closeModals(); // Close the modal
+            }}
           />
         )}
       </AnimatePresence>
@@ -4160,7 +5274,6 @@ const RecipientsManagement = ({ isDark }) => {
         )}
       </AnimatePresence>
 
-      {/* Confirmation Dialogs */}
       <AnimatePresence>
         {showDeleteDialog && (
           <ConfirmationDialog
@@ -4203,7 +5316,6 @@ const RecipientsManagement = ({ isDark }) => {
         )}
       </AnimatePresence>
 
-      {/* Success Dialog */}
       <AnimatePresence>
         {showSuccessDialog && (
           <SuccessDialog
