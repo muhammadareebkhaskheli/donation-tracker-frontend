@@ -2578,7 +2578,7 @@ const ForwardModal = ({ isDark, request, onClose, onForward, currentAdmin = 'adm
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, pointerEvents: 'none' }}
         transition={{ type: "spring", damping: 25 }}
-        className={`rounded-3xl w-full max-w-sm mx-auto ${isDark
+        className={`rounded-3xl w-full max-w-md mx-4 ${isDark
           ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
           : 'bg-gradient-to-br from-white via-white to-gray-50'
           }`}
@@ -3834,14 +3834,6 @@ const RequestCard = React.memo(({
                       Edit Request
                     </button>
 
-                    <button
-                      onClick={() => handleMenuAction(() => onForward(request))}
-                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-violet-500/20 text-gray-300' : 'hover:bg-violet-100 text-gray-700'}`}
-                    >
-                      <Send size={16} />
-                      Forward
-                    </button>
-
                     {request.status === 'Pending-Validation' && (
                       <button
                         onClick={() => {
@@ -3851,7 +3843,7 @@ const RequestCard = React.memo(({
                         className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-amber-500/20 text-gray-300' : 'hover:bg-amber-100 text-gray-700'}`}
                       >
                         <FileCheck size={16} />
-                        Validate
+                        Validation
                       </button>
                     )}
 
@@ -3862,7 +3854,7 @@ const RequestCard = React.memo(({
                           }`}
                       >
                         <CheckCircle size={16} />
-                        Approve/Reject
+                        Approval
                       </button>
                     )}
 
@@ -3871,6 +3863,14 @@ const RequestCard = React.memo(({
                         ✓ Already Approved
                       </div>
                     )}
+
+                    <button
+                      onClick={() => handleMenuAction(() => onForward(request))}
+                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-violet-500/20 text-gray-300' : 'hover:bg-violet-100 text-gray-700'}`}
+                    >
+                      <Send size={16} />
+                      Forward
+                    </button>
 
                     <div className={`my-2 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`} />
 
@@ -4065,12 +4065,14 @@ const ValidationModal = ({ isDark, request, onClose, onValidate, urgencyOptions 
 
   // Check if urgency is already set in the request
   const hasUrgencySet = request.urgency && request.urgency !== '';
-  const showUrgencyField = !hasUrgencySet;
+  // Show urgency field only if it's not already set AND validation type is not 'reject'
+  const showUrgencyField = !hasUrgencySet && formData.validationType !== 'reject';
 
   const validateForm = () => {
     const errors = {};
     const shake = [];
 
+    // Only validate urgency if it's shown (meaning we're validating and urgency is not set)
     if (showUrgencyField && !formData.urgency) {
       errors.urgency = 'Please select urgency level';
       shake.push('urgency');
@@ -4107,8 +4109,10 @@ const ValidationModal = ({ isDark, request, onClose, onValidate, urgencyOptions 
   const confirmValidation = () => {
     const validationData = {
       ...formData,
-      // Use existing urgency if not shown in form
-      urgency: showUrgencyField ? formData.urgency : request.urgency
+      // Use existing urgency if not shown in form, or empty string for rejections
+      urgency: formData.validationType === 'reject' 
+        ? '' // Don't set urgency for rejections
+        : (showUrgencyField ? formData.urgency : request.urgency)
     };
     onValidate(request.id, validationData);
     setShowConfirmDialog(false);
@@ -4116,6 +4120,18 @@ const ValidationModal = ({ isDark, request, onClose, onValidate, urgencyOptions 
 
   const handleFieldChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+
+    // Clear validation type-specific errors
+    if (field === 'validationType') {
+      // When switching to reject, clear urgency error if any
+      if (value === 'reject') {
+        setFieldErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.urgency;
+          return newErrors;
+        });
+      }
+    }
 
     if (fieldErrors[field]) {
       setFieldErrors(prev => ({ ...prev, [field]: '' }));
@@ -4156,7 +4172,9 @@ const ValidationModal = ({ isDark, request, onClose, onValidate, urgencyOptions 
                   Validate Request
                 </h2>
                 <p className="text-amber-100 text-xs sm:text-sm font-medium">
-                  {showUrgencyField ? 'Set urgency and validate/reject' : 'Validate or reject request'}
+                  {formData.validationType === 'reject' 
+                    ? 'Reject request (urgency not required)' 
+                    : (showUrgencyField ? 'Set urgency and validate/reject' : 'Validate or reject request')}
                 </p>
               </div>
               <motion.button
@@ -4184,7 +4202,7 @@ const ValidationModal = ({ isDark, request, onClose, onValidate, urgencyOptions 
                   <p className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
                     {request.id} • {request.category}
                   </p>
-                  {!showUrgencyField && request.urgency && (
+                  {!showUrgencyField && request.urgency && formData.validationType !== 'reject' && (
                     <div className="mt-2">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${request.urgency === 'High' ? 'bg-rose-500/20 text-rose-600' :
                         request.urgency === 'Medium' ? 'bg-amber-500/20 text-amber-600' :
@@ -4198,63 +4216,6 @@ const ValidationModal = ({ isDark, request, onClose, onValidate, urgencyOptions 
                   )}
                 </div>
               </div>
-
-              {/* Urgency Field (Only shown if not already set) */}
-              {showUrgencyField && (
-                <div>
-                  <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Set Urgency Level <span className="text-rose-500 font-normal normal-case">*</span>
-                  </label>
-                  <div className="overflow-visible">
-                    <motion.div
-                      animate={shakeFields.includes('urgency') ? "shake" : "initial"}
-                      variants={shakeAnimation}
-                      className="overflow-visible relative"
-                    >
-                      <select
-                        value={formData.urgency}
-                        onChange={(e) => handleFieldChange('urgency', e.target.value)}
-                        className={`w-full p-3 sm:p-4 rounded-2xl text-sm font-medium transition-all appearance-none ${isDark
-                          ? 'bg-gray-700 border-gray-600'
-                          : 'bg-white border-gray-200'
-                          } border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none ${formData.urgency === ""
-                            ? (isDark ? 'text-[#9CA3AF]' : 'text-[#6B7280]')
-                            : (isDark ? 'text-white' : 'text-gray-900')
-                          } ${fieldErrors.urgency ? 'border-rose-500' : ''}`}
-                        style={{
-                          paddingRight: '2.5rem'
-                        }}
-                      >
-                        <option value="">
-                          &nbsp;Select Urgency
-                        </option>
-                        {urgencyOptions.map(option => (
-                          <option
-                            key={option}
-                            value={option}
-                            className={isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'}
-                          >
-                            &nbsp;{option}
-                          </option>
-                        ))}
-                      </select>
-                      <div className={`absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                        <ChevronDown size={16} />
-                      </div>
-                    </motion.div>
-                  </div>
-                  {fieldErrors.urgency && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex items-center gap-2 text-rose-600 text-xs font-medium mt-1"
-                    >
-                      <AlertCircle size={12} />
-                      {fieldErrors.urgency}
-                    </motion.div>
-                  )}
-                </div>
-              )}
 
               {/* Validation Type (Validate/Reject) */}
               <div>
@@ -4329,6 +4290,63 @@ const ValidationModal = ({ isDark, request, onClose, onValidate, urgencyOptions 
                   </motion.div>
                 )}
               </div>
+
+              {/* Urgency Field - Only shown if validating AND urgency not already set */}
+              {showUrgencyField && (
+                <div>
+                  <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Set Urgency Level <span className="text-rose-500 font-normal normal-case">*</span>
+                  </label>
+                  <div className="overflow-visible">
+                    <motion.div
+                      animate={shakeFields.includes('urgency') ? "shake" : "initial"}
+                      variants={shakeAnimation}
+                      className="overflow-visible relative"
+                    >
+                      <select
+                        value={formData.urgency}
+                        onChange={(e) => handleFieldChange('urgency', e.target.value)}
+                        className={`w-full p-3 sm:p-4 rounded-2xl text-sm font-medium transition-all appearance-none ${isDark
+                          ? 'bg-gray-700 border-gray-600'
+                          : 'bg-white border-gray-200'
+                          } border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none ${formData.urgency === ""
+                            ? (isDark ? 'text-[#9CA3AF]' : 'text-[#6B7280]')
+                            : (isDark ? 'text-white' : 'text-gray-900')
+                          } ${fieldErrors.urgency ? 'border-rose-500' : ''}`}
+                        style={{
+                          paddingRight: '2.5rem'
+                        }}
+                      >
+                        <option value="">
+                          &nbsp;Select Urgency
+                        </option>
+                        {urgencyOptions.map(option => (
+                          <option
+                            key={option}
+                            value={option}
+                            className={isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'}
+                          >
+                            &nbsp;{option}
+                          </option>
+                        ))}
+                      </select>
+                      <div className={`absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <ChevronDown size={16} />
+                      </div>
+                    </motion.div>
+                  </div>
+                  {fieldErrors.urgency && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-2 text-rose-600 text-xs font-medium mt-1"
+                    >
+                      <AlertCircle size={12} />
+                      {fieldErrors.urgency}
+                    </motion.div>
+                  )}
+                </div>
+              )}
 
               {/* Reason Field */}
               <div>

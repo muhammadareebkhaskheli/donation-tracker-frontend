@@ -11,7 +11,10 @@ import {
   MapPin,
   Calendar,
   CheckCircle2,
+  AlertTriangle,
+  FileCheck,
   AlertCircle,
+  MessageSquare,
   Send,
   RefreshCw,
   ChevronDown,
@@ -572,7 +575,10 @@ const recipientsData = [
       }
     ],
     totalAmountReceived: 5000000,
-    donationsCount: 15
+    donationsCount: 15,
+    createdBy: 'Super Admin',
+    approvers: ['admin1', 'admin2'],
+    approvedBy: ['admin1', 'admin3']
   },
   {
     id: 'REC-002',
@@ -606,7 +612,10 @@ const recipientsData = [
     assignee: 'admin2',
     forwardingHistory: [],
     totalAmountReceived: 1500000,
-    donationsCount: 8
+    createdBy: 'Super Admin',
+    donationsCount: 8,
+    approvers: ['admin1', 'admin2'],
+    approvedBy: []
   },
   {
     id: 'REC-003',
@@ -646,7 +655,10 @@ const recipientsData = [
       }
     ],
     totalAmountReceived: 3500000,
-    donationsCount: 22
+    donationsCount: 22,
+    createdBy: 'Super Admin',
+    approvers: ['admin1', 'admin2'],
+    approvedBy: ['admin1']
   },
   {
     id: 'REC-004',
@@ -680,7 +692,9 @@ const recipientsData = [
     assignee: 'admin1',
     forwardingHistory: [],
     totalAmountReceived: 12000000,
-    donationsCount: 45
+    donationsCount: 45,
+    createdBy: 'Super Admin',
+    approvers: ['admin1', 'admin2'],
   },
   {
     id: 'REC-005',
@@ -720,7 +734,9 @@ const recipientsData = [
       }
     ],
     totalAmountReceived: 800000,
-    donationsCount: 5
+    createdBy: 'Super Admin',
+    donationsCount: 5,
+    approvers: ['admin1', 'admin2'],
   },
   {
     id: 'REC-006',
@@ -753,7 +769,9 @@ const recipientsData = [
     assignee: 'admin2',
     forwardingHistory: [],
     totalAmountReceived: 25000000,
-    donationsCount: 78
+    donationsCount: 78,
+    createdBy: 'Approver 1',
+    approvers: ['admin1', 'admin2'],
   },
   {
     id: 'REC-007',
@@ -793,7 +811,9 @@ const recipientsData = [
       }
     ],
     totalAmountReceived: 500000000,
-    donationsCount: 1200
+    donationsCount: 1200,
+    createdBy: 'Co-Approver 1',
+    approvers: ['admin1', 'admin2'],
   },
 ];
 
@@ -803,6 +823,14 @@ const availableAdmins = [
   { id: 'admin2', name: 'Approver 1', role: 'approver' },
   { id: 'admin3', name: 'Co-Approver 1', role: 'co_approver' },
   { id: 'admin4', name: 'Support Admin', role: 'support' }
+];
+
+// Add this after availableAdmins definition (around line ~4666)
+const approversList = [
+  { id: 'admin1', name: 'Super Admin', role: 'Super Admin', department: 'Management' },
+  { id: 'admin2', name: 'Approver 1', role: 'Approver', department: 'Verification' },
+  { id: 'admin3', name: 'Co-Approver 1', role: 'Co-Approver', department: 'Support' },
+  { id: 'admin4', name: 'Support Admin', role: 'Support', department: 'Customer Support' }
 ];
 
 // Helper function to calculate profile completion percentage
@@ -1096,7 +1124,313 @@ const shakeAnimation = {
   }
 };
 
-const RecipientCard = memo(({ recipient, isDark, onView, onEdit, onDelete, onForward, onStatusChange, onVerifyReject, index }) => {
+// Add this new ValidationModal component (similar to the one in requests management)
+const RecipientValidationModal = ({ isDark, recipient, onClose, onValidate }) => {
+  const [formData, setFormData] = useState({
+    validationType: '',
+    reason: '',
+    comment: ''
+  });
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [shakeFields, setShakeFields] = useState([]);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  const validateForm = () => {
+    const errors = {};
+    const shake = [];
+
+    if (!formData.validationType) {
+      errors.validationType = 'Please select validation type';
+      shake.push('validationType');
+    }
+
+    // Reason is only required for rejection, optional for validation
+    if (formData.validationType === 'reject' && !formData.reason.trim()) {
+      errors.reason = 'Please provide a reason for rejection';
+      shake.push('reason');
+    }
+
+    setFieldErrors(errors);
+    setShakeFields(shake);
+
+    setTimeout(() => {
+      setShakeFields([]);
+    }, 600);
+
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (validateForm()) {
+      setShowConfirmDialog(true);
+    }
+  };
+
+  const confirmValidation = () => {
+    onValidate(recipient.id, formData);
+    setShowConfirmDialog(false);
+  };
+
+  const handleFieldChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0, pointerEvents: 'none' }}
+        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        style={{ margin: 0, padding: 0 }}
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 30 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, pointerEvents: 'none' }}
+          transition={{ type: "spring", damping: 25 }}
+          className={`rounded-3xl w-full max-w-md mx-auto ${isDark
+            ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
+            : 'bg-gradient-to-br from-white via-white to-gray-50'
+            }`}
+          style={{
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
+            maxHeight: 'calc(100vh - 2rem)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="relative p-4 sm:p-6 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-t-3xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold text-white mb-1">
+                  Validate Recipient
+                </h2>
+                <p className="text-amber-100 text-xs sm:text-sm font-medium">
+                  Validate or reject this recipient
+                </p>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.1, rotate: 90 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={onClose}
+                className="p-1.5 sm:p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+              >
+                <X size={18} className="text-white" />
+              </motion.button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
+              {/* Recipient Details */}
+              <div>
+                <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Recipient Details
+                </label>
+                <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+                  <p className={`text-sm sm:text-base font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {recipient.name}
+                  </p>
+                  <p className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                    {recipient.id} • {recipient.occupation}
+                  </p>
+                </div>
+              </div>
+
+              {/* Validation Type (Validate/Reject) */}
+              <div>
+                <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Validation Type <span className="text-rose-500 font-normal normal-case">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <motion.div
+                    animate={shakeFields.includes('validationType') ? "shake" : "initial"}
+                    variants={shakeAnimation}
+                    className="overflow-visible"
+                  >
+                    <input
+                      type="radio"
+                      id="validate"
+                      name="validationType"
+                      value="validate"
+                      checked={formData.validationType === 'validate'}
+                      onChange={(e) => handleFieldChange('validationType', e.target.value)}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="validate"
+                      className={`flex items-center justify-center gap-2 p-3 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all ${formData.validationType === 'validate'
+                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600'
+                        : isDark
+                          ? 'border-gray-600 bg-gray-700 text-gray-400 hover:border-emerald-500'
+                          : 'border-gray-200 bg-gray-100 text-gray-600 hover:border-emerald-500'
+                        }`}
+                    >
+                      <CheckCircle size={16} />
+                      Validate
+                    </label>
+                  </motion.div>
+
+                  <motion.div
+                    animate={shakeFields.includes('validationType') ? "shake" : "initial"}
+                    variants={shakeAnimation}
+                    className="overflow-visible"
+                  >
+                    <input
+                      type="radio"
+                      id="reject"
+                      name="validationType"
+                      value="reject"
+                      checked={formData.validationType === 'reject'}
+                      onChange={(e) => handleFieldChange('validationType', e.target.value)}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="reject"
+                      className={`flex items-center justify-center gap-2 p-3 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all ${formData.validationType === 'reject'
+                        ? 'border-rose-500 bg-rose-500/10 text-rose-600'
+                        : isDark
+                          ? 'border-gray-600 bg-gray-700 text-gray-400 hover:border-rose-500'
+                          : 'border-gray-200 bg-gray-100 text-gray-600 hover:border-rose-500'
+                        }`}
+                    >
+                      <XCircle size={16} />
+                      Reject
+                    </label>
+                  </motion.div>
+                </div>
+                {fieldErrors.validationType && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2 text-rose-600 text-xs font-medium mt-1"
+                  >
+                    <AlertCircle size={12} />
+                    {fieldErrors.validationType}
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Reason/Comment Field */}
+              <div>
+                <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Comments
+                  <span className={`font-normal normal-case ${formData.validationType === 'reject' ? 'text-rose-500' : 'text-gray-400'}`}>
+                    {formData.validationType === 'reject' ? ' *' : ' (Optional)'}
+                  </span>
+                </label>
+                <div className="overflow-visible">
+                  <motion.div
+                    animate={shakeFields.includes('reason') ? "shake" : "initial"}
+                    variants={shakeAnimation}
+                    className="overflow-visible"
+                  >
+                    <textarea
+                      value={formData.reason}
+                      onChange={(e) => handleFieldChange('reason', e.target.value)}
+                      rows="3"
+                      placeholder={formData.validationType === 'reject'
+                        ? "Please provide a reason for rejection..."
+                        : "Add an optional comment for validation..."}
+                      className={`w-full p-3 sm:p-4 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none resize-none transition-all text-sm font-medium ${isDark
+                        ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
+                        : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                        } ${fieldErrors.reason ? 'border-rose-500' : ''}`}
+                    />
+                  </motion.div>
+                </div>
+                {fieldErrors.reason && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2 text-rose-600 text-xs font-medium mt-1"
+                  >
+                    <AlertCircle size={12} />
+                    {fieldErrors.reason}
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Quick rejection reasons */}
+              {formData.validationType === 'reject' && (
+                <div className="mt-2">
+                  <p className={`text-xs font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Quick reasons:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {['Insufficient Documentation', 'Identity Verification Failed', 'Invalid Information', 'Address Verification Failed', 'Bank Details Mismatch', 'Duplicate Entry'].map((quickReason) => (
+                      <button
+                        key={quickReason}
+                        type="button"
+                        onClick={() => handleFieldChange('reason', quickReason)}
+                        className={`text-xs px-3 py-1.5 rounded-full transition-all ${isDark
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                      >
+                        {quickReason}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 sm:gap-3 pt-4 flex-nowrap">
+                <motion.button
+                  type="button"
+                  onClick={onClose}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`flex-1 min-w-[100px] px-3 py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${isDark
+                    ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                    }`}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  type="submit"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex-1 min-w-[100px] px-3 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 shadow-xl"
+                >
+                  <FileCheck size={16} />
+                  Submit
+                </motion.button>
+              </div>
+            </form>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* Confirmation Dialog */}
+      <AnimatePresence>
+        {showConfirmDialog && (
+          <ConfirmationDialog
+            isDark={isDark}
+            title={`Confirm ${formData.validationType === 'validate' ? 'Validation' : 'Rejection'}`}
+            message={`Are you sure you want to ${formData.validationType === 'validate' ? 'validate' : 'reject'} this recipient?`}
+            onConfirm={confirmValidation}
+            onCancel={() => setShowConfirmDialog(false)}
+            confirmText={formData.validationType === 'validate' ? 'Validate' : 'Reject'}
+            cancelText="Cancel"
+          />
+        )}
+      </AnimatePresence>
+    </>
+  );
+};
+
+const RecipientCard = memo(({ recipient, isDark, onView, onEdit, onDelete, onForward, onStatusChange, onVerifyReject, onValidate, index }) => {
   const [showActions, setShowActions] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const hoverRef = useRef(false);
@@ -1484,18 +1818,6 @@ const RecipientCard = memo(({ recipient, isDark, onView, onEdit, onDelete, onFor
                       View Details
                     </button>
 
-                    {/* Show Verify/Reject option only for "Under Review" recipients */}
-                    {recipient.status === 'Under Review' && (
-                      <button
-                        onClick={() => handleMenuAction(() => onVerifyReject(recipient))}
-                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-violet-500/20 text-gray-300' : 'hover:bg-violet-100 text-gray-700'
-                          }`}
-                      >
-                        <CheckCircle size={16} />
-                        Verify/Reject
-                      </button>
-                    )}
-
                     <button
                       onClick={() => handleMenuAction(() => onEdit(recipient))}
                       className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-amber-500/20 text-gray-300' : 'hover:bg-amber-100 text-gray-700'
@@ -1504,6 +1826,29 @@ const RecipientCard = memo(({ recipient, isDark, onView, onEdit, onDelete, onFor
                       <Edit size={16} />
                       Edit
                     </button>
+
+                    {/* Show Verify/Reject option only for "Under Review" recipients */}
+                    {recipient.status === 'Validated' && (
+                      <button
+                        onClick={() => handleMenuAction(() => onVerifyReject(recipient))}
+                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-violet-500/20 text-gray-300' : 'hover:bg-violet-100 text-gray-700'
+                          }`}
+                      >
+                        <CheckCircle size={16} />
+                        Approval
+                      </button>
+                    )}
+
+                    {recipient.status === 'Pending-Validation' && (
+                      <button
+                        onClick={() => handleMenuAction(() => onValidate(recipient))}
+                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-emerald-500/20 text-gray-300' : 'hover:bg-emerald-100 text-gray-700'
+                          }`}
+                      >
+                        <CheckCircle size={16} />
+                        Validation
+                      </button>
+                    )}
 
                     <button
                       onClick={() => handleMenuAction(() => onForward(recipient))}
@@ -1556,7 +1901,7 @@ const RecipientCard = memo(({ recipient, isDark, onView, onEdit, onDelete, onFor
         </div>
 
         {/* ========== STATUS & OCCUPATION BADGES ========== */}
-        <div className="flex items-center gap-3 flex-wrap mb-6">
+        <div className="flex items-center gap-3 flex-wrap mb-2">
           <motion.div
             whileHover={{ scale: 1.05 }}
             animate={{
@@ -1593,7 +1938,7 @@ const RecipientCard = memo(({ recipient, isDark, onView, onEdit, onDelete, onFor
         </div>
 
         {/* ========== CONTACT INFO ========== */}
-        <div className={`p-3 sm:p-4 rounded-2xl space-y-2 sm:space-y-3 mb-6`}>
+        <div className={`p-3 sm:p-4 rounded-2xl space-y-2 sm:space-y-3 mb-1`}>
           <div className="flex items-center gap-2 sm:gap-3">
             <Mail size={14} className={`${occupationConfig.textColor} flex-shrink-0`} />
             <span className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} truncate`}>
@@ -1613,6 +1958,88 @@ const RecipientCard = memo(({ recipient, isDark, onView, onEdit, onDelete, onFor
             </span>
           </div>
         </div>
+
+        {/* ========== APPROVERS SECTION - Only show for verified/validated recipients ========== */}
+        {recipient.status === 'Validated' && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between">
+              <p className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Approved by
+              </p>
+              <div className="flex items-center gap-2">
+                {/* Show approval count with visual indicator */}
+                <motion.div
+                  animate={{
+                    scale: isHovered ? [1, 1.05, 1] : 1,
+                  }}
+                  transition={{
+                    duration: isHovered ? 1.5 : 0.1,
+                    repeat: isHovered ? Infinity : 0,
+                    repeatDelay: isHovered ? 0.5 : 0
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium ${(recipient.approvedBy?.length || 0) === ((recipient.approvers?.length || 0) + (recipient.coApprovers?.length || 0))
+                    ? isDark
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : 'bg-emerald-100 text-emerald-700'
+                    : (recipient.approvedBy?.length || 0) > 0
+                      ? isDark
+                        ? 'bg-amber-500/20 text-amber-300'
+                        : 'bg-amber-100 text-amber-700'
+                      : isDark
+                        ? 'bg-gray-700/50 text-gray-400'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}
+                >
+                  <UserCheck size={12} className="flex-shrink-0" />
+                  <span className="font-semibold">
+                    {recipient.approvedBy?.length || 0} / {((recipient.approvers?.length || 0) + (recipient.coApprovers?.length || 0))}
+                  </span>
+                  {(recipient.approvedBy?.length || 0) === ((recipient.approvers?.length || 0) + (recipient.coApprovers?.length || 0)) && (
+                    <CheckCircle size={10} className="text-emerald-500 flex-shrink-0" />
+                  )}
+                </motion.div>
+              </div>
+            </div>
+
+            {/* Show approved by section with only approved approvers */}
+            {recipient.approvedBy?.length > 0 && (
+              <div className="mt-1">
+                <div className="flex flex-wrap gap-2">
+                  {recipient.approvedBy.map((approverId, index) => {
+                    const approver = availableAdmins.find(a => a.id === approverId);
+                    const isCoApprover = recipient.coApprovers?.includes(approverId);
+                    return (
+                      <motion.div
+                        key={approverId}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: index * 0.05 }}
+                        className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium border ${isDark
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          }`}
+                      >
+                        <CheckCircle size={12} className="flex-shrink-0" />
+                        <span className="truncate max-w-[100px]">
+                          {approver?.name || 'Unknown'}
+                        </span>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* If no approvals yet */}
+            {(!recipient.approvedBy || recipient.approvedBy.length === 0) && (
+              <div className="mt-3">
+                <p className={`text-xs italic ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  No approvals yet
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ========== AGE & DOB INFO ========== */}
         <div className="grid grid-cols-2 gap-4 mb-6">
@@ -1654,28 +2081,75 @@ const RecipientCard = memo(({ recipient, isDark, onView, onEdit, onDelete, onFor
           </motion.div>
         </div>
 
-        {/* ========== ADMIN & DOCUMENTS INFO ========== */}
-        <div className="flex items-center justify-between gap-3 flex-wrap mb-6">
-          <div className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-medium ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'
-            }`}>
-            <UserCheck size={12} className="flex-shrink-0" />
-            <span className="truncate max-w-[80px] xs:max-w-[100px] sm:max-w-none">
-              {availableAdmins.find(a => a.id === recipient.assignee)?.name || 'Unknown'}
+        {/* ========== CREATED BY & ASSIGNED TO INFO ========== */}
+        {recipient.assignee ? (
+          /* Two columns layout when assignee exists */
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {/* Created By */}
+            <div className={`p-3 rounded-xl flex flex-col items-center justify-center ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+              <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Created by
+              </p>
+              <p className={`text-sm font-semibold text-center ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {(() => {
+                  const creator = recipient.createdBy || recipient.approver || 'Super Admin';
+                  // Check if creator is the current user (admin1)
+                  if (creator === 'Super Admin' || creator === 'admin1') {
+                    return 'You';
+                  }
+                  return creator;
+                })()}
+              </p>
+            </div>
+
+            {/* Assigned To */}
+            <div className={`p-3 rounded-xl flex flex-col items-center justify-center ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+              <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Assigned to
+              </p>
+              <p className={`text-sm font-semibold text-center ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {recipient.assignee === 'admin1'
+                  ? 'You'
+                  : availableAdmins.find(a => a.id === recipient.assignee)?.name || 'Unknown'
+                }
+              </p>
+            </div>
+          </div>
+        ) : (
+          /* Full width layout when no assignee */
+          <div className="mb-6">
+            <div className={`p-3 rounded-xl flex flex-col items-center justify-center w-full ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+              <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Created by
+              </p>
+              <p className={`text-sm font-semibold text-center ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {(() => {
+                  const creator = recipient.createdBy || recipient.approver || 'Super Admin';
+                  // Check if creator is the current user (admin1)
+                  if (creator === 'Super Admin' || creator === 'admin1') {
+                    return 'You';
+                  }
+                  return creator;
+                })()}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ========== FOOTER WITH DOCUMENTS ========== */}
+        <div className="flex items-center justify-between text-xs font-medium pt-4 border-t border-gray-700/20">
+          <div className="flex items-center gap-2">
+            <Calendar size={14} className={`flex-shrink-0 ${occupationConfig.textColor}`} />
+            <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>
+              Registered: {formatDate(recipient.registrationDate)}
             </span>
           </div>
+
           <div className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-medium ${isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-700'
             }`}>
             <FileText size={12} className="flex-shrink-0" />
             {recipient.documents.length} Docs
           </div>
-        </div>
-
-        {/* ========== FOOTER ========== */}
-        <div className="flex items-center gap-2 text-xs font-medium pt-4 border-t border-gray-700/20">
-          <Calendar size={14} className={`flex-shrink-0 ${occupationConfig.textColor}`} />
-          <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>
-            Registered: {formatDate(recipient.registrationDate)}
-          </span>
         </div>
       </div>
     </motion.div>
@@ -1694,24 +2168,28 @@ const getStatusColor = (status) => {
   return statusMap[status.toLowerCase()] || { gradient: 'from-gray-500 to-gray-600', icon: FileText };
 };
 
-// Verification Modal Component
+// Verification Modal Component - Updated with quick reasons for reject only
 const VerificationModal = ({ isDark, recipient, onClose, onVerify, onReject }) => {
-  const [action, setAction] = useState(''); // 'verify' or 'reject'
-  const [reason, setReason] = useState('');
-  const [comment, setComment] = useState('');
+  const [formData, setFormData] = useState({
+    verificationType: '',
+    reason: '',
+    comment: ''
+  });
   const [fieldErrors, setFieldErrors] = useState({});
   const [shakeFields, setShakeFields] = useState([]);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const validateForm = () => {
     const errors = {};
     const shake = [];
 
-    if (!action) {
-      errors.action = 'Please select an action';
-      shake.push('action');
+    if (!formData.verificationType) {
+      errors.verificationType = 'Please select verification type';
+      shake.push('verificationType');
     }
 
-    if (action === 'reject' && !reason.trim()) {
+    // Reason is only required for rejection, optional for verification
+    if (formData.verificationType === 'reject' && !formData.reason.trim()) {
       errors.reason = 'Please provide a reason for rejection';
       shake.push('reason');
     }
@@ -1728,21 +2206,22 @@ const VerificationModal = ({ isDark, recipient, onClose, onVerify, onReject }) =
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!validateForm()) {
-      return;
-    }
-
-    if (action === 'verify') {
-      onVerify(recipient.id, comment.trim());
-    } else if (action === 'reject') {
-      onReject(recipient.id, reason.trim());
+    if (validateForm()) {
+      setShowConfirmDialog(true);
     }
   };
 
+  const confirmAction = () => {
+    if (formData.verificationType === 'verify') {
+      onVerify(recipient.id, formData.comment || formData.reason);
+    } else if (formData.verificationType === 'reject') {
+      onReject(recipient.id, formData.reason);
+    }
+    setShowConfirmDialog(false);
+  };
+
   const handleFieldChange = (field, value) => {
-    if (field === 'action') setAction(value);
-    if (field === 'reason') setReason(value);
-    if (field === 'comment') setComment(value);
+    setFormData(prev => ({ ...prev, [field]: value }));
 
     if (fieldErrors[field]) {
       setFieldErrors(prev => ({ ...prev, [field]: '' }));
@@ -1750,144 +2229,151 @@ const VerificationModal = ({ isDark, recipient, onClose, onVerify, onReject }) =
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      style={{ margin: 0, padding: 0 }}
-    >
+    <>
       <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 30 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         exit={{ opacity: 0, pointerEvents: 'none' }}
-        transition={{ type: "spring", damping: 25 }}
-        className={`rounded-3xl w-full max-w-md mx-4 ${isDark
-          ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
-          : 'bg-gradient-to-br from-white via-white to-gray-50'
-          }`}
-        style={{
-          boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
-          maxHeight: 'calc(100vh - 2rem)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        style={{ margin: 0, padding: 0 }}
       >
-        <div className={`relative p-4 sm:p-6 ${action === 'verify'
-          ? 'bg-gradient-to-r from-emerald-600 to-green-600'
-          : action === 'reject'
-            ? 'bg-gradient-to-r from-rose-600 to-red-600'
-            : 'bg-gradient-to-r from-violet-600 to-fuchsia-600'
-          } rounded-t-3xl`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg sm:text-xl font-bold text-white mb-1">
-                {action === 'verify' ? 'Verify Recipient' :
-                  action === 'reject' ? 'Reject Recipient' :
-                    'Review Recipient'}
-              </h2>
-              <p className="text-white/80 text-xs sm:text-sm font-medium">
-                {action === 'verify' ? 'Approve this recipient' :
-                  action === 'reject' ? 'Reject this recipient' :
-                    'Select an action for this recipient'}
-              </p>
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.1, rotate: 90 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={onClose}
-              className="p-1.5 sm:p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
-            >
-              <X size={18} className="text-white" />
-            </motion.button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
-            <div>
-              <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                Recipient Details
-              </label>
-              <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'
-                }`}>
-                <p className={`text-sm sm:text-base font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {recipient.name}
-                </p>
-                <p className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                  {recipient.id} • {recipient.occupation}
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                Select Action <span className="text-rose-500 font-normal normal-case">*</span>
-              </label>
-              <div className="overflow-visible">
-                <motion.div
-                  animate={shakeFields.includes('action') ? "shake" : "initial"}
-                  variants={shakeAnimation}
-                  className="overflow-visible"
-                >
-                  <div className="grid grid-cols-2 gap-3">
-                    <motion.button
-                      type="button"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleFieldChange('action', 'verify')}
-                      className={`p-4 rounded-2xl border-2 text-center transition-all ${action === 'verify'
-                        ? 'bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-500 text-emerald-700'
-                        : isDark
-                          ? 'bg-gray-700 border-gray-600 text-gray-300 hover:border-emerald-500'
-                          : 'bg-white border-gray-200 text-gray-700 hover:border-emerald-500'
-                        }`}
-                    >
-                      <CheckCircle size={24} className="mx-auto mb-2" />
-                      <span className="text-sm font-semibold">Verify</span>
-                      <p className="text-xs mt-1 opacity-80">Approve recipient</p>
-                    </motion.button>
-
-                    <motion.button
-                      type="button"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleFieldChange('action', 'reject')}
-                      className={`p-4 rounded-2xl border-2 text-center transition-all ${action === 'reject'
-                        ? 'bg-gradient-to-r from-rose-50 to-red-50 border-rose-500 text-rose-700'
-                        : isDark
-                          ? 'bg-gray-700 border-gray-600 text-gray-300 hover:border-rose-500'
-                          : 'bg-white border-gray-200 text-gray-700 hover:border-rose-500'
-                        }`}
-                    >
-                      <XCircle size={24} className="mx-auto mb-2" />
-                      <span className="text-sm font-semibold">Reject</span>
-                      <p className="text-xs mt-1 opacity-80">Reject recipient</p>
-                    </motion.button>
-                  </div>
-                </motion.div>
-              </div>
-              {fieldErrors.action && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2 text-rose-600 text-xs font-medium mt-1"
-                >
-                  <AlertCircle size={12} />
-                  {fieldErrors.action}
-                </motion.div>
-              )}
-            </div>
-
-            {action === 'reject' && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 30 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, pointerEvents: 'none' }}
+          transition={{ type: "spring", damping: 25 }}
+          className={`rounded-3xl w-full max-w-md mx-auto ${isDark
+            ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
+            : 'bg-gradient-to-br from-white via-white to-gray-50'
+            }`}
+          style={{
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
+            maxHeight: 'calc(100vh - 2rem)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="relative p-4 sm:p-6 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-t-3xl">
+            <div className="flex items-center justify-between">
               <div>
-                <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                  Reason for Rejection <span className="text-rose-500 font-normal normal-case">*</span>
+                <h2 className="text-lg sm:text-xl font-bold text-white mb-1">
+                  Approve Recipient
+                </h2>
+                <p className="text-violet-100 text-xs sm:text-sm font-medium">
+                  Approve or reject this recipient
+                </p>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.1, rotate: 90 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={onClose}
+                className="p-1.5 sm:p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+              >
+                <X size={18} className="text-white" />
+              </motion.button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
+              {/* Recipient Details */}
+              <div>
+                <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Recipient Details
+                </label>
+                <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+                  <p className={`text-sm sm:text-base font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {recipient.name}
+                  </p>
+                  <p className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                    {recipient.id} • {recipient.occupation}
+                  </p>
+                </div>
+              </div>
+
+              {/* Verification Type (Verify/Reject) */}
+              <div>
+                <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Verification Type <span className="text-rose-500 font-normal normal-case">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <motion.div
+                    animate={shakeFields.includes('verificationType') ? "shake" : "initial"}
+                    variants={shakeAnimation}
+                    className="overflow-visible"
+                  >
+                    <input
+                      type="radio"
+                      id="verify"
+                      name="verificationType"
+                      value="verify"
+                      checked={formData.verificationType === 'verify'}
+                      onChange={(e) => handleFieldChange('verificationType', e.target.value)}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="verify"
+                      className={`flex items-center justify-center gap-2 p-3 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all ${formData.verificationType === 'verify'
+                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600'
+                        : isDark
+                          ? 'border-gray-600 bg-gray-700 text-gray-400 hover:border-emerald-500'
+                          : 'border-gray-200 bg-gray-100 text-gray-600 hover:border-emerald-500'
+                        }`}
+                    >
+                      <CheckCircle size={16} />
+                      Approve
+                    </label>
+                  </motion.div>
+
+                  <motion.div
+                    animate={shakeFields.includes('verificationType') ? "shake" : "initial"}
+                    variants={shakeAnimation}
+                    className="overflow-visible"
+                  >
+                    <input
+                      type="radio"
+                      id="reject"
+                      name="verificationType"
+                      value="reject"
+                      checked={formData.verificationType === 'reject'}
+                      onChange={(e) => handleFieldChange('verificationType', e.target.value)}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="reject"
+                      className={`flex items-center justify-center gap-2 p-3 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all ${formData.verificationType === 'reject'
+                        ? 'border-rose-500 bg-rose-500/10 text-rose-600'
+                        : isDark
+                          ? 'border-gray-600 bg-gray-700 text-gray-400 hover:border-rose-500'
+                          : 'border-gray-200 bg-gray-100 text-gray-600 hover:border-rose-500'
+                        }`}
+                    >
+                      <XCircle size={16} />
+                      Reject
+                    </label>
+                  </motion.div>
+                </div>
+                {fieldErrors.verificationType && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2 text-rose-600 text-xs font-medium mt-1"
+                  >
+                    <AlertCircle size={12} />
+                    {fieldErrors.verificationType}
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Reason/Comment Field */}
+              <div>
+                <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Comments
+                  <span className={`font-normal normal-case ${formData.verificationType === 'reject' ? 'text-rose-500' : 'text-gray-400'}`}>
+                    {formData.verificationType === 'reject' ? ' *' : ' (Optional)'}
+                  </span>
                 </label>
                 <div className="overflow-visible">
                   <motion.div
@@ -1896,34 +2382,18 @@ const VerificationModal = ({ isDark, recipient, onClose, onVerify, onReject }) =
                     className="overflow-visible"
                   >
                     <textarea
-                      value={reason}
+                      value={formData.reason}
                       onChange={(e) => handleFieldChange('reason', e.target.value)}
                       rows="3"
-                      placeholder="Explain why you're rejecting this recipient..."
-                      className={`w-full p-3 sm:p-4 rounded-2xl border-2 focus:ring-4 focus:ring-rose-500/30 focus:border-rose-500 focus:outline-none resize-none transition-all text-sm font-medium ${isDark
+                      placeholder={formData.verificationType === 'reject'
+                        ? "Please provide a reason for rejection..."
+                        : "Add an optional comment for verification..."}
+                      className={`w-full p-3 sm:p-4 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none resize-none transition-all text-sm font-medium ${isDark
                         ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                         : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
                         } ${fieldErrors.reason ? 'border-rose-500' : ''}`}
                     />
                   </motion.div>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className={`text-xs font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Quick reasons:
-                  </span>
-                  {['Identity Verification Failed', 'Invalid Information', 'Address Verification Failed', 'Document Verification Failed', 'Incomplete Documentation', 'Bank Details Mismatch'].map((quickReason) => (
-                    <button
-                      key={quickReason}
-                      type="button"
-                      onClick={() => handleFieldChange('reason', quickReason)}
-                      className={`text-xs px-3 py-1.5 rounded-full transition-all ${isDark
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                    >
-                      {quickReason}
-                    </button>
-                  ))}
                 </div>
                 {fieldErrors.reason && (
                   <motion.div
@@ -1936,71 +2406,86 @@ const VerificationModal = ({ isDark, recipient, onClose, onVerify, onReject }) =
                   </motion.div>
                 )}
               </div>
-            )}
 
-            {action === 'verify' && (
-              <div>
-                <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                  Verification Comments (Optional)
-                </label>
-                <textarea
-                  value={comment}
-                  onChange={(e) => handleFieldChange('comment', e.target.value)}
-                  rows="3"
-                  placeholder="Add any comments about the verification..."
-                  className={`w-full p-3 sm:p-4 rounded-2xl border-2 focus:ring-4 focus:ring-emerald-500/30 focus:border-emerald-500 focus:outline-none resize-none transition-all text-sm font-medium ${isDark
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
-                    : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+              {/* Quick rejection reasons - ONLY SHOW FOR REJECT */}
+              {formData.verificationType === 'reject' && (
+                <div className="mt-2">
+                  <p className={`text-xs font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Quick reasons:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      'Identity Verification Failed',
+                      'Invalid Information',
+                      'Address Verification Failed',
+                      'Document Verification Failed',
+                      'Incomplete Documentation',
+                      'Bank Details Mismatch',
+                      'Duplicate Entry',
+                      'Previous Rejection History',
+                      'Income Proof Required',
+                      'Age Verification Failed'
+                    ].map((quickReason) => (
+                      <button
+                        key={quickReason}
+                        type="button"
+                        onClick={() => handleFieldChange('reason', quickReason)}
+                        className={`text-xs px-3 py-1.5 rounded-full transition-all ${isDark
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                      >
+                        {quickReason}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 sm:gap-3 pt-4 flex-nowrap">
+                <motion.button
+                  type="button"
+                  onClick={onClose}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`flex-1 min-w-[100px] px-3 py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${isDark
+                    ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
                     }`}
-                />
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  type="submit"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex-1 min-w-[100px] px-3 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 shadow-xl"
+                >
+                  <FileCheck size={16} />
+                  Submit
+                </motion.button>
               </div>
-            )}
-
-            <div className="flex gap-2 sm:gap-3 pt-4 flex-nowrap">
-              <motion.button
-                type="button"
-                onClick={onClose}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className={`flex-1 min-w-[100px] px-3 py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${isDark
-                  ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
-                  : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
-              >
-                Cancel
-              </motion.button>
-              <motion.button
-                type="submit"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className={`flex-1 min-w-[100px] px-3 py-3 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 shadow-xl ${action === 'verify'
-                  ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white'
-                  : action === 'reject'
-                    ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white'
-                    : 'bg-gradient-to-r from-gray-600 to-gray-700 text-white cursor-not-allowed'
-                  }`}
-                disabled={!action}
-              >
-                {action === 'verify' ? (
-                  <>
-                    <CheckCircle size={16} />
-                    Verify Recipient
-                  </>
-                ) : action === 'reject' ? (
-                  <>
-                    <XCircle size={16} />
-                    Reject Recipient
-                  </>
-                ) : (
-                  'Select Action'
-                )}
-              </motion.button>
-            </div>
-          </form>
-        </div>
+            </form>
+          </div>
+        </motion.div>
       </motion.div>
-    </motion.div>
+
+      {/* Confirmation Dialog */}
+      <AnimatePresence>
+        {showConfirmDialog && (
+          <ConfirmationDialog
+            isDark={isDark}
+            title={`Confirm ${formData.verificationType === 'verify' ? 'Approval' : 'Rejection'}`}
+            message={`Are you sure you want to ${formData.verificationType === 'verify' ? 'approve' : 'reject'} this recipient?`}
+            onConfirm={confirmAction}
+            onCancel={() => setShowConfirmDialog(false)}
+            confirmText={formData.verificationType === 'verify' ? 'Approve' : 'Reject'}
+            cancelText="Cancel"
+          />
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 
@@ -2080,7 +2565,7 @@ const ForwardModal = ({ isDark, recipient, onClose, onForward, currentAdmin = 'a
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg sm:text-xl font-bold text-white mb-1">
-                Forward Request
+                Forward Recipient
               </h2>
               <p className="text-violet-100 text-xs sm:text-sm font-medium">
                 Transfer recipient to another admin
@@ -2139,7 +2624,7 @@ const ForwardModal = ({ isDark, recipient, onClose, onForward, currentAdmin = 'a
                       .filter(admin => admin.id !== currentAdmin)
                       .map(admin => (
                         <option key={admin.id} value={admin.id}>
-                          {admin.name} ({admin.role})
+                          {admin.name}
                         </option>
                       ))
                     }
@@ -2492,6 +2977,59 @@ const RecipientDetailModal = ({ recipient, isDark, onClose, onStatusChange, onVe
 
   const age = calculateAge(recipient.dateOfBirth);
 
+  // Get all validation/approval/rejection comments
+  const getAllComments = useMemo(() => {
+    const comments = [];
+
+    if (recipient.validationNotes && recipient.validationNotes.length > 0) {
+      recipient.validationNotes.forEach(note => {
+        comments.push({
+          id: `validation-${note.id || Date.now()}-${Math.random()}`,
+          text: note.text,
+          timestamp: note.timestamp,
+          admin: note.admin,
+          type: note.type
+        });
+      });
+    }
+
+    return comments.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }, [recipient]);
+
+  const [showComments, setShowComments] = useState(false);
+
+  // Get icon and color based on comment type
+  const getCommentConfig = (type) => {
+    switch (type) {
+      case 'validation':
+      case 'approval':
+      case 'verification':
+        return {
+          icon: CheckCircle,
+          color: 'text-emerald-500',
+          bgColor: isDark ? 'bg-emerald-500/20' : 'bg-emerald-100',
+          borderColor: isDark ? 'border-emerald-500/30' : 'border-emerald-200',
+          label: type === 'validation' ? 'Validated' : type === 'approval' ? 'Approved' : 'Verified'
+        };
+      case 'rejection':
+        return {
+          icon: XCircle,
+          color: 'text-rose-500',
+          bgColor: isDark ? 'bg-rose-500/20' : 'bg-rose-100',
+          borderColor: isDark ? 'border-rose-500/30' : 'border-rose-200',
+          label: 'Rejected'
+        };
+      default:
+        return {
+          icon: FileText,
+          color: 'text-gray-500',
+          bgColor: isDark ? 'bg-gray-500/20' : 'bg-gray-100',
+          borderColor: isDark ? 'border-gray-500/30' : 'border-gray-200',
+          label: 'Comment'
+        };
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -2795,7 +3333,69 @@ const RecipientDetailModal = ({ recipient, isDark, onClose, onStatusChange, onVe
               </div>
             </div>
 
-            {recipient.forwardingHistory.length > 0 && (
+            <div className={`p-4 sm:p-6 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+              <h3 className={`text-base sm:text-lg font-bold mb-4 sm:mb-6 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <FileText size={18} className="text-amber-500" />
+                Documents ({recipient.documents.length})
+              </h3>
+              <div className="space-y-2 sm:space-y-3">
+                {recipient.documents.length > 0 ? (
+                  recipient.documents.map((doc, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      whileHover={{ x: 5 }}
+                      className={`flex items-center justify-between p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                        <div className={`p-2 sm:p-3 rounded-xl flex-shrink-0 ${isDark ? 'bg-gray-700' : 'bg-gray-100'
+                          }`}>
+                          <FileText size={16} className="text-amber-500" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-sm font-semibold truncate ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{doc.name}</p>
+                          <p className={`text-xs font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {doc.size}
+                          </p>
+                        </div>
+                      </div>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const link = document.createElement('a');
+                          link.href = `/api/documents/${doc.name}`;
+                          link.download = doc.name;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+
+                          if (onStatusChange && recipient.status === 'Submitted') {
+                            onStatusChange(recipient.id, 'Under Review');
+                          }
+                        }}
+                        className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-semibold ${isDark
+                          ? 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
+                          : 'bg-violet-100 text-violet-700 hover:bg-violet-200'
+                          }`}
+                      >
+                        <Download size={14} className="inline mr-1 sm:mr-2" />
+                        Download
+                      </motion.button>
+                    </motion.div>
+                  ))
+                ) : (
+                  <p className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>No documents uploaded</p>
+                )}
+              </div>
+            </div>
+
+            {/* Forwarding History Section - Kept exactly as is */}
+            {recipient.forwardingHistory && recipient.forwardingHistory.length > 0 && (
               <div className={`p-4 sm:p-6 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                 <h3 className={`text-base sm:text-lg font-bold mb-4 sm:mb-6 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   <Send size={18} className="text-violet-500" />
@@ -2834,68 +3434,88 @@ const RecipientDetailModal = ({ recipient, isDark, onClose, onStatusChange, onVe
               </div>
             )}
 
-            <div className={`p-4 sm:p-6 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
-              <h3 className={`text-base sm:text-lg font-bold mb-4 sm:mb-6 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                <FileText size={18} className="text-amber-500" />
-                Documents ({recipient.documents.length})
-              </h3>
-              <div className="space-y-2 sm:space-y-3">
-                {recipient.documents.length > 0 ? (
-                  recipient.documents.map((doc, index) => (
+            {/* Validation/Approval/Rejection Comments Section - Similar to forwarding history style */}
+            {getAllComments.length > 0 && (
+              <div className={`p-4 sm:p-6 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className={`text-base sm:text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    <MessageSquare size={18} className="text-violet-500" />
+                    Review Comments ({getAllComments.length})
+                  </h3>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowComments(!showComments)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-semibold ${isDark
+                      ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
+                      : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                      }`}
+                  >
+                    {showComments ? (
+                      <>
+                        <ChevronUp size={16} />
+                        Hide Comments
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown size={16} />
+                        Show Comments
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+
+                <AnimatePresence>
+                  {showComments && (
                     <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      whileHover={{ x: 5 }}
-                      className={`flex items-center justify-between p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'
-                        }`}
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
                     >
-                      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                        <div className={`p-2 sm:p-3 rounded-xl flex-shrink-0 ${isDark ? 'bg-gray-700' : 'bg-gray-100'
-                          }`}>
-                          <FileText size={16} className="text-amber-500" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className={`text-sm font-semibold truncate ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{doc.name}</p>
-                          <p className={`text-xs font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                            {doc.size}
-                          </p>
-                        </div>
+                      <div className="space-y-3 sm:space-y-4">
+                        {getAllComments.map((comment, index) => {
+                          const config = getCommentConfig(comment.type);
+                          const Icon = config.icon;
+
+                          return (
+                            <motion.div
+                              key={comment.id || index}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: index * 0.1 }}
+                              className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'
+                                }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                                    <Icon size={14} className={`${config.color} flex-shrink-0`} />
+                                    <span className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                                      {config.label}
+                                    </span>
+                                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${config.bgColor} ${config.color}`}>
+                                      {getAdminName(comment.admin)}
+                                    </span>
+                                  </div>
+                                  <p className={`text-xs font-medium mb-1 sm:mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                                    {comment.text}
+                                  </p>
+                                  <p className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                                    <Clock size={12} className="inline mr-1" />
+                                    {formatDate(comment.timestamp)}
+                                  </p>
+                                </div>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
                       </div>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-
-                        onClick={(e) => {
-                          e.stopPropagation();
-
-                          const link = document.createElement('a');
-                          link.href = `/api/documents/${doc.name}`;
-                          link.download = doc.name;
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-
-                          if (onStatusChange && recipient.status === 'Submitted') {
-                            onStatusChange(recipient.id, 'Under Review');
-                          }
-                        }}
-                        className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-semibold ${isDark
-                          ? 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
-                          : 'bg-violet-100 text-violet-700 hover:bg-violet-200'
-                          }`}
-                      >
-                        <Download size={14} className="inline mr-1 sm:mr-2" />
-                        Download
-                      </motion.button>
                     </motion.div>
-                  ))
-                ) : (
-                  <p className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>No documents uploaded</p>
-                )}
+                  )}
+                </AnimatePresence>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </motion.div>
@@ -4528,12 +5148,58 @@ const RecipientsManagement = ({ isDark }) => {
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [recipientToVerifyReject, setRecipientToVerifyReject] = useState(null);
   const [verificationAction, setVerificationAction] = useState(null);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [recipientToValidate, setRecipientToValidate] = useState(null);
 
   const scrollPosition = useRef(0);
 
+  // Move these outside the useEffect
+  const handleValidateRecipient = useCallback((recipient) => {
+    setRecipientToValidate(recipient);
+    setShowValidationModal(true);
+  }, []);
+
+  const handleValidationSubmit = useCallback((recipientId, validationData) => {
+    const { validationType, reason, comment } = validationData;
+
+    setRecipients(prev => prev.map(recipient => {
+      if (recipient.id === recipientId) {
+        const updatedRecipient = {
+          ...recipient,
+          validationNotes: [
+            ...(recipient.validationNotes || []),
+            {
+              id: Date.now(),
+              text: reason || comment || (validationType === 'validate' ? 'Validated' : 'Rejected'),
+              timestamp: new Date().toISOString(),
+              admin: 'Admin User',
+              type: validationType === 'validate' ? 'validation' : 'rejection'
+            }
+          ]
+        };
+
+        if (validationType === 'validate') {
+          updatedRecipient.status = 'Verified';
+          updatedRecipient.verificationStatus = 'Validated';
+        } else if (validationType === 'reject') {
+          updatedRecipient.status = 'Rejected';
+          updatedRecipient.verificationStatus = 'Rejected';
+        }
+
+        return updatedRecipient;
+      }
+      return recipient;
+    }));
+
+    setShowValidationModal(false);
+    setRecipientToValidate(null);
+    setSuccessMessage(`Recipient ${validationType === 'validate' ? 'validated' : 'rejected'} successfully!`);
+    setShowSuccessDialog(true);
+  }, []);
+
   useEffect(() => {
     const isAnyModalOpen =
-      showAddRecipientModal || showRecipientModal || showForwardModal || showVerificationModal || showDeleteDialog || showForwardConfirmDialog || showApproveDialog || showSuccessDialog;
+      showAddRecipientModal || showRecipientModal || showValidationModal || showForwardModal || showVerificationModal || showDeleteDialog || showForwardConfirmDialog || showApproveDialog || showSuccessDialog;
 
     if (isAnyModalOpen) {
       scrollPosition.current = window.pageYOffset || document.documentElement.scrollTop;
@@ -4562,14 +5228,18 @@ const RecipientsManagement = ({ isDark }) => {
       document.body.style.paddingRight = '';
       document.body.classList.remove('modal-open');
     };
-  }, [showAddRecipientModal, showRecipientModal, showForwardModal, showVerificationModal, showDeleteDialog, showForwardConfirmDialog, showApproveDialog, showSuccessDialog]);
-
-
+  }, [showAddRecipientModal, showValidationModal, showRecipientModal, showForwardModal, showVerificationModal, showDeleteDialog, showForwardConfirmDialog, showApproveDialog, showSuccessDialog]);
 
   const handleVerifyReject = useCallback((recipient) => {
-    setRecipientToVerifyReject(recipient);
-    setShowVerificationModal(true);
-  }, []);
+    if (recipient.status === 'Submitted') {
+      // For Submitted status, use the validation modal
+      handleValidateRecipient(recipient);
+    } else {
+      // For other statuses, use the existing verification modal
+      setRecipientToVerifyReject(recipient);
+      setShowVerificationModal(true);
+    }
+  }, [handleValidateRecipient]); // Add this dependency array
 
   const handleVerify = useCallback((recipientId, comment = '') => {
     setRecipients(prev => prev.map(recipient =>
@@ -4578,7 +5248,18 @@ const RecipientsManagement = ({ isDark }) => {
         status: 'Verified',
         verificationStatus: 'Verified',
         verificationComment: comment,
-        approver: 'Admin User'
+        approver: 'Admin User',
+        // Add to validationNotes for consistency
+        validationNotes: [
+          ...(recipient.validationNotes || []),
+          {
+            id: Date.now(),
+            text: comment || 'Verified',
+            timestamp: new Date().toISOString(),
+            admin: 'Admin User',
+            type: 'verification' // Using 'verification' type
+          }
+        ]
       } : recipient
     ));
 
@@ -4595,7 +5276,18 @@ const RecipientsManagement = ({ isDark }) => {
         status: 'Rejected',
         verificationStatus: 'Rejected',
         rejectionReason: reason,
-        approver: 'Admin User'
+        approver: 'Admin User',
+        // Add to validationNotes for consistency
+        validationNotes: [
+          ...(recipient.validationNotes || []),
+          {
+            id: Date.now(),
+            text: reason || 'Rejected',
+            timestamp: new Date().toISOString(),
+            admin: 'Admin User',
+            type: 'rejection'
+          }
+        ]
       } : recipient
     ));
 
@@ -4965,7 +5657,7 @@ const RecipientsManagement = ({ isDark }) => {
         />
         <EnhancedStatCard
           icon={CheckCircle}
-          title="Verified"
+          title="Approved"
           value={stats.verifiedRecipients}
           fullNumber={getFullFormattedNumber(stats.verifiedRecipients, true)}
           change={12.5}
@@ -4976,7 +5668,7 @@ const RecipientsManagement = ({ isDark }) => {
         />
         <EnhancedStatCard
           icon={Send}
-          title="Submitted"
+          title="Pending-Validation"
           value={stats.submittedRecipients}
           fullNumber={getFullFormattedNumber(stats.submittedRecipients, true)}
           change={5.2}
@@ -5165,6 +5857,7 @@ const RecipientsManagement = ({ isDark }) => {
                   onDelete={handleDeleteRecipient}
                   onForward={handleOpenForwardModal}
                   onVerifyReject={handleVerifyReject}
+                  onValidate={handleValidateRecipient}
                   onStatusChange={handleStatusChange}
                   index={index}
                 />
@@ -5241,6 +5934,20 @@ const RecipientsManagement = ({ isDark }) => {
             onStatusChange={handleStatusChange} // Make sure this is passed
             onVerificationChange={handleVerificationChange}
             availableAdmins={availableAdmins}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showValidationModal && recipientToValidate && (
+          <RecipientValidationModal
+            isDark={isDark}
+            recipient={recipientToValidate}
+            onClose={() => {
+              setShowValidationModal(false);
+              setRecipientToValidate(null);
+            }}
+            onValidate={handleValidationSubmit}
           />
         )}
       </AnimatePresence>
