@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import RecipientsManagement from './RecipientsManagement';
-import DonorsManagement from './DonorsManagement';
-import UsersManagement from './UsersManagement';
-import DonationsManagement from './DonationsManagement';
-import RequestsManagement from './RequestsManagement';
-import ReportsAnalytics from './ReportsAnalytics';
-import NotificationsManagement from './NotificationsManagement';
-import SettingsManagement from './SettingsManagement';
-import ProfileManagement from './ProfileManagement';
+import RecipientsManagement from './Admins/RecipientsManagement';
+import DonorsManagement from './Admins/DonorsManagement';
+import UsersManagement from './Admins/UsersManagement';
+import DonationsManagement from './Admins/DonationsManagement';
+import RequestsManagement from './Admins/RequestsManagement';
+import ReportsAnalytics from './Admins/ReportsAnalytics';
+import NotificationsManagement from './Admins/NotificationsManagement';
+import SettingsManagement from './Admins/SettingsManagement';
+import ProfileManagement from './Admins/ProfileManagement';
 import {
   LayoutDashboard,
   Wallet,

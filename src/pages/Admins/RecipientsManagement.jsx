@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   FileCheck,
+  Camera,
   AlertCircle,
   MessageSquare,
   Send,
@@ -2948,6 +2949,144 @@ const DocumentUpload = React.memo(({ documents, onDocumentsChange, isDark, field
   );
 });
 
+const EnhancedAvatarUpload = React.memo(({ user, onAvatarChange, isDark, fieldErrors, onFieldError, shakeFields }) => {
+  const [previewUrl, setPreviewUrl] = useState(user?.avatar || null);
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = useCallback((e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      onFieldError?.('avatar', 'File size should be less than 5MB');
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      onFieldError?.('avatar', 'Please upload an image file');
+      return;
+    }
+
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      setPreviewUrl(base64String);
+      onAvatarChange?.(base64String);
+      onFieldError?.('avatar', ''); // Clear any previous errors
+    };
+    reader.readAsDataURL(file);
+  }, [onAvatarChange, onFieldError]);
+
+  const handleRemoveAvatar = useCallback(() => {
+    setPreviewUrl(null);
+    onAvatarChange?.(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    onFieldError?.('avatar', ''); // Clear any errors
+  }, [onAvatarChange, onFieldError]);
+
+  const handleClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative">
+        <motion.div
+          animate={shakeFields?.includes('avatar') ? "shake" : "initial"}
+          variants={shakeAnimation}
+          className="overflow-visible"
+        >
+          <div
+            onClick={handleClick}
+            className={`relative cursor-pointer group w-32 h-32 rounded-full overflow-hidden border-4 transition-all ${fieldErrors?.avatar
+                ? 'border-rose-500'
+                : previewUrl
+                  ? isDark
+                    ? 'border-violet-500'
+                    : 'border-violet-400'
+                  : isDark
+                    ? 'border-gray-600 hover:border-violet-500'
+                    : 'border-gray-300 hover:border-violet-400'
+              }`}
+          >
+            {previewUrl ? (
+              <>
+                <img
+                  src={previewUrl}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Camera size={24} className="text-white" />
+                </div>
+              </>
+            ) : (
+              <div className={`w-full h-full flex items-center justify-center ${isDark ? 'bg-gray-700' : 'bg-gray-100'
+                }`}>
+                <User size={40} className={isDark ? 'text-gray-400' : 'text-gray-500'} />
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {previewUrl && (
+          <motion.button
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={handleRemoveAvatar}
+            className="absolute -top-2 -right-2 p-1.5 rounded-full bg-rose-500 text-white shadow-lg hover:bg-rose-600 transition-colors"
+          >
+            <X size={14} />
+          </motion.button>
+        )}
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
+      <button
+        type="button"
+        onClick={handleClick}
+        className={`mt-3 text-sm font-medium transition-colors ${fieldErrors?.avatar
+            ? 'text-rose-500'
+            : isDark
+              ? 'text-gray-400 hover:text-violet-400'
+              : 'text-gray-600 hover:text-violet-600'
+          }`}
+      >
+        {previewUrl ? 'Change Photo' : 'Upload Photo'}
+      </button>
+
+      {fieldErrors?.avatar && (
+        <motion.p
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+        >
+          <AlertCircle size={12} />
+          {fieldErrors.avatar}
+        </motion.p>
+      )}
+
+      <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+        Max size: 5MB • JPG, PNG
+      </p>
+    </div>
+  );
+});
+
 const RecipientDetailModal = ({ recipient, isDark, onClose, onStatusChange, onVerificationChange, availableAdmins }) => {
   const getAdminName = (adminId) => {
     const admin = availableAdmins.find(a => a.id === adminId);
@@ -3562,7 +3701,8 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
     accountType: '',
     status: 'Unknown',
     verificationStatus: 'Not Started',
-    documents: []
+    documents: [],
+    avatar: '' // Add avatar field to initial form data
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -3617,7 +3757,7 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
         'name', 'email', 'phone', 'aadhaarNumber', 'panNumber',
         'dateOfBirth', 'address', 'occupation', 'familyDetails',
         'bankName', 'accountNumber', 'ifscCode', 'accountHolderName',
-        'branchName', 'upiId', 'accountType'
+        'branchName', 'upiId', 'accountType', 'avatar' // Add avatar to fields to check
       ];
 
       // Check if any field has content
@@ -3723,7 +3863,8 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
     branchName: useRef(null),
     upiId: useRef(null),
     accountType: useRef(null),
-    documents: useRef(null)
+    documents: useRef(null),
+    avatar: useRef(null) // Add avatar ref
   };
 
   const modalRef = useRef(null);
@@ -3734,7 +3875,7 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
         'name', 'email', 'phone', 'aadhaarNumber', 'panNumber', 'dateOfBirth',
         'address', 'occupation', 'familyDetails', 'bankName', 'accountNumber',
         'ifscCode', 'accountHolderName', 'branchName', 'upiId', 'accountType',
-        'documents'
+        'documents', 'avatar' // Add avatar to field order
       ];
 
       const firstInvalidField = fieldOrder.find(field =>
@@ -3776,9 +3917,146 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
     };
 
     const isValidEmail = (email) => {
-      const emailRegex = /^[a-zA-Z0-9]([a-zA-Z0-9]*[._-]?[a-zA-Z0-9]+)*@[a-zA-Z0-9]([a-zA-Z0-9]*[-]?[a-zA-Z0-9]+)*\.[a-zA-Z]{2,}$/;
-      return emailRegex.test(email.trim());
-    };
+  // Remove any whitespace and convert to lowercase
+  email = email.trim().toLowerCase();
+  
+  // Check if empty
+  if (!email) return false;
+  
+  // Check length (max 254 chars as per RFC 5321)
+  if (email.length > 254) return false;
+  
+  // Basic structure: local@domain
+  const parts = email.split('@');
+  if (parts.length !== 2) return false;
+  
+  const [local, domain] = parts;
+  
+  // Local part validation (max 64 chars)
+  if (local.length === 0 || local.length > 64) return false;
+  
+  // Domain part validation
+  if (domain.length === 0 || domain.length > 255) return false;
+  
+  // GOOGLE-GRADE VALIDATION RULES:
+  
+  // 1. Local part can only contain: letters (a-z), numbers (0-9), and dots (.), plus (+), hyphen (-), underscore (_)
+  //    NO special characters like &, ^, %, $, #, @, !, *, etc.
+  const localRegex = /^[a-z0-9][a-z0-9._+-]*[a-z0-9]$|^[a-z0-9]$/;
+  if (!localRegex.test(local)) {
+    return false; // Rejects emails with special chars at start/end or invalid chars
+  }
+  
+  // 2. No consecutive dots in local part (like john..doe)
+  if (local.includes('..')) return false;
+  
+  // 3. Dot cannot be at start or end of local part
+  if (local.startsWith('.') || local.endsWith('.')) return false;
+  
+  // 4. Plus sign can only be used once (for sub-addressing) and cannot be at start/end
+  if ((local.match(/\+/g) || []).length > 1) return false;
+  if (local.startsWith('+') || local.endsWith('+')) return false;
+  
+  // 5. Hyphen cannot be at start or end
+  if (local.startsWith('-') || local.endsWith('-')) return false;
+  
+  // 6. Underscore cannot be at start or end
+  if (local.startsWith('_') || local.endsWith('_')) return false;
+  
+  // 7. Domain validation - must be valid format
+  const domainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/;
+  if (!domainRegex.test(domain)) return false;
+  
+  // 8. No consecutive hyphens in domain
+  if (domain.includes('--')) return false;
+  
+  // 9. Domain cannot start or end with hyphen
+  if (domain.startsWith('-') || domain.endsWith('-')) return false;
+  
+  // 10. TLD must be at least 2 characters and only letters
+  const domainParts = domain.split('.');
+  const tld = domainParts[domainParts.length - 1];
+  if (tld.length < 2 || tld.length > 6) return false;
+  if (!/^[a-z]+$/.test(tld)) return false;
+  
+  // 11. Check for common invalid patterns
+  const invalidPatterns = [
+    /\.{2,}/,                    // Consecutive dots
+    /[^a-z0-9._+@-]/,            // Any character not in allowed set
+    /@.*@/,                       // Multiple @ symbols
+    /\s/,                         // Whitespace
+    /^\.|\.$/,                    // Dot at start or end of any part
+    /[<>()\[\]\\,;:&^%$#!*?]/,    // Absolutely NO special characters
+  ];
+  
+  for (const pattern of invalidPatterns) {
+    if (pattern.test(email)) return false;
+  }
+  
+  // 12. Block disposable/temporary email domains (like Google does)
+  const disposableDomains = new Set([
+    'tempmail.com', 'throwaway.com', 'mailinator.com', 'guerrillamail.com',
+    'sharklasers.com', 'spam4.me', 'yopmail.com', '10minutemail.com',
+    'temp-mail.org', 'fakeinbox.com', 'throwawaymail.com', 'tempemail.com',
+    'trashmail.com', 'spambox.com', 'maildrop.cc', 'getnada.com',
+    'tempmail.net', 'tempinbox.com', 'mailnesia.com', 'mailcatch.com',
+    'guerrillamail.org', 'guerrillamail.net', 'guerrillamail.biz',
+    'guerrillamail.de', 'guerrillamail.co.uk', 'sharklasers.com',
+    'grr.la', 'guerrillamailblock.com', 'spam4.me', 'mailmetrash.com',
+    'mailexpire.com', 'mailmoat.com', 'spambog.com', 'spamfree24.org',
+    'spamfree24.de', 'spamfree24.info', 'spamfree24.net', 'spamfree24.com'
+  ]);
+  
+  if (disposableDomains.has(domain)) {
+    return false; // Reject disposable emails
+  }
+  
+  // 13. Block role-based emails (like Google does for security)
+  const roleBasedPrefixes = [
+    'admin', 'administrator', 'info', 'support', 'contact', 'help',
+    'webmaster', 'postmaster', 'noreply', 'no-reply', 'mailer-daemon',
+    'abuse', 'spam', 'security', 'root', 'sysadmin', 'hostmaster',
+    'usenet', 'news', 'marketing', 'sales', 'billing', 'accounts'
+  ];
+  
+  const localLower = local.toLowerCase();
+  for (const prefix of roleBasedPrefixes) {
+    if (localLower === prefix || localLower.startsWith(prefix + '.')) {
+      return false; // Reject role-based emails for security
+    }
+  }
+  
+  // 14. Check for valid domain structure (must have at least two parts)
+  if (domainParts.length < 2) return false;
+  
+  // 15. Each domain part must be valid
+  for (const part of domainParts) {
+    if (part.length === 0) return false;
+    if (part.length > 63) return false; // Max length per domain part
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(part)) return false;
+  }
+  
+  // 16. Additional Google-specific restrictions
+  const googleRestrictions = [
+    // No consecutive special characters
+    /[._+-]{2,}/.test(local),
+    
+    // No mixing of special characters without alphanumeric separation
+    local.includes('.+') || local.includes('+.') ||
+    local.includes('.-') || local.includes('-.') ||
+    local.includes('._') || local.includes('_.') ||
+    local.includes('+-') || local.includes('-+') ||
+    local.includes('+_') || local.includes('_+') ||
+    local.includes('-_') || local.includes('_-'),
+    
+    // No special characters in certain positions
+    local.split(/[._+-]/).some(part => part.length === 0)
+  ];
+  
+  if (googleRestrictions.some(Boolean)) return false;
+  
+  return true;
+};
 
     const isValidPhone = (phone) => {
       const phoneWithoutCode = phone.replace('+91-', '');
@@ -4169,6 +4447,34 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
 
           <div className="flex-1 overflow-y-auto">
             <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+              {/* Profile Photo Section */}
+              <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+                <h3 className={`text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  <Camera size={16} className="text-violet-500" />
+                  Profile Photo
+                </h3>
+                <div ref={fieldRefs.avatar} className="overflow-visible">
+                  <EnhancedAvatarUpload
+                    user={formData}
+                    onAvatarChange={(avatar) => {
+                      setFormData(prev => ({ ...prev, avatar }));
+                      if (fieldErrors.avatar) {
+                        setFieldErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.avatar;
+                          return newErrors;
+                        });
+                      }
+                    }}
+                    isDark={isDark}
+                    fieldErrors={fieldErrors}
+                    onFieldError={handleFieldError}
+                    shakeFields={shakeFields}
+                  />
+                </div>
+              </div>
+
+              {/* Personal Information Section */}
               <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                 <h3 className={`text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   <Users size={16} className="text-violet-500" />
@@ -4176,6 +4482,7 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
                 </h3>
 
                 <div className="space-y-4 sm:space-y-5">
+                  {/* Rest of the Personal Information fields */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div ref={fieldRefs.name} className="overflow-visible">
                       <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -4555,6 +4862,7 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
                 </div>
               </div>
 
+              {/* Bank Details Section */}
               <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                 <h3 className={`text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   <CreditCard size={16} className="text-blue-500" />
@@ -4756,29 +5064,29 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
                           readOnly
                           onFocus={(e) => e.target.removeAttribute('readonly')}
                           className={`w-full p-2 sm:p-3 rounded-2xl text-sm font-medium transition-all appearance-none ${isDark
-                            ? 'bg-gray-800 border-gray-600'
-                            : 'bg-white border-gray-200'
+                              ? 'bg-gray-800 border-gray-600'
+                              : 'bg-white border-gray-200'
                             } border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none ${formData.accountType === ""
                               ? (isDark ? 'text-[#9CA3AF]' : 'text-[#6B7280]')
                               : (isDark ? 'text-white' : 'text-gray-900')
                             } ${fieldErrors.accountType ? 'border-rose-500' : ''}`}
                         >
-                          <option value="">
+                          <option value="" className={`${isDark ? 'text-gray-400 bg-gray-800' : 'text-gray-500 bg-white'} font-medium`}>
                             &nbsp;Select Account Type...
                           </option>
-                          <option value="Savings" className={isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'}>
+                          <option value="Savings" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'} font-medium`}>
                             &nbsp;Savings Account
                           </option>
-                          <option value="Current" className={isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'}>
+                          <option value="Current" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'} font-medium`}>
                             &nbsp;Current Account
                           </option>
-                          <option value="Salary" className={isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'}>
+                          <option value="Salary" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'} font-medium`}>
                             &nbsp;Salary Account
                           </option>
-                          <option value="Joint" className={isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'}>
+                          <option value="Joint" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'} font-medium`}>
                             &nbsp;Joint Account
                           </option>
-                          <option value="NRI" className={isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'}>
+                          <option value="NRI" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'} font-medium`}>
                             &nbsp;NRI Account
                           </option>
                         </select>
@@ -4792,7 +5100,7 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
                         <motion.p
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="flex items-center gap-2 text-rose-600 text-xs text-xs font-medium mt-1"
+                          className="flex items-center gap-2 text-rose-600 text-xs font-medium mt-1"
                         >
                           <AlertCircle size={12} />
                           {fieldErrors.accountType}
@@ -4803,10 +5111,11 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
                 </div>
               </div>
 
+              {/* Document Upload Section */}
               <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                 <h3 className={`text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   <FileText size={16} className="text-amber-500" />
-                  Document Upload <span className="text-rose-500 font-normal normal-case">*</span>
+                  Documents Upload <span className="text-rose-500 font-normal normal-case">*</span>
                 </h3>
                 <div ref={fieldRefs.documents} className="overflow-visible">
                   <DocumentUpload
@@ -4820,6 +5129,7 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
                 </div>
               </div>
 
+              {/* Profile Completion Status Section */}
               <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                 <h3 className={`text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   <Activity size={16} className="text-violet-500" />
@@ -4875,7 +5185,8 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
                       {[
                         { label: 'Personal Information', completed: completionChecklist.personalInfo },
                         { label: 'Bank Details', completed: completionChecklist.bankDetails },
-                        { label: 'Required Documents', completed: completionChecklist.requiredDocuments }
+                        { label: 'Required Documents', completed: completionChecklist.requiredDocuments },
+                        { label: 'Profile Photo', completed: formData.avatar && formData.avatar.toString().trim() !== '' } // Add avatar to checklist
                       ].map((item, index) => (
                         <div key={index} className="flex items-center gap-3">
                           <div className={`w-4 h-4 rounded-full flex items-center justify-center ${item.completed
@@ -4930,6 +5241,7 @@ const AddRecipientModal = ({ isDark, recipient, onClose, onAddRecipient, onUpdat
                 </div>
               </div>
 
+              {/* Action Buttons */}
               <div className="flex gap-2 sm:gap-3 pt-4 flex-nowrap">
                 <motion.button
                   type="button"

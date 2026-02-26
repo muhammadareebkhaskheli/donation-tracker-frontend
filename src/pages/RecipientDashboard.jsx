@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import MyRequests from './MyRequests';
-import Donations from './Donations';
-import ProfileVerificationPage from './ProfileVerificationPage';
-import NotificationsPage from './NotificationsPage';
-import RecipientSettings from './RecipientSettings';
+import MyRequests from './Recipients/MyRequests';
+import Donations from './Recipients/Donations';
+import ProfileVerificationPage from './Recipients/ProfileVerificationPage';
+import NotificationsPage from './Donors/NotificationsPage';
+import RecipientSettings from './Donors/RecipientSettings';
 import {
     LayoutDashboard,
     FileText,

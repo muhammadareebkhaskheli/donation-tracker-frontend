@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import BrowseRecipients from './BrowseRecipients';
-import DonorProfileVerificationPage from './DonorProfileVerificationPage';
-import NotificationsPage from './NotificationsPage';
-import RecipientSettings from './RecipientSettings';
+import BrowseRecipients from './Donors/BrowseRecipients';
+import DonorProfileVerificationPage from './Donors/DonorProfileVerificationPage';
+import NotificationsPage from './Donors/NotificationsPage';
+import RecipientSettings from './Donors/RecipientSettings';
 import {
     LayoutDashboard,
     Users,
