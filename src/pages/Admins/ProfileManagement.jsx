@@ -1821,7 +1821,7 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
               No social links added yet
             </p>
             <p className={`text-sm mb-4 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-              Add your social media profiles to connect with others
+              Add your social media profiles to access them easily
             </p>
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -2353,7 +2353,7 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
   const triggerShake = (fieldNames) => {
     // Don't clear first - set the new shake fields directly
     setLocalShakeFields(fieldNames);
-    
+
     // Increment key to force re-render with new animation
     setShakeKey(prev => prev + 1);
 
@@ -2390,10 +2390,10 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
 
   const handlePasswordChange = async () => {
     setValidationAttempted(true);
-    
+
     // Clear previous errors but DON'T clear shake fields here
     setPasswordErrors({});
-    
+
     setIsLoading(true);
 
     try {
@@ -2413,10 +2413,10 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
 
       if (Object.keys(errors).length > 0) {
         setPasswordErrors(errors);
-        
+
         // Trigger shake for invalid fields
         triggerShake(Object.keys(errors));
-        
+
         setIsLoading(false);
         return;
       }
@@ -2777,10 +2777,14 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
       </div>
     </div>
   );
-});
+})
 
-// Edit Profile Modal (Updated - Removed password and social links)
-const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
+const EditProfileModal = memo(({
+  isDark,
+  user,
+  onClose,
+  onUpdate
+}) => {
   const [formData, setFormData] = useState(user);
   const [originalData] = useState(user);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -2798,7 +2802,6 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
     console.log('Form data avatar updated:', formData.avatar ? 'Has avatar data' : 'No avatar');
   }, [formData.avatar]);
 
-  // And ensure the handleAvatarChange is correctly defined:
   const handleAvatarChange = (avatarData) => {
     console.log('handleAvatarChange called with data length:', avatarData?.length);
     setFormData(prev => {
@@ -2810,7 +2813,6 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
       return newFormData;
     });
 
-    // Clear any avatar field error
     if (fieldErrors.avatar) {
       setFieldErrors(prev => {
         const newErrors = { ...prev };
@@ -2820,7 +2822,6 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
     }
   };
 
-  // Field refs for scrolling - properly initialized
   const fieldRefs = {
     name: useRef(null),
     email: useRef(null),
@@ -2838,7 +2839,6 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
     documents: useRef(null),
   };
 
-  // Calculate completion percentage and update checklist
   useEffect(() => {
     const percentage = calculateProfileCompletion(formData);
     const checklist = getCompletionChecklist(formData);
@@ -2865,9 +2865,7 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
         if (fieldRef && fieldRef.current) {
           setTimeout(() => {
             try {
-              // For avatar field, we need to scroll to a more specific element
               if (firstInvalidField === 'avatar') {
-                // Find the actual upload area within the avatar component
                 const avatarElement = fieldRef.current;
                 const uploadArea = avatarElement.querySelector('.relative.w-32.h-32');
 
@@ -2885,7 +2883,6 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
                   });
                 }
               } else {
-                // For other fields, scroll to the input/select element
                 fieldRef.current.scrollIntoView({
                   behavior: 'smooth',
                   block: 'center',
@@ -2893,10 +2890,8 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
                 });
               }
 
-              // Focus the appropriate element
               setTimeout(() => {
                 if (firstInvalidField === 'avatar') {
-                  // For avatar, try to focus the camera button
                   const cameraButton = fieldRef.current.querySelector('label[for="avatar-upload"]');
                   if (cameraButton) {
                     cameraButton.focus();
@@ -2926,150 +2921,47 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
 
     setShakeFields([]);
 
-    // Validation helper functions (same as recipient management)
+    // Validation helper functions (same as before)
     const isValidName = (name) => {
       return /^[A-Za-z\s]+$/.test(name.trim());
     };
 
     const isValidEmail = (email) => {
-      // Remove any whitespace and convert to lowercase
       email = email.trim().toLowerCase();
-
-      // Check if empty
       if (!email) return false;
-
-      // Check length (max 254 chars as per RFC 5321)
       if (email.length > 254) return false;
-
-      // Basic structure: local@domain
       const parts = email.split('@');
       if (parts.length !== 2) return false;
-
       const [local, domain] = parts;
-
-      // Local part validation (max 64 chars)
       if (local.length === 0 || local.length > 64) return false;
-
-      // Domain part validation
       if (domain.length === 0 || domain.length > 255) return false;
-
-      // GOOGLE-GRADE VALIDATION RULES:
-
-      // 1. Local part can only contain: letters (a-z), numbers (0-9), and dots (.), plus (+), hyphen (-), underscore (_)
-      //    NO special characters like &, ^, %, $, #, @, !, *, etc.
       const localRegex = /^[a-z0-9][a-z0-9._+-]*[a-z0-9]$|^[a-z0-9]$/;
-      if (!localRegex.test(local)) {
-        return false; // Rejects emails with special chars at start/end or invalid chars
-      }
-
-      // 2. No consecutive dots in local part (like john..doe)
+      if (!localRegex.test(local)) return false;
       if (local.includes('..')) return false;
-
-      // 3. Dot cannot be at start or end of local part
       if (local.startsWith('.') || local.endsWith('.')) return false;
-
-      // 4. Plus sign can only be used once (for sub-addressing) and cannot be at start/end
       if ((local.match(/\+/g) || []).length > 1) return false;
       if (local.startsWith('+') || local.endsWith('+')) return false;
-
-      // 5. Hyphen cannot be at start or end
       if (local.startsWith('-') || local.endsWith('-')) return false;
-
-      // 6. Underscore cannot be at start or end
       if (local.startsWith('_') || local.endsWith('_')) return false;
-
-      // 7. Domain validation - must be valid format
       const domainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/;
       if (!domainRegex.test(domain)) return false;
-
-      // 8. No consecutive hyphens in domain
       if (domain.includes('--')) return false;
-
-      // 9. Domain cannot start or end with hyphen
       if (domain.startsWith('-') || domain.endsWith('-')) return false;
-
-      // 10. TLD must be at least 2 characters and only letters
       const domainParts = domain.split('.');
       const tld = domainParts[domainParts.length - 1];
       if (tld.length < 2 || tld.length > 6) return false;
       if (!/^[a-z]+$/.test(tld)) return false;
-
-      // 11. Check for common invalid patterns
       const invalidPatterns = [
-        /\.{2,}/,                    // Consecutive dots
-        /[^a-z0-9._+@-]/,            // Any character not in allowed set
-        /@.*@/,                       // Multiple @ symbols
-        /\s/,                         // Whitespace
-        /^\.|\.$/,                    // Dot at start or end of any part
-        /[<>()\[\]\\,;:&^%$#!*?]/,    // Absolutely NO special characters
+        /\.{2,}/,
+        /[^a-z0-9._+@-]/,
+        /@.*@/,
+        /\s/,
+        /^\.|\.$/,
+        /[<>()\[\]\\,;:&^%$#!*?]/,
       ];
-
       for (const pattern of invalidPatterns) {
         if (pattern.test(email)) return false;
       }
-
-      // 12. Block disposable/temporary email domains (like Google does)
-      const disposableDomains = new Set([
-        'tempmail.com', 'throwaway.com', 'mailinator.com', 'guerrillamail.com',
-        'sharklasers.com', 'spam4.me', 'yopmail.com', '10minutemail.com',
-        'temp-mail.org', 'fakeinbox.com', 'throwawaymail.com', 'tempemail.com',
-        'trashmail.com', 'spambox.com', 'maildrop.cc', 'getnada.com',
-        'tempmail.net', 'tempinbox.com', 'mailnesia.com', 'mailcatch.com',
-        'guerrillamail.org', 'guerrillamail.net', 'guerrillamail.biz',
-        'guerrillamail.de', 'guerrillamail.co.uk', 'sharklasers.com',
-        'grr.la', 'guerrillamailblock.com', 'spam4.me', 'mailmetrash.com',
-        'mailexpire.com', 'mailmoat.com', 'spambog.com', 'spamfree24.org',
-        'spamfree24.de', 'spamfree24.info', 'spamfree24.net', 'spamfree24.com'
-      ]);
-
-      if (disposableDomains.has(domain)) {
-        return false; // Reject disposable emails
-      }
-
-      // 13. Block role-based emails (like Google does for security)
-      const roleBasedPrefixes = [
-        'admin', 'administrator', 'info', 'support', 'contact', 'help',
-        'webmaster', 'postmaster', 'noreply', 'no-reply', 'mailer-daemon',
-        'abuse', 'spam', 'security', 'root', 'sysadmin', 'hostmaster',
-        'usenet', 'news', 'marketing', 'sales', 'billing', 'accounts'
-      ];
-
-      const localLower = local.toLowerCase();
-      for (const prefix of roleBasedPrefixes) {
-        if (localLower === prefix || localLower.startsWith(prefix + '.')) {
-          return false; // Reject role-based emails for security
-        }
-      }
-
-      // 14. Check for valid domain structure (must have at least two parts)
-      if (domainParts.length < 2) return false;
-
-      // 15. Each domain part must be valid
-      for (const part of domainParts) {
-        if (part.length === 0) return false;
-        if (part.length > 63) return false; // Max length per domain part
-        if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(part)) return false;
-      }
-
-      // 16. Additional Google-specific restrictions
-      const googleRestrictions = [
-        // No consecutive special characters
-        /[._+-]{2,}/.test(local),
-
-        // No mixing of special characters without alphanumeric separation
-        local.includes('.+') || local.includes('+.') ||
-        local.includes('.-') || local.includes('-.') ||
-        local.includes('._') || local.includes('_.') ||
-        local.includes('+-') || local.includes('-+') ||
-        local.includes('+_') || local.includes('_+') ||
-        local.includes('-_') || local.includes('_-'),
-
-        // No special characters in certain positions
-        local.split(/[._+-]/).some(part => part.length === 0)
-      ];
-
-      if (googleRestrictions.some(Boolean)) return false;
-
       return true;
     };
 
@@ -3093,14 +2985,8 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
     const isValidDateOfBirth = (dob) => {
       const birthDate = new Date(dob);
       const today = new Date();
-
-      // Check if date is valid
       if (isNaN(birthDate.getTime())) return false;
-
-      // Check if date is in the future
       if (birthDate > today) return false;
-
-      // Check age (must be at least 18)
       const age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
@@ -3108,7 +2994,6 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
       } else {
         if (age < 18) return false;
       }
-
       return true;
     };
 
@@ -3120,7 +3005,6 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
       return ['Single', 'Married', 'Divorced', 'Widowed'].includes(status);
     };
 
-    // Add this near the top of validateForm function
     if (!formData.avatar) {
       errors.avatar = 'Profile photo is required';
       invalidFields.push('avatar');
@@ -3129,7 +3013,6 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
       invalidFields.push('avatar');
     }
 
-    // Required field validation with strong rules
     if (!formData.name.trim()) {
       errors.name = 'Name is required';
       invalidFields.push('name');
@@ -3239,7 +3122,6 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
     return true;
   };
 
-  // Add this helper function for phone number formatting (same as recipient management)
   const formatPhoneNumber = (digits, countryCode) => {
     if (!digits) return '';
 
@@ -3276,7 +3158,6 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
       return;
     }
 
-    // Check if there are any changes
     const hasChanges = Object.keys(formData).some(key => {
       if (key === 'completionPercentage') return false;
       if (key === 'documents') {
@@ -3317,12 +3198,9 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
 
     let newValue = value;
 
-    // Apply field-specific formatting and restrictions
     if (name === 'name' || name === 'nationality' || name === 'department' || name === 'designation') {
-      // Allow only alphabets and spaces for name, nationality, department, designation
       newValue = value.replace(/[^a-zA-Z\s]/g, '');
     } else if (name === 'phone' || name === 'emergencyContact') {
-      // Format phone numbers
       let processedValue = value;
 
       if (value.startsWith('+91-')) {
@@ -3339,7 +3217,6 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
         newValue = '+91-' + newValue;
       }
     } else if (name === 'email') {
-      // Convert email to lowercase
       newValue = value.toLowerCase();
     } else {
       newValue = value;
@@ -3350,7 +3227,6 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
       [name]: newValue
     }));
 
-    // Clear error for this field if it exists
     if (fieldErrors[name]) {
       setFieldErrors(prev => {
         const newErrors = { ...prev };
@@ -3471,7 +3347,7 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
                 </div>
               </div>
 
-              {/* Personal Information Section - All fields combined */}
+              {/* Personal Information Section */}
               <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                 <h3 className={`text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   <User size={16} className="text-violet-500" />
@@ -3479,6 +3355,7 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
                 </h3>
 
                 <div className="space-y-4 sm:space-y-5">
+                  {/* All the input fields remain exactly the same as before */}
                   {/* Row 1: Name and Email */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div ref={fieldRefs.name} className="overflow-visible">
@@ -3781,7 +3658,7 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
                     </div>
                   </div>
 
-                  {/* Row 5: Gender, Marital Status, Nationality */}
+                  {/* Row 5: Marital Status and Nationality */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div ref={fieldRefs.maritalStatus} className="overflow-visible">
                       <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -4170,8 +4047,7 @@ const EditProfileModal = memo(({ isDark, user, onClose, onUpdate }) => {
   );
 });
 
-// Profile Header Component
-const ProfileHeader = memo(({ user, isDark, onEdit }) => {
+const ProfileHeader = memo(({ user, isDark, onEdit, verificationStatus, isSubmitted, isRejectedResubmit }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   const formatDate = (dateString) => {
@@ -4180,6 +4056,55 @@ const ProfileHeader = memo(({ user, isDark, onEdit }) => {
       month: 'short',
       year: 'numeric'
     });
+  };
+
+  const getVerificationBadge = () => {
+    switch (verificationStatus) {
+      case 'verified':
+        return (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-full text-sm font-semibold"
+          >
+            <BadgeCheck size={16} />
+            Verified Admin
+          </motion.div>
+        );
+      case 'rejected':
+        return (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-rose-500 to-red-500 text-white rounded-full text-sm font-semibold"
+          >
+            <BadgeX size={16} />
+            Verification Rejected
+          </motion.div>
+        );
+      case 'submitted':
+        return (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-full text-sm font-semibold"
+          >
+            <Send size={16} />
+            Submitted for Verification
+          </motion.div>
+        );
+      default:
+        return (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full text-sm font-semibold"
+          >
+            <BadgeAlert size={16} />
+            Pending Verification
+          </motion.div>
+        );
+    }
   };
 
   return (
@@ -4255,7 +4180,7 @@ const ProfileHeader = memo(({ user, isDark, onEdit }) => {
             />
           </motion.div>
 
-          <div>
+          <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <h2 className={`text-xl sm:text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 {user.name}
@@ -4268,15 +4193,20 @@ const ProfileHeader = memo(({ user, isDark, onEdit }) => {
           </div>
         </div>
 
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={onEdit}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl text-sm font-semibold shadow-xl"
-        >
-          <Edit size={16} />
-          Edit Profile
-        </motion.button>
+        <div className="flex items-center gap-3">
+          {getVerificationBadge()}
+          {!isSubmitted && !isRejectedResubmit && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onEdit}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl text-sm font-semibold shadow-xl"
+            >
+              <Edit size={16} />
+              Edit Profile
+            </motion.button>
+          )}
+        </div>
       </div>
     </motion.div>
   );
@@ -4299,6 +4229,28 @@ const ProfileManagement = ({ isDark }) => {
   const [showSocialDeleteConfirmation, setShowSocialDeleteConfirmation] = useState(false);
   const [linkToDelete, setLinkToDelete] = useState(null);
   const [isSocialModalOpen, setIsSocialModalOpen] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isRejectedResubmit, setIsRejectedResubmit] = useState(false);
+  const [adminVerificationStatus, setAdminVerificationStatus] = useState('rejected');
+  const [adminComments, setAdminComments] = useState([
+    {
+      id: 1,
+      admin: 'Priya',
+      comments: 'Aadhaar card photo needs clearer picture with all corners visible',
+      date: '2024-01-10T10:30:00Z',
+      action: 'rejected'
+    },
+    {
+      id: 2,
+      admin: 'Rajesh',
+      comments: 'Please upload a clearer photo of your PAN card',
+      date: '2024-01-09T15:20:00Z',
+      action: 'rejected'
+    }
+  ]);
+  const [showSubmitButton, setShowSubmitButton] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
   const modalStates = useRef({
     edit: false,
     deleteDevice: false,
@@ -4308,7 +4260,6 @@ const ProfileManagement = ({ isDark }) => {
 
   const scrollPosition = useRef(0);
 
-  // Update modalStates ref when any modal state changes
   useEffect(() => {
     modalStates.current = {
       edit: showEditModal,
@@ -4318,7 +4269,7 @@ const ProfileManagement = ({ isDark }) => {
     };
   }, [showEditModal, showDeleteConfirmation, showSuccessDialog, showSocialDeleteConfirmation]);
 
-  // Handle body scroll locking - EXACTLY like RecipientsManagement.jsx
+  // Handle body scroll locking
   useEffect(() => {
     const isAnyModalOpen = showEditModal || showDeleteConfirmation || showSuccessDialog || showSocialDeleteConfirmation || isSocialModalOpen;
 
@@ -4350,19 +4301,15 @@ const ProfileManagement = ({ isDark }) => {
       document.body.classList.remove('modal-open');
     };
   }, [showEditModal, showDeleteConfirmation, showSuccessDialog, showSocialDeleteConfirmation, isSocialModalOpen]);
-  // In ProfileManagement component, update:
-  const handleSocialLinkDelete = (item, action) => {
-    if (action === 'delete') {
-      setSuccessMessage('Social link deleted successfully!');
-    } else if (action === 'add') {
-      setSuccessMessage('Social link added successfully!');
-    } else if (action === 'edit') {
-      setSuccessMessage('Social link updated successfully!');
-    }
 
-    // Show success dialog without scrolling to top
-    setShowSuccessDialog(true);
+  // Helper function to check if user is admin
+  const isAdmin = (role) => {
+    const adminRoles = ['Admin', 'Super Admin', 'System Admin', 'Administrator'];
+    return adminRoles.includes(role);
   };
+
+  // Filter comments to show only rejection comments
+  const rejectionComments = adminComments?.filter(comment => comment.action === 'rejected') || [];
 
   const handleSocialLinkSuccess = (action, item) => {
     let message = '';
@@ -4462,6 +4409,43 @@ const ProfileManagement = ({ isDark }) => {
     setShowSuccessDialog(true);
   };
 
+  const handleEditClick = () => {
+    setIsEditing(true);
+    setShowEditModal(true);
+    // Reset submission states when user starts editing
+    setIsSubmitted(false);
+    setIsRejectedResubmit(false);
+    // Show submit button when admin starts editing
+    if (isAdmin(user.role)) {
+      setShowSubmitButton(true);
+    }
+  };
+
+  const handleSubmitForVerification = () => {
+    setShowSubmitButton(false);
+    setIsSubmitted(true);
+    setIsRejectedResubmit(false);
+    setAdminVerificationStatus('submitted');
+    setAdminComments([...adminComments, {
+      id: Date.now(),
+      action: 'submitted',
+      comments: 'Profile submitted for verification',
+      date: new Date().toISOString(),
+      admin: 'System'
+    }]);
+    setSuccessMessage('Profile submitted for verification successfully!');
+    setShowSuccessDialog(true);
+  };
+
+  const handleResubmitForVerification = () => {
+    setShowSubmitButton(true);
+    setIsRejectedResubmit(true);
+    setIsSubmitted(false);
+    setAdminVerificationStatus('submitted');
+    setSuccessMessage('You can now re-submit your profile for verification');
+    setShowSuccessDialog(true);
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-IN', {
       day: 'numeric',
@@ -4495,7 +4479,7 @@ const ProfileManagement = ({ isDark }) => {
       case 'overview':
         return (
           <div className="space-y-6">
-            {/* Personal Information Card - All combined */}
+            {/* Personal Information Card */}
             <div className={`p-6 rounded-2xl ${isDark ? 'bg-gray-800/50' : 'bg-gray-100'}`}>
               <h3 className={`text-lg font-bold mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 <User size={18} className="text-violet-500" />
@@ -4615,9 +4599,8 @@ const ProfileManagement = ({ isDark }) => {
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => {
-                            // Create a download link
                             const link = document.createElement('a');
-                            link.href = doc.url || '#'; // You'll need actual URLs
+                            link.href = doc.url || '#';
                             link.download = doc.name;
                             document.body.appendChild(link);
                             link.click();
@@ -4634,6 +4617,95 @@ const ProfileManagement = ({ isDark }) => {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {isAdmin(user.role) && (
+              <div className="space-y-4">
+                {isAdmin(user.role) && adminVerificationStatus === 'rejected' && adminComments && adminComments.length > 0 && (
+                  <div className={`p-6 rounded-2xl ${isDark ? 'bg-gray-800/50' : 'bg-gray-100'}`}>
+                    <div className="space-y-4">
+                      <h3 className={`text-lg font-bold mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        <MessageSquare size={18} className="text-violet-500" />
+                        Admin Comments ({adminComments.filter(c => c.action === 'rejected').length})
+                      </h3>
+
+                      {adminComments.filter(comment => comment.action === 'rejected').map((comment) => (
+                        <motion.div
+                          key={comment.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.1 }}
+                          className={`p-4 rounded-xl ${isDark
+                            ? 'bg-gray-700 border-gray-600'
+                            : 'bg-white border-gray-200'
+                            }`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold bg-rose-500`}>
+                                {comment.admin?.charAt(0) || 'A'}
+                              </div>
+                              <div>
+                                <p className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                                  {comment.admin || 'Admin'}
+                                </p>
+                                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  Administrator
+                                </p>
+                              </div>
+                            </div>
+                            <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                              {new Date(comment.date).toLocaleDateString('en-IN', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+
+                          {/* Comment text */}
+                          <p className={`text-sm font-semibold mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                            {comment.comments}
+                          </p>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons - On the right side */}
+                <div className="flex justify-end gap-3">
+                  {/* Submit Button - Shows when editing and not yet submitted */}
+                  {showSubmitButton && (
+                    <motion.button
+                      type="button"
+                      onClick={handleSubmitForVerification}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl text-sm font-semibold shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <Send size={16} />
+                      Submit for Verification
+                    </motion.button>
+                  )}
+
+                  {/* Re-submit Button - Shows when status is rejected */}
+                  {adminVerificationStatus === 'rejected' && !showSubmitButton && (
+                    <motion.button
+                      type="button"
+                      onClick={handleResubmitForVerification}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl text-sm font-semibold shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <RefreshCw size={16} />
+                      Re-submit for Verification
+                    </motion.button>
+                  )}
                 </div>
               </div>
             )}
@@ -4846,7 +4918,7 @@ const ProfileManagement = ({ isDark }) => {
                 socialLinks={socialLinks}
                 onUpdate={handleSocialLinksUpdate}
                 isDark={isDark}
-                onDeleteRequest={handleSocialLinkDelete}
+                onDeleteRequest={() => { }}
                 onModalStateChange={setIsSocialModalOpen}
                 onSuccess={handleSocialLinkSuccess}
               />
@@ -4865,7 +4937,10 @@ const ProfileManagement = ({ isDark }) => {
       <ProfileHeader
         user={user}
         isDark={isDark}
-        onEdit={() => setShowEditModal(true)}
+        onEdit={handleEditClick}
+        verificationStatus={adminVerificationStatus}
+        isSubmitted={isSubmitted}
+        isRejectedResubmit={isRejectedResubmit}
       />
 
       {/* Tabs Navigation */}
@@ -4913,7 +4988,7 @@ const ProfileManagement = ({ isDark }) => {
         {renderTabContent()}
       </motion.div>
 
-      {/* Edit Profile Modal */}
+      {/* Edit Profile Modal - Now without verification section */}
       <AnimatePresence>
         {showEditModal && (
           <EditProfileModal
@@ -4921,6 +4996,7 @@ const ProfileManagement = ({ isDark }) => {
             user={user}
             onClose={() => setShowEditModal(false)}
             onUpdate={handleUpdateProfile}
+          // Remove verification props as they're not needed in edit modal
           />
         )}
       </AnimatePresence>
