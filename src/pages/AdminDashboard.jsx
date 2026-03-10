@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RecipientsManagement from './Admins/RecipientsManagement';
 import DonorsManagement from './Admins/DonorsManagement';
-import UsersManagement from './Admins/UsersManagement';
+import AdminsManagement from './Admins/AdminsManagement';
 import DonationsManagement from './Admins/DonationsManagement';
 import RequestsManagement from './Admins/RequestsManagement';
 import ReportsAnalytics from './Admins/ReportsAnalytics';
@@ -735,7 +735,7 @@ const ModernSidebar = ({ activeTab, setActiveTab, sidebarOpen, setSidebarOpen, u
     { name: "Dashboard", icon: LayoutDashboard, id: "dashboard" },
     { name: "Recipients Management", icon: Users, id: "recipients" },
     { name: "Donors Management", icon: Heart, id: "donors" },
-    { name: "Users Management", icon: UserCog, id: "users" },
+    { name: "Admins Management", icon: UserCog, id: "admins" },
     { name: "Donations Management", icon: Wallet, id: "donations" },
     { name: "Requests / Approvals", icon: FileCheck, id: "approvals" },
     { name: "Reports & Analytics", icon: BarChart3, id: "reports" },
@@ -1933,8 +1933,8 @@ const AdminDashboard = () => {
         return <RecipientsManagement isDark={isDark} />;
       case 'donors':
         return <DonorsManagement isDark={isDark} />;
-      case 'users':
-        return <UsersManagement isDark={isDark} />;
+      case 'admins':
+        return <AdminsManagement isDark={isDark} />;
       case 'donations':
         return <DonationsManagement isDark={isDark} />;
       case 'approvals':

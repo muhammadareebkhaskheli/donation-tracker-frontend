@@ -707,7 +707,7 @@ const handleFirstStepSubmit = async (e) => {
 
   const handleForgotPasswordClick = () => {
     scrollToTop();
-    navigate('/forgot-password');
+    navigate('/ForgotPassword');
   };
 
   const handleClearRememberedData = () => {

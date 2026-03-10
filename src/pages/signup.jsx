@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { authAPI } from "../services/api";
 import {
   Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight,
   HeartHandshake, ShieldCheck, TrendingUp, Star, Zap, Target,
@@ -42,15 +41,11 @@ export default function Signup() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [shakeFields, setShakeFields] = useState([]);
 
-  // REAL API Integration States
-  const [currentStep, setCurrentStep] = useState('signup'); // 'signup', 'verify', 'setup2fa', 'complete'
+  // Mock Data Flow States
+  const [currentStep, setCurrentStep] = useState('signup'); // 'signup', 'verify', 'complete'
   const [verificationCode, setVerificationCode] = useState("");
-  const [twoFactorCode, setTwoFactorCode] = useState(""); // Separate state for 2FA code
   const [verificationMethod, setVerificationMethod] = useState("email");
   const [isVerifying, setIsVerifying] = useState(false);
-  const [twoFactorSecret, setTwoFactorSecret] = useState("");
-  const [twoFactorQRCode, setTwoFactorQRCode] = useState("");
-  const [isTwoFactorVerifying, setIsTwoFactorVerifying] = useState(false);
   const [currentUserIdentifier, setCurrentUserIdentifier] = useState("");
 
   // Timer state for code expiration
@@ -420,7 +415,7 @@ export default function Signup() {
     setTimeout(() => setShakeFields([]), 500);
   };
 
-  // 🔄 REAL API INTEGRATION - Main signup handler
+  // MOCK DATA - Main signup handler
   const handleSignup = async (e) => {
     e.preventDefault();
 
@@ -466,57 +461,19 @@ export default function Signup() {
 
     setIsLoading(true);
 
-    try {
-        const registrationData = {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            password: formData.password,
-            userType: userType,
-        };
-
-        if (loginType === 'email') {
-            registrationData.email = formData.email;
-            registrationData.phone = null;
-        } else {
-            registrationData.phone = phoneCode + formData.phone;
-            registrationData.email = null;
-        }
-
-        console.log("Sending registration data:", registrationData);
-
-        const response = await authAPI.register(registrationData);
-
-        if (response.data.success) {
-            const identifier = loginType === 'email' ? formData.email : phoneCode + formData.phone;
-            setCurrentUserIdentifier(identifier);
-            setVerificationMethod(loginType);
-
-            // Check if this is a restarted registration
-            if (response.data.isRestarted) {
-                console.log("Registration restarted for:", identifier);
-            }
-
-            setCurrentStep('verify');
-            setFieldErrors({});
-
-            console.log("Registration successful, moving to verification:", response.data);
-            scrollToTop();
-
-        } else {
-            throw new Error(response.data.message || "Registration failed");
-        }
-
-    } catch (error) {
-        console.error("Registration error:", error);
-        setFieldErrors({
-            submit: error.response?.data?.message || "Registration failed. Please check your information and try again."
-        });
-    } finally {
-        setIsLoading(false);
-    }
+    // Mock API call with dummy data
+    setTimeout(() => {
+      const identifier = loginType === 'email' ? formData.email : phoneCode + formData.phone;
+      setCurrentUserIdentifier(identifier);
+      setVerificationMethod(loginType);
+      setCurrentStep('verify');
+      setFieldErrors({});
+      setIsLoading(false);
+      scrollToTop();
+    }, 1500);
   };
 
-  // 🔄 REAL API INTEGRATION - Verification code submission
+  // MOCK DATA - Verification code submission
   const handleVerificationSubmit = async (e) => {
     e.preventDefault();
 
@@ -527,82 +484,14 @@ export default function Signup() {
 
     setIsVerifying(true);
 
-    try {
-      let response;
-
-      if (verificationMethod === 'email') {
-        response = await authAPI.verifyEmail(currentUserIdentifier, verificationCode);
-      } else {
-        response = await authAPI.verifyPhone(currentUserIdentifier, verificationCode);
-      }
-
-      if (response.data.success) {
-        // Move to 2FA setup
-        const twoFactorResponse = await authAPI.setupAuthenticator({
-          [verificationMethod]: currentUserIdentifier
-        });
-
-        if (twoFactorResponse.data.success) {
-          setTwoFactorSecret(twoFactorResponse.data.secret);
-          setTwoFactorQRCode(twoFactorResponse.data.qrCodeUrl);
-          setCurrentStep('setup2fa');
-          setVerificationCode(""); // Clear verification code
-          setTwoFactorCode(""); // Clear 2FA code
-          setFieldErrors({});
-
-          console.log("Verification successful, moving to 2FA setup");
-
-          scrollToTop();
-        } else {
-          throw new Error("Failed to setup authenticator");
-        }
-      } else {
-        setFieldErrors({ verification: response.data.message || "Invalid verification code" });
-      }
-    } catch (error) {
-      console.error("Verification error:", error);
-      setFieldErrors({
-        verification: error.response?.data?.message || "Verification failed. Please try again."
-      });
-    } finally {
+    // Mock verification (any 6-digit code works)
+    setTimeout(() => {
+      setCurrentStep('complete');
+      setVerificationCode("");
+      setFieldErrors({});
       setIsVerifying(false);
-    }
-  };
-
-  // 🔄 REAL API INTEGRATION - 2FA setup verification
-  const handleTwoFactorSetup = async (e) => {
-    e.preventDefault();
-
-    if (!twoFactorCode || twoFactorCode.length !== 6) {
-      setFieldErrors({ twoFactor: "Please enter a valid 6-digit code" });
-      return;
-    }
-
-    setIsTwoFactorVerifying(true);
-
-    try {
-      const response = await authAPI.verifyAuthenticatorSetup({
-        [verificationMethod]: currentUserIdentifier,
-        code: twoFactorCode,
-        secret: twoFactorSecret
-      });
-
-      if (response.data.success) {
-        setCurrentStep('complete');
-        console.log("2FA setup completed successfully");
-
-        scrollToTop();
-      } else {
-        setFieldErrors({ twoFactor: response.data.message || "Invalid authentication code" });
-      }
-    } catch (error) {
-      console.error("2FA verification error:", error);
-      setFieldErrors({
-        twoFactor: error.response?.data?.message || "Setup failed. Please try again."
-      });
-    } finally {
-      setIsTwoFactorVerifying(false);
-    }
+      scrollToTop();
+    }, 1500);
   };
 
   // Handle completion and redirect to login
@@ -613,20 +502,11 @@ export default function Signup() {
     }, 100);
   };
 
-  // FIXED: Handle back button - navigate between steps, not browser history
+  // Handle back button - navigate between steps
   const handleBackToSignup = () => {
     setCurrentStep('signup');
     setVerificationCode("");
-    setTwoFactorCode("");
     setIsTimerActive(false);
-    setFieldErrors({});
-    scrollToTop();
-  };
-
-  // FIXED: Handle back from 2FA setup
-  const handleBackToVerification = () => {
-    setCurrentStep('verify');
-    setTwoFactorCode("");
     setFieldErrors({});
     scrollToTop();
   };
@@ -638,26 +518,10 @@ export default function Signup() {
       return;
     }
 
-    try {
-      const response = await authAPI.resendVerification({
-        [verificationMethod]: currentUserIdentifier,
-        type: verificationMethod === 'email' ? 'email_verification' : 'phone_verification'
-      });
-
-      if (response.data.success) {
-        console.log("Verification code resent successfully");
-        setTimer(60);
-        setIsTimerActive(true);
-        setFieldErrors({});
-      } else {
-        throw new Error("Failed to resend verification code");
-      }
-    } catch (error) {
-      console.error("Resend verification error:", error);
-      setFieldErrors({
-        verification: "Failed to resend verification code. Please try again."
-      });
-    }
+    // Mock resend
+    setTimer(60);
+    setIsTimerActive(true);
+    setFieldErrors({});
   };
 
   const selectedCountry = countryCodes.find(country => country.code === phoneCode);
@@ -667,8 +531,6 @@ export default function Signup() {
     switch (currentStep) {
       case 'verify':
         return renderVerificationStep();
-      case 'setup2fa':
-        return renderTwoFactorSetupStep();
       case 'complete':
         return renderCompletionStep();
       default:
@@ -739,7 +601,6 @@ export default function Signup() {
             maxLength={6}
             autoFocus
           />
-          {/* REMOVED the code expiration timer from here */}
           {fieldErrors.verification && (
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
               <XCircle className="w-4 h-4" /> {fieldErrors.verification}
@@ -747,7 +608,7 @@ export default function Signup() {
           )}
         </motion.div>
 
-        {/* Resend Code Link - UPDATED */}
+        {/* Resend Code Link */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -818,7 +679,7 @@ export default function Signup() {
               </>
             ) : (
               <>
-                Continue to Security Setup
+                Complete Verification
                 <motion.div
                   animate={{ x: [0, 5, 0] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
@@ -860,188 +721,6 @@ export default function Signup() {
     </>
   );
 
-  // 2FA Setup Step with QR Code
-  const renderTwoFactorSetupStep = () => (
-    <>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8"
-      >
-        <motion.div
-          variants={iconAnimation}
-          initial="initial"
-          animate="animate"
-          whileHover="hover"
-          className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-400 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl cursor-pointer"
-        >
-          <Shield className="w-10 h-10 text-white" />
-        </motion.div>
-
-        <motion.h2
-          className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-green-800 bg-clip-text text-transparent mb-3"
-        >
-          Setup Two-Factor Authentication
-        </motion.h2>
-        <motion.p
-          className="text-gray-600 text-lg mb-6"
-        >
-          Secure your account with 2FA (Mandatory)
-        </motion.p>
-
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-4 border border-green-200">
-          <div className="flex items-center gap-3">
-            <Key className="w-5 h-5 text-green-600" />
-            <div className="text-left">
-              <p className="text-green-800 text-sm font-medium">Enhanced Security</p>
-              <p className="text-green-600 text-xs">2FA is required for all account logins</p>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      <div className="space-y-6">
-        {/* QR Code Section - FIXED: Now shows actual QR code */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="bg-white rounded-2xl p-6 border-2 border-gray-100 text-center"
-        >
-          <h3 className="font-bold text-gray-800 mb-4">Scan QR Code</h3>
-          <div className="bg-gray-50 rounded-xl p-4 inline-block mb-4">
-            {twoFactorQRCode ? (
-              <img
-                src={twoFactorQRCode}
-                alt="QR Code for 2FA Setup"
-                className="w-48 h-48 rounded-lg"
-                onError={(e) => {
-                  // Fallback if QR code fails to load
-                  e.target.style.display = 'none';
-                  const fallback = e.target.parentElement.querySelector('.qr-fallback');
-                  if (fallback) fallback.style.display = 'block';
-                }}
-              />
-            ) : null}
-            <div className={`w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center qr-fallback ${twoFactorQRCode ? 'hidden' : 'block'}`}>
-              <span className="text-gray-500 text-sm">Generating QR Code...</span>
-            </div>
-          </div>
-          <p className="text-sm text-gray-600 mb-4">
-            Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
-          </p>
-          <div className="bg-blue-50 rounded-xl p-3">
-            <p className="text-xs text-blue-700 font-mono break-all">
-              Secret: {twoFactorSecret}
-            </p>
-          </div>
-        </motion.div>
-
-        {/* Manual Setup Form */}
-        <form onSubmit={handleTwoFactorSetup} className="space-y-5">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Enter 6-digit code from authenticator *
-            </label>
-            <input
-              type="text"
-              value={twoFactorCode}
-              onChange={(e) => {
-                setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6));
-                if (fieldErrors.twoFactor) {
-                  setFieldErrors(prev => ({ ...prev, twoFactor: null }));
-                }
-              }}
-              className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl text-center text-xl font-mono tracking-widest focus:outline-none focus:border-green-400 focus:ring-4 focus:ring-green-100"
-              placeholder="000000"
-              maxLength={6}
-              autoFocus
-            />
-            {fieldErrors.twoFactor && (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                <XCircle className="w-4 h-4" /> {fieldErrors.twoFactor}
-              </motion.p>
-            )}
-          </motion.div>
-
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            type="submit"
-            disabled={isTwoFactorVerifying || twoFactorCode.length !== 6}
-            whileHover="hover"
-            whileTap="tap"
-            className="w-full py-5 px-6 bg-gradient-to-r from-green-600 to-emerald-500 
-                     text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
-                     transform transition-all duration-300
-                     disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
-          >
-            <motion.div
-              className="absolute inset-0 rounded-2xl border-2 border-green-400"
-              variants={pulseAnimation}
-              whileHover="hover"
-            />
-
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-
-            <span className="relative z-10 flex items-center gap-3">
-              {isTwoFactorVerifying ? (
-                <>
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-6 h-6 border-2 border-white border-t-transparent rounded-full"
-                  />
-                  Verifying 2FA...
-                </>
-              ) : (
-                <>
-                  Complete Setup & Create Account
-                  <motion.div
-                    animate={{ x: [0, 5, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    <ArrowRight className="w-5 h-5" />
-                  </motion.div>
-                </>
-              )}
-            </span>
-          </motion.button>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="text-center"
-          >
-            <motion.button
-              type="button"
-              onClick={handleBackToVerification}
-              variants={backLinkAnimation}
-              whileHover="hover"
-              whileTap="tap"
-              className="text-blue-600 hover:text-blue-700 font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden"
-            >
-              <motion.span
-                animate={{ x: [0, -3, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="group-hover:-translate-x-1 transition-transform duration-300"
-              >
-                ←
-              </motion.span>
-              Back to verification
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
-            </motion.button>
-          </motion.div>
-        </form>
-      </div>
-    </>
-  );
-
   // Completion Step
   const renderCompletionStep = () => (
     <motion.div
@@ -1074,9 +753,9 @@ export default function Signup() {
         transition={{ delay: 0.6 }}
         className="text-gray-600 text-lg mb-8"
       >
-        Your account has been secured with two-factor authentication.
+        Your account has been verified successfully.
         <br />
-        You can now sign in with enhanced security.
+        You can now sign in to your account.
       </motion.p>
 
       <motion.div
@@ -1088,8 +767,8 @@ export default function Signup() {
         <div className="flex items-center gap-3 justify-center">
           <ShieldCheck className="w-6 h-6 text-green-600" />
           <div>
-            <p className="text-green-800 font-semibold">Security Features Enabled</p>
-            <p className="text-green-600 text-sm">Email verification • Two-factor authentication • Encrypted data</p>
+            <p className="text-green-800 font-semibold">Account Ready</p>
+            <p className="text-green-600 text-sm">Email/Phone verified • Account active • Ready to use</p>
           </div>
         </div>
       </motion.div>

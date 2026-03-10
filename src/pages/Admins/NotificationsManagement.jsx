@@ -1053,16 +1053,6 @@ const NotificationsManagement = ({ isDark }) => {
           delay={0.4}
           isDark={isDark}
         />
-        <NotificationStatCard
-          icon={Calendar}
-          title="Today"
-          value={stats.todayNotifications}
-          change={20.1}
-          changeType="increase"
-          color="from-emerald-500 to-teal-500"
-          delay={0.5}
-          isDark={isDark}
-        />
       </div>
 
       {/* Bulk Actions Bar */}

@@ -44,7 +44,7 @@ function App() {
             </ProtectedRoute>
           } 
         />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/ForgotPassword" element={<ForgotPassword />} />
         <Route path="/AdminSignup" element={<AdminSignup />} />
       </Routes>
     </Router>

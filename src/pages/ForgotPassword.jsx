@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
-    Mail, Phone, Shield, Key, Lock, ArrowRight, ArrowLeft,
+    Mail, Phone, Key, ArrowRight, ArrowLeft,
     CheckCircle, XCircle, Eye, EyeOff, Clock, ShieldCheck,
     User, Fingerprint, Zap, Target
 } from "lucide-react";
@@ -21,7 +21,6 @@ export default function ForgotPassword() {
         email: "",
         phone: "",
         verificationCode: "",
-        twoFactorCode: "",
         newPassword: "",
         confirmPassword: ""
     });
@@ -32,14 +31,18 @@ export default function ForgotPassword() {
     const [showCountryDropdown, setShowCountryDropdown] = useState(false);
     const [codeSent, setCodeSent] = useState(false);
     const [codeVerified, setCodeVerified] = useState(false);
-    const [twoFactorVerified, setTwoFactorVerified] = useState(false);
-    const [resetToken, setResetToken] = useState("");
     const [countdown, setCountdown] = useState(0);
 
     const dropdownRef = useRef(null);
     const verificationCodeRef = useRef(null);
-    const twoFactorCodeRef = useRef(null);
     const containerRef = useRef(null);
+
+    // Dummy data for testing
+    const dummyUsers = [
+        { email: "test@example.com", phone: "+921234567890", validCode: "123456" },
+        { email: "user@demo.com", phone: "+921122334455", validCode: "654321" },
+        { email: "john@doe.com", phone: "+923001234567", validCode: "111222" }
+    ];
 
     // Country codes
     const countryCodes = [
@@ -202,21 +205,6 @@ export default function ForgotPassword() {
         }
     };
 
-    // Success page animation
-    const successAnimation = {
-        initial: { scale: 0, opacity: 0 },
-        animate: {
-            scale: 1,
-            opacity: 1,
-            transition: {
-                type: "spring",
-                stiffness: 100,
-                damping: 15,
-                duration: 0.8
-            }
-        }
-    };
-
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -236,18 +224,15 @@ export default function ForgotPassword() {
         }
     }, [countdown]);
 
-    // FIXED: AUTO SCROLL TO TOP AND FOCUS MANAGEMENT
+    // AUTO SCROLL TO TOP AND FOCUS MANAGEMENT
     useEffect(() => {
-        // Use requestAnimationFrame for immediate scroll
         requestAnimationFrame(() => {
-            // Scroll to top of the window
             window.scrollTo({
                 top: 0,
                 left: 0,
                 behavior: 'instant'
             });
 
-            // Also scroll any scrollable containers to top
             const scrollableContainers = document.querySelectorAll('.overflow-auto, .overflow-y-auto');
             scrollableContainers.forEach(container => {
                 container.scrollTo({
@@ -257,30 +242,19 @@ export default function ForgotPassword() {
             });
         });
 
-        // Focus management with better timing - wait for render cycle
         const focusTimer = setTimeout(() => {
             switch (currentStep) {
                 case 2:
                     if (verificationCodeRef.current) {
                         verificationCodeRef.current.focus();
-                        // Force cursor to end of input
                         const value = verificationCodeRef.current.value;
                         verificationCodeRef.current.setSelectionRange(value.length, value.length);
                     }
                     break;
                 case 3:
-                    if (twoFactorCodeRef.current) {
-                        twoFactorCodeRef.current.focus();
-                        // Force cursor to end of input
-                        const value = twoFactorCodeRef.current.value;
-                        twoFactorCodeRef.current.setSelectionRange(value.length, value.length);
-                    }
-                    break;
-                case 4:
                     const newPasswordInput = document.querySelector('input[name="newPassword"]');
                     if (newPasswordInput) {
                         newPasswordInput.focus();
-                        // Force cursor to end of input
                         const value = newPasswordInput.value;
                         newPasswordInput.setSelectionRange(value.length, value.length);
                     }
@@ -288,7 +262,7 @@ export default function ForgotPassword() {
                 default:
                     break;
             }
-        }, 150); // Slightly longer delay to ensure DOM is ready
+        }, 150);
 
         return () => clearTimeout(focusTimer);
     }, [currentStep]);
@@ -322,7 +296,7 @@ export default function ForgotPassword() {
         setTimeout(() => setShakeFields([]), 500);
     };
 
-    // Step 1: Send verification code
+    // Step 1: Send verification code (DUMMY DATA)
     const handleSendCode = async (e) => {
         e.preventDefault();
         setIsLoading(true);
@@ -352,39 +326,30 @@ export default function ForgotPassword() {
                 return;
             }
 
-            // REAL API CALL (your existing code)
-            const requestData = {};
-            if (resetMethod === 'email') {
-                requestData.email = formData.email;
-            } else {
-                requestData.phone = phoneCode + formData.phone;
-            }
+            // SIMULATE API CALL with dummy data
+            await new Promise(resolve => setTimeout(resolve, 1500));
 
-            console.log("Sending forgot password request:", requestData);
+            const userIdentifier = resetMethod === 'email' ? formData.email : phoneCode + formData.phone;
+            
+            // Check if user exists in dummy data
+            const userExists = dummyUsers.some(user => 
+                resetMethod === 'email' ? user.email === userIdentifier : user.phone === userIdentifier
+            );
 
-            const response = await fetch('http://localhost:8080/api/auth/forgot-password', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestData)
-            });
-
-            const data = await response.json();
-
-            console.log("Forgot password response:", data);
-
-            if (response.ok && data.success) {
+            if (userExists) {
                 setCodeSent(true);
                 setCountdown(60);
                 setCurrentStep(2);
                 setFieldErrors({});
+                
+                // Show success message with dummy code
+                const dummyCode = dummyUsers.find(user => 
+                    resetMethod === 'email' ? user.email === userIdentifier : user.phone === userIdentifier
+                )?.validCode || "123456";
+                
+                console.log(`✅ Dummy verification code for ${userIdentifier}: ${dummyCode}`);
             } else {
-                if (response.status === 400) {
-                    throw new Error(data.message || "Account validation failed");
-                } else {
-                    throw new Error(data.message || "Failed to send verification code");
-                }
+                throw new Error("Account not found. Please check your credentials.");
             }
 
         } catch (error) {
@@ -395,7 +360,7 @@ export default function ForgotPassword() {
         }
     };
 
-    // Step 2: Verify code - UPDATE THIS FUNCTION
+    // Step 2: Verify code (DUMMY DATA)
     const handleVerifyCode = async (e) => {
         e.preventDefault();
         setIsLoading(true);
@@ -408,44 +373,23 @@ export default function ForgotPassword() {
                 return;
             }
 
-            console.log("Verifying code:", formData.verificationCode);
+            // SIMULATE API CALL with dummy data
+            await new Promise(resolve => setTimeout(resolve, 1500));
 
-            // ✅ REAL API CALL - Replace simulation
-            const verifyData = {
-                code: formData.verificationCode
-            };
+            const userIdentifier = resetMethod === 'email' ? formData.email : phoneCode + formData.phone;
+            
+            // Find user in dummy data
+            const user = dummyUsers.find(user => 
+                resetMethod === 'email' ? user.email === userIdentifier : user.phone === userIdentifier
+            );
 
-            if (resetMethod === 'email') {
-                verifyData.email = formData.email;
-            } else {
-                verifyData.phone = phoneCode + formData.phone;
-            }
-
-            console.log("Sending verification request:", verifyData);
-
-            const endpoint = resetMethod === 'email'
-                ? '/api/auth/verify-password-reset-email'
-                : '/api/auth/verify-password-reset-phone';
-
-            const response = await fetch(`http://localhost:8080${endpoint}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(verifyData)
-            });
-
-            const data = await response.json();
-
-            console.log("Verification response:", data);
-
-            if (response.ok && data.success) {
+            // Check if code matches dummy code
+            if (user && user.validCode === formData.verificationCode) {
                 setCodeVerified(true);
                 setCurrentStep(3);
                 setFieldErrors({});
-                setResetToken(btoa(`${Date.now()}:${Math.random().toString(36).substr(2, 9)}`));
             } else {
-                throw new Error(data.message || "Invalid verification code");
+                throw new Error("Invalid verification code");
             }
 
         } catch (error) {
@@ -456,65 +400,7 @@ export default function ForgotPassword() {
         }
     };
 
-    // Step 3: 2FA Verification - UPDATE THIS FUNCTION
-    const handleTwoFactorVerify = async (e) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setFieldErrors({});
-
-        try {
-            if (!formData.twoFactorCode || formData.twoFactorCode.length !== 6) {
-                setFieldErrors({ twoFactorCode: "Please enter a valid 6-digit 2FA code" });
-                triggerShake(['twoFactorCode']);
-                return;
-            }
-
-            console.log("Verifying 2FA code:", formData.twoFactorCode);
-
-            // ✅ REAL API CALL - Replace simulation
-            const verifyData = {
-                code: formData.twoFactorCode
-            };
-
-            // Add identifier based on reset method
-            if (resetMethod === 'email') {
-                verifyData.email = formData.email;
-            } else {
-                verifyData.phone = phoneCode + formData.phone;
-            }
-
-            console.log("Sending 2FA verification request:", verifyData);
-
-            // Use the correct endpoint for password reset 2FA
-            const response = await fetch('http://localhost:8080/api/auth/verify-password-reset-authenticator', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(verifyData)
-            });
-
-            const data = await response.json();
-
-            console.log("2FA verification response:", data);
-
-            if (response.ok && data.success) {
-                setTwoFactorVerified(true);
-                setCurrentStep(4);
-                setFieldErrors({});
-            } else {
-                throw new Error(data.message || "Invalid 2FA code");
-            }
-
-        } catch (error) {
-            console.error("2FA verification error:", error);
-            setFieldErrors({ twoFactorCode: error.message });
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Step 4: Reset password
+    // Step 3: Reset password (DUMMY DATA)
     const handleResetPassword = async (e) => {
         e.preventDefault();
         setIsLoading(true);
@@ -542,42 +428,13 @@ export default function ForgotPassword() {
                 return;
             }
 
-            console.log("Resetting password...");
+            // SIMULATE API CALL with dummy data
+            await new Promise(resolve => setTimeout(resolve, 1500));
 
-            // ✅ FIX: REAL API CALL to reset password
-            const resetData = {
-                newPassword: formData.newPassword
-            };
-
-            // Add identifier based on reset method
-            if (resetMethod === 'email') {
-                resetData.email = formData.email;
-            } else {
-                resetData.phone = phoneCode + formData.phone;
-            }
-
-            console.log("Sending password reset request:", resetData);
-
-            const response = await fetch('http://localhost:8080/api/auth/reset-password', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(resetData)
-            });
-
-            const data = await response.json();
-
-            console.log("Password reset response:", data);
-
-            if (response.ok && data.success) {
-                // Show success page
-                setPasswordResetSuccess(true);
-                setCurrentStep(5);
-                setFieldErrors({});
-            } else {
-                throw new Error(data.message || "Failed to reset password");
-            }
+            // Show success page
+            setPasswordResetSuccess(true);
+            setCurrentStep(4);
+            setFieldErrors({});
 
         } catch (error) {
             console.error("Password reset error:", error);
@@ -593,6 +450,13 @@ export default function ForgotPassword() {
         setIsLoading(true);
         try {
             await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            const userIdentifier = resetMethod === 'email' ? formData.email : phoneCode + formData.phone;
+            const dummyCode = dummyUsers.find(user => 
+                resetMethod === 'email' ? user.email === userIdentifier : user.phone === userIdentifier
+            )?.validCode || "123456";
+            
+            console.log(`✅ New dummy verification code: ${dummyCode}`);
             setCountdown(60);
             setFieldErrors({});
         } catch (error) {
@@ -607,7 +471,6 @@ export default function ForgotPassword() {
     const stepIcons = [
         { icon: User, color: "from-blue-500 to-cyan-400" },
         { icon: Mail, color: "from-green-500 to-emerald-400" },
-        { icon: Shield, color: "from-purple-500 to-pink-400" },
         { icon: Key, color: "from-orange-500 to-red-400" },
         { icon: CheckCircle, color: "from-green-500 to-emerald-400" }
     ];
@@ -615,7 +478,6 @@ export default function ForgotPassword() {
     const stepTitles = [
         "Reset Method",
         "Verification Code",
-        "2FA Authentication",
         "New Password",
         "Success"
     ];
@@ -693,7 +555,7 @@ export default function ForgotPassword() {
                             variants={fadeInUp}
                             className="text-gray-600 text-lg mb-6"
                         >
-                            Step {currentStep} of 5: {stepTitles[currentStep - 1]}
+                            Step {currentStep} of 4: {stepTitles[currentStep - 1]}
                         </motion.p>
 
                         {/* Animated Progress Bar */}
@@ -706,9 +568,9 @@ export default function ForgotPassword() {
                             />
                         </div>
 
-                        {/* FIXED: Progress Steps with Circular Icons Only */}
+                        {/* Progress Steps with Circular Icons Only */}
                         <div className="flex justify-between items-center px-4">
-                            {[1, 2, 3, 4, 5].map((step) => {
+                            {[1, 2, 3, 4].map((step) => {
                                 const StepIcon = stepIcons[step - 1].icon;
                                 const stepColor = stepIcons[step - 1].color;
 
@@ -872,7 +734,6 @@ export default function ForgotPassword() {
                                                         }`}
                                                     placeholder={resetMethod === 'email' ? 'Enter your email' : 'Enter your phone'}
                                                 />
-                                                {/* FIXED: Check button similar to signup page */}
                                                 {formData[resetMethod] && (
                                                     resetMethod === 'email' ?
                                                         validateEmail(formData.email) && (
@@ -905,7 +766,7 @@ export default function ForgotPassword() {
                                                 className="bg-red-50 border border-red-200 rounded-2xl p-4"
                                             >
                                                 <div className="flex items-center gap-2 text-red-700">
-                                                    <Shield className="w-4 h-4" />
+                                                    <ShieldCheck className="w-4 h-4" />
                                                     <span className="text-sm font-medium">{fieldErrors.submit}</span>
                                                 </div>
                                             </motion.div>
@@ -952,6 +813,14 @@ export default function ForgotPassword() {
                                             </span>
                                         </motion.button>
                                     </form>
+
+                                    {/* Dummy data hint */}
+                                    <motion.p
+                                        variants={fadeInUp}
+                                        className="text-xs text-center text-gray-400 mt-4"
+                                    >
+                                        Test with: test@example.com or +921234567890 (Code: 123456)
+                                    </motion.p>
                                 </motion.div>
                             )}
 
@@ -992,6 +861,12 @@ export default function ForgotPassword() {
                                             className="text-sm text-blue-600 font-medium"
                                         >
                                             {resetMethod === 'email' ? formData.email : phoneCode + formData.phone}
+                                        </motion.p>
+                                        <motion.p
+                                            variants={fadeInUp}
+                                            className="text-xs text-gray-400 mt-2"
+                                        >
+                                            (Check console for dummy code)
                                         </motion.p>
                                     </motion.div>
 
@@ -1092,113 +967,8 @@ export default function ForgotPassword() {
                                 </motion.div>
                             )}
 
-                            {/* Step 3: 2FA Verification */}
+                            {/* Step 3: Set New Password */}
                             {currentStep === 3 && (
-                                <motion.div
-                                    variants={staggerContainer}
-                                    initial="initial"
-                                    animate="animate"
-                                >
-                                    <motion.div
-                                        variants={fadeInUp}
-                                        className="text-center mb-8"
-                                    >
-                                        <motion.div
-                                            variants={iconAnimation}
-                                            initial="initial"
-                                            animate="animate"
-                                            whileHover="hover"
-                                            className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-400 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl cursor-pointer"
-                                        >
-                                            <Shield className="w-10 h-10 text-white" />
-                                        </motion.div>
-                                        <motion.h3
-                                            variants={fadeInUp}
-                                            className="text-2xl font-bold text-gray-900 mb-2"
-                                        >
-                                            Two-Factor Authentication
-                                        </motion.h3>
-                                        <motion.p
-                                            variants={fadeInUp}
-                                            className="text-gray-600"
-                                        >
-                                            Enter the 6-digit code from your authenticator app
-                                        </motion.p>
-                                    </motion.div>
-
-                                    <form onSubmit={handleTwoFactorVerify} className="space-y-5">
-                                        <motion.div variants={fadeInUp}>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                2FA Code *
-                                            </label>
-                                            <motion.div
-                                                variants={shakeFields.includes('twoFactorCode') ? shakeAnimation : {}}
-                                                animate={shakeFields.includes('twoFactorCode') ? "shake" : "animate"}
-                                            >
-                                                <input
-                                                    ref={twoFactorCodeRef}
-                                                    type="text"
-                                                    name="twoFactorCode"
-                                                    value={formData.twoFactorCode}
-                                                    onChange={handleChange}
-                                                    maxLength={6}
-                                                    className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl text-center text-xl font-mono tracking-widest focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)]"
-                                                    placeholder="000000"
-                                                />
-                                            </motion.div>
-                                            {fieldErrors.twoFactorCode && (
-                                                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                                                    <XCircle className="w-4 h-4" /> {fieldErrors.twoFactorCode}
-                                                </motion.p>
-                                            )}
-                                        </motion.div>
-
-                                        <motion.button
-                                            variants={fadeInUp}
-                                            type="submit"
-                                            disabled={isLoading || formData.twoFactorCode.length !== 6}
-                                            whileHover="hover"
-                                            whileTap="tap"
-                                            className="w-full py-5 px-6 bg-gradient-to-r from-purple-600 to-pink-500 
-                                                text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
-                                                transform transition-all duration-300
-                                                disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
-                                        >
-                                            <motion.div
-                                                className="absolute inset-0 rounded-2xl border-2 border-purple-400"
-                                                variants={pulseAnimation}
-                                                whileHover="hover"
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                                            <span className="relative z-10 flex items-center gap-3">
-                                                {isLoading ? (
-                                                    <>
-                                                        <motion.div
-                                                            animate={{ rotate: 360 }}
-                                                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                                            className="w-6 h-6 border-2 border-white border-t-transparent rounded-full"
-                                                        />
-                                                        Verifying...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        Verify 2FA
-                                                        <motion.div
-                                                            animate={{ x: [0, 5, 0] }}
-                                                            transition={{ duration: 1.5, repeat: Infinity }}
-                                                        >
-                                                            <ArrowRight className="w-5 h-5" />
-                                                        </motion.div>
-                                                    </>
-                                                )}
-                                            </span>
-                                        </motion.button>
-                                    </form>
-                                </motion.div>
-                            )}
-
-                            {/* Step 4: Set New Password - FIXED EYE ICON POSITIONING */}
-                            {currentStep === 4 && (
                                 <motion.div
                                     variants={staggerContainer}
                                     initial="initial"
@@ -1259,17 +1029,13 @@ export default function ForgotPassword() {
                                                     placeholder="Enter new password"
                                                 />
 
-                                                {/* FIXED: Proper icon positioning with proper spacing */}
                                                 <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center gap-2 z-20">
-                                                    {/* Check/X icons - positioned first */}
                                                     {formData.newPassword && validatePassword(formData.newPassword) && (
                                                         <CheckCircle className="w-5 h-5 text-green-500" />
                                                     )}
                                                     {fieldErrors.newPassword && (
                                                         <XCircle className="w-5 h-5 text-red-500" />
                                                     )}
-
-                                                    {/* Eye icon - positioned second with proper spacing */}
                                                     <motion.button
                                                         type="button"
                                                         onClick={() => setShowPassword(!showPassword)}
@@ -1316,17 +1082,13 @@ export default function ForgotPassword() {
                                                     placeholder="Confirm new password"
                                                 />
 
-                                                {/* FIXED: Proper icon positioning with proper spacing */}
                                                 <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center gap-2 z-20">
-                                                    {/* Check/X icons - positioned first */}
                                                     {passwordsMatch && formData.confirmPassword && (
                                                         <CheckCircle className="w-5 h-5 text-green-500" />
                                                     )}
                                                     {fieldErrors.confirmPassword && (
                                                         <XCircle className="w-5 h-5 text-red-500" />
                                                     )}
-
-                                                    {/* Eye icon - positioned second with proper spacing */}
                                                     <motion.button
                                                         type="button"
                                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -1425,15 +1187,14 @@ export default function ForgotPassword() {
                                 </motion.div>
                             )}
 
-                            {/* Step 5: Success Page - FIXED ICON SIZE */}
-                            {currentStep === 5 && (
+                            {/* Step 4: Success Page */}
+                            {currentStep === 4 && (
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ duration: 0.8, ease: "easeOut" }}
                                     className="text-center"
                                 >
-                                    {/* FIXED: Smaller success icon but same rectangular shape */}
                                     <motion.div
                                         variants={iconAnimation}
                                         initial="initial"
@@ -1538,7 +1299,7 @@ export default function ForgotPassword() {
                     </AnimatePresence>
 
                     {/* Back Button */}
-                    {currentStep > 1 && currentStep < 5 && (
+                    {currentStep > 1 && currentStep < 4 && (
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -1566,8 +1327,8 @@ export default function ForgotPassword() {
                         </motion.div>
                     )}
 
-                    {/* Back to Login - Only show on first 4 steps */}
-                    {currentStep < 5 && (
+                    {/* Back to Login - Only show on first 3 steps */}
+                    {currentStep < 4 && (
                         <motion.div
                             variants={fadeInUp}
                             className="text-center mt-6 pt-6 border-t border-gray-200"
@@ -1599,3 +1360,22 @@ export default function ForgotPassword() {
         </motion.div>
     );
 }
+
+// Lock icon component needed for password fields
+const Lock = (props) => (
+    <svg
+        {...props}
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+    </svg>
+);

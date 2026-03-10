@@ -2949,142 +2949,281 @@ const DocumentUpload = React.memo(({ documents, onDocumentsChange, isDark, field
   );
 });
 
-const EnhancedAvatarUpload = React.memo(({ user, onAvatarChange, isDark, fieldErrors, onFieldError, shakeFields }) => {
+const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, onFieldError, shakeFields, fieldName = 'profilePhoto' }) => {
+  const [isDragging, setIsDragging] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(user?.avatar || null);
-  const fileInputRef = useRef(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [validationError, setValidationError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const containerRef = useRef(null);
 
-  const handleFileChange = useCallback((e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  useEffect(() => {
+    setPreviewUrl(user?.avatar || null);
+  }, [user?.avatar]);
 
-    // Check file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      onFieldError?.('avatar', 'File size should be less than 5MB');
-      return;
+  // Effect to scroll when shaking starts
+  useEffect(() => {
+    if (shakeFields?.includes(fieldName) && containerRef.current) {
+      // Scroll the container into view
+      containerRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest'
+      });
+
+      // Focus the container for better UX
+      containerRef.current.focus();
+    }
+  }, [shakeFields, fieldName]);
+
+  const validateAndProcessFile = (file) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const maxSize = 5 * 1024 * 1024;
+
+    if (!allowedTypes.includes(file.type)) {
+      const error = 'Only JPG, PNG, GIF, and WEBP images are allowed';
+      setValidationError(error);
+      if (onFieldError) {
+        onFieldError(fieldName, error);
+      }
+      return false;
     }
 
-    // Check file type
-    if (!file.type.startsWith('image/')) {
-      onFieldError?.('avatar', 'Please upload an image file');
-      return;
+    if (file.size > maxSize) {
+      const error = 'Image size must be less than 5MB';
+      setValidationError(error);
+      if (onFieldError) {
+        onFieldError(fieldName, error);
+      }
+      return false;
     }
 
-    // Create preview URL
+    return true;
+  };
+
+  const processFile = (file) => {
+    console.log('Processing file:', file.name);
+    setIsLoading(true);
+    setValidationError('');
+
+    // Clear any previous errors
+    if (onFieldError) {
+      onFieldError(fieldName, '');
+    }
+
     const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result;
-      setPreviewUrl(base64String);
-      onAvatarChange?.(base64String);
-      onFieldError?.('avatar', ''); // Clear any previous errors
+
+    reader.onload = (e) => {
+      const result = e.target.result;
+      setPreviewUrl(result);
+
+      if (onAvatarChange) {
+        console.log('Calling onAvatarChange with data URL length:', result.length);
+        onAvatarChange(result);
+      } else {
+        console.error('onAvatarChange is not defined');
+      }
+
+      setValidationError('');
+      setIsLoading(false);
     };
-    reader.readAsDataURL(file);
-  }, [onAvatarChange, onFieldError]);
 
-  const handleRemoveAvatar = useCallback(() => {
-    setPreviewUrl(null);
-    onAvatarChange?.(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    reader.onerror = (error) => {
+      console.error('FileReader error:', error);
+      const errorMsg = 'Error reading file';
+      setValidationError(errorMsg);
+      if (onFieldError) {
+        onFieldError(fieldName, errorMsg);
+      }
+      setIsLoading(false);
+    };
+
+    reader.onprogress = (data) => {
+      if (data.lengthComputable) {
+        const progress = (data.loaded / data.total) * 100;
+        console.log('Reading progress:', progress.toFixed(0) + '%');
+      }
+    };
+
+    try {
+      reader.readAsDataURL(file);
+      console.log('Started reading file as data URL');
+    } catch (error) {
+      console.error('Error starting file read:', error);
+      setValidationError('Failed to read file');
+      setIsLoading(false);
     }
-    onFieldError?.('avatar', ''); // Clear any errors
-  }, [onAvatarChange, onFieldError]);
+  };
 
-  const handleClick = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
+  const handleFileChange = (event) => {
+    console.log('File input change event triggered');
+    const file = event.target.files?.[0];
+    if (file) {
+      console.log('File selected:', file.name, 'Size:', file.size, 'Type:', file.type);
+      if (!validateAndProcessFile(file)) {
+        return;
+      }
+      processFile(file);
+    } else {
+      console.log('No file selected');
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    console.log('File dropped');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      console.log('Dropped file:', file.name, 'Size:', file.size, 'Type:', file.type);
+      if (!file.type.startsWith('image/')) {
+        const error = 'Please drop an image file';
+        setValidationError(error);
+        if (onFieldError) {
+          onFieldError(fieldName, error);
+        }
+        return;
+      }
+
+      if (!validateAndProcessFile(file)) {
+        return;
+      }
+      processFile(file);
+    }
+  };
+
+  const shakeAnimation = {
+    initial: { x: 0 },
+    shake: {
+      x: [0, -10, 10, -10, 10, 0],
+      transition: { duration: 0.6, ease: "easeInOut" }
+    }
+  };
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="relative">
-        <motion.div
-          animate={shakeFields?.includes('avatar') ? "shake" : "initial"}
-          variants={shakeAnimation}
-          className="overflow-visible"
-        >
-          <div
-            onClick={handleClick}
-            className={`relative cursor-pointer group w-32 h-32 rounded-full overflow-hidden border-4 transition-all ${fieldErrors?.avatar
-                ? 'border-rose-500'
-                : previewUrl
-                  ? isDark
-                    ? 'border-violet-500'
-                    : 'border-violet-400'
-                  : isDark
-                    ? 'border-gray-600 hover:border-violet-500'
-                    : 'border-gray-300 hover:border-violet-400'
-              }`}
-          >
-            {previewUrl ? (
-              <>
-                <img
-                  src={previewUrl}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Camera size={24} className="text-white" />
-                </div>
-              </>
-            ) : (
-              <div className={`w-full h-full flex items-center justify-center ${isDark ? 'bg-gray-700' : 'bg-gray-100'
-                }`}>
-                <User size={40} className={isDark ? 'text-gray-400' : 'text-gray-500'} />
-              </div>
-            )}
-          </div>
-        </motion.div>
-
-        {previewUrl && (
-          <motion.button
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={handleRemoveAvatar}
-            className="absolute -top-2 -right-2 p-1.5 rounded-full bg-rose-500 text-white shadow-lg hover:bg-rose-600 transition-colors"
-          >
-            <X size={14} />
-          </motion.button>
-        )}
-      </div>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileChange}
-        className="hidden"
+  <div 
+    ref={containerRef}
+    className="flex flex-col items-center space-y-4 focus:outline-none"
+    tabIndex={-1}
+  >
+    {/* Rest of the component remains the same */}
+    <motion.div
+      initial={{ scale: 0.9, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: "spring", damping: 15 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+      className="relative"
+    >
+      {/* Animated Rings */}
+      <motion.div
+        className="absolute inset-0 rounded-full"
+        animate={{
+          boxShadow: isHovered
+            ? [
+              '0 0 0 4px rgba(139, 92, 246, 0.3)',
+              '0 0 0 8px rgba(139, 92, 246, 0.2)',
+              '0 0 0 12px rgba(139, 92, 246, 0.1)',
+            ]
+            : '0 0 0 0px rgba(139, 92, 246, 0)',
+        }}
+        transition={{ duration: 1, repeat: Infinity }}
       />
 
-      <button
-        type="button"
-        onClick={handleClick}
-        className={`mt-3 text-sm font-medium transition-colors ${fieldErrors?.avatar
-            ? 'text-rose-500'
-            : isDark
-              ? 'text-gray-400 hover:text-violet-400'
-              : 'text-gray-600 hover:text-violet-600'
-          }`}
+      {/* Wrap only the avatar container with shake animation */}
+      <motion.div
+        animate={shakeFields?.includes(fieldName) ? "shake" : "initial"}
+        variants={shakeAnimation}
+        className="overflow-visible"
       >
-        {previewUrl ? 'Change Photo' : 'Upload Photo'}
-      </button>
-
-      {fieldErrors?.avatar && (
-        <motion.p
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+        <div
+          className={`relative w-32 h-32 rounded-full border-4 transition-all duration-200 ${isDragging
+            ? 'border-violet-500 bg-violet-500/20 scale-110'
+            : (fieldErrors?.[fieldName] || validationError)
+              ? 'border-rose-500 bg-rose-500/20'
+              : isDark
+                ? 'border-gray-700 bg-gray-800'
+                : 'border-gray-200 bg-gray-100'
+            }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
         >
-          <AlertCircle size={12} />
-          {fieldErrors.avatar}
-        </motion.p>
-      )}
+          {isLoading ? (
+            <div className="w-full h-full rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : previewUrl ? (
+            <img
+              src={previewUrl}
+              alt="Profile"
+              className="w-full h-full rounded-full object-cover"
+              onError={() => {
+                console.error('Image failed to load');
+                setPreviewUrl(null);
+                const errorMsg = 'Failed to load image';
+                setValidationError(errorMsg);
+                if (onFieldError) {
+                  onFieldError(fieldName, errorMsg);
+                }
+              }}
+            />
+          ) : (
+            <div
+              className="w-full h-full rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center"
+            >
+              <User size={48} className="text-white" />
+            </div>
+          )}
 
-      <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-        Max size: 5MB • JPG, PNG
+          <label
+            htmlFor="avatar-upload"
+            className="absolute bottom-0 right-0 w-10 h-10 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full flex items-center justify-center cursor-pointer border-2 border-white shadow-lg hover:shadow-xl transition-shadow"
+          >
+            <Camera size={16} className="text-white" />
+            <input
+              id="avatar-upload"
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </label>
+        </div>
+      </motion.div>
+    </motion.div>
+
+    {/* Error message display */}
+    {(fieldErrors?.[fieldName] || validationError) && (
+      <motion.p
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center gap-1 text-rose-600 text-xs font-medium"
+      >
+        <XCircle size={12} />
+        {fieldErrors?.[fieldName] || validationError}
+      </motion.p>
+    )}
+
+    <div className="text-center">
+      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+        Click camera icon or drag & drop to upload
+      </p>
+      <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+        JPG, PNG, GIF, WEBP • Max 5MB
       </p>
     </div>
-  );
+  </div>
+);
 });
 
 const RecipientDetailModal = ({ recipient, isDark, onClose, onStatusChange, onVerificationChange, availableAdmins }) => {

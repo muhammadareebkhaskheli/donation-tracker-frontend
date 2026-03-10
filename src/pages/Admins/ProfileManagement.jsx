@@ -1,40 +1,18 @@
 import React, { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  // User related icons
   User,
-  UserCheck,
-  UserCog,
-  UserPlus,
-  UserMinus,
-  UserX,
-  UserCheck2,
-
-  // Contact icons
-  Mail,
   Phone,
-  MapPin,
-  MapPinned,
-
-  // Security icons
   Shield,
   ShieldCheck,
-  ShieldAlert,
-  ShieldOff,
   Key,
   Lock,
-  Fingerprint,
-
-  // Status icons
   CheckCircle,
   XCircle,
   AlertCircle,
   BadgeCheck,
   BadgeAlert,
-  BadgeInfo,
   BadgeX,
-
-  // Action icons
   Edit,
   Save,
   Download,
@@ -44,51 +22,21 @@ import {
   Plus,
   Check,
   ExternalLink,
-
-  // Navigation icons
   ChevronDown,
   ChevronUp,
   ChevronLeft,
-  ChevronRight,
-
-  // Device icons
   Smartphone,
   Laptop,
   Tablet,
   Monitor,
-
-  // Notification icons
-  Bell,
-  MailCheck,
-  PhoneCall,
-
-  // Time icons
-  Calendar,
   Clock,
-  CalendarDays,
-
-  // Achievement icons
   Award,
   Medal,
-  Trophy,
-  Crown,
   Star,
-  Sparkles,
-  Gift,
-  Gem,
-
-  // Activity icons
   Activity,
   TrendingUp,
   TrendingDown,
-
-  // Settings icons
-  Settings,
   Monitor as MonitorIcon,
-  Sun,
-  Moon,
-
-  // Social icons
   Github,
   Twitter,
   Linkedin,
@@ -96,63 +44,17 @@ import {
   Facebook,
   Youtube,
   Twitch,
-
-  // Globe icons
   Globe,
-  Globe2,
-
-  // Document icons
   FileText,
-
-  // Payment/Banking icons
-  CreditCard,
-  Wallet,
-  Banknote,
-
-  // Profile icons
-  Users,
-  UsersRound,
-  UserRound,
-
-  // Eye icons
   Eye,
   EyeOff,
-
-  // Camera icons
   Camera,
-
-  // QR Code
-  QrCode,
-
-  // Map icons
   MapPin as MapPinIcon,
-
-  // Message icons
   MessageSquare,
-
-  // Refresh icon
   RefreshCw,
-
-  // Logout icon
-  LogOut,
-
-  // Additional icons from recipients management
-  Search,
-  Filter,
   Eye as ViewIcon,
-  MoreVertical,
   Send,
-  FileCheck,
-  IdCard,
   Briefcase,
-  Car,
-  Stethoscope,
-  Cpu,
-  ShoppingBag,
-  Sprout,
-  Building,
-  GraduationCap,
-  IndianRupee,
   Music,
   Ghost,
   Image,
@@ -850,32 +752,42 @@ const EnhancedTextarea = memo(({
   );
 });
 
-// Enhanced Avatar Upload Component - Fixed Version
-const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, onFieldError, shakeFields }) => {
+const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, onFieldError, shakeFields, fieldName = 'profilePhoto' }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(user?.avatar || null);
   const [isHovered, setIsHovered] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const containerRef = useRef(null);
 
-  // Update preview when user avatar changes externally
   useEffect(() => {
-    console.log('User avatar changed:', user?.avatar ? 'Has avatar' : 'No avatar');
     setPreviewUrl(user?.avatar || null);
   }, [user?.avatar]);
 
-  const validateAndProcessFile = (file) => {
-    console.log('Validating file:', file.name, file.type, file.size);
+  // Effect to scroll when shaking starts
+  useEffect(() => {
+    if (shakeFields?.includes(fieldName) && containerRef.current) {
+      // Scroll the container into view
+      containerRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest'
+      });
 
-    // Validate file
+      // Focus the container for better UX
+      containerRef.current.focus();
+    }
+  }, [shakeFields, fieldName]);
+
+  const validateAndProcessFile = (file) => {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 5 * 1024 * 1024;
 
     if (!allowedTypes.includes(file.type)) {
       const error = 'Only JPG, PNG, GIF, and WEBP images are allowed';
       setValidationError(error);
       if (onFieldError) {
-        onFieldError('avatar', error);
+        onFieldError(fieldName, error);
       }
       return false;
     }
@@ -884,7 +796,7 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
       const error = 'Image size must be less than 5MB';
       setValidationError(error);
       if (onFieldError) {
-        onFieldError('avatar', error);
+        onFieldError(fieldName, error);
       }
       return false;
     }
@@ -897,17 +809,17 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
     setIsLoading(true);
     setValidationError('');
 
-    // Use FileReader directly without image dimension validation first
+    // Clear any previous errors
+    if (onFieldError) {
+      onFieldError(fieldName, '');
+    }
+
     const reader = new FileReader();
 
     reader.onload = (e) => {
-      console.log('FileReader loaded successfully');
       const result = e.target.result;
-
-      // Set preview immediately
       setPreviewUrl(result);
 
-      // Call the parent's onAvatarChange with the result
       if (onAvatarChange) {
         console.log('Calling onAvatarChange with data URL length:', result.length);
         onAvatarChange(result);
@@ -916,9 +828,6 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
       }
 
       setValidationError('');
-      if (onFieldError) {
-        onFieldError('avatar', '');
-      }
       setIsLoading(false);
     };
 
@@ -927,7 +836,7 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
       const errorMsg = 'Error reading file';
       setValidationError(errorMsg);
       if (onFieldError) {
-        onFieldError('avatar', errorMsg);
+        onFieldError(fieldName, errorMsg);
       }
       setIsLoading(false);
     };
@@ -939,7 +848,6 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
       }
     };
 
-    // Start reading the file
     try {
       reader.readAsDataURL(file);
       console.log('Started reading file as data URL');
@@ -984,7 +892,7 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
         const error = 'Please drop an image file';
         setValidationError(error);
         if (onFieldError) {
-          onFieldError('avatar', error);
+          onFieldError(fieldName, error);
         }
         return;
       }
@@ -1004,8 +912,15 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
     }
   };
 
+  // Check if this field should shake
+  const shouldShake = shakeFields?.includes(fieldName);
+
   return (
-    <div className="flex flex-col items-center space-y-4">
+    <div 
+      ref={containerRef}
+      className="flex flex-col items-center space-y-4 focus:outline-none"
+      tabIndex={-1}
+    >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -1029,20 +944,22 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
           transition={{ duration: 1, repeat: Infinity }}
         />
 
+        {/* Wrap only the avatar container with shake animation */}
         <motion.div
-          animate={shakeFields?.includes('avatar') ? "shake" : "initial"}
+          animate={shouldShake ? "shake" : "initial"}
           variants={shakeAnimation}
           className="overflow-visible"
         >
           <div
-            className={`relative w-32 h-32 rounded-full border-4 transition-all duration-200 ${isDragging
-              ? 'border-violet-500 bg-violet-500/20 scale-110'
-              : fieldErrors?.avatar || validationError
-                ? 'border-rose-500 bg-rose-500/20'
-                : isDark
-                  ? 'border-gray-700 bg-gray-800'
-                  : 'border-gray-200 bg-gray-100'
-              }`}
+            className={`relative w-32 h-32 rounded-full border-4 transition-all duration-200 ${
+              isDragging
+                ? 'border-violet-500 bg-violet-500/20 scale-110'
+                : (fieldErrors?.[fieldName] || validationError)
+                  ? 'border-rose-500 bg-rose-500/20'
+                  : isDark
+                    ? 'border-gray-700 bg-gray-800'
+                    : 'border-gray-200 bg-gray-100'
+            }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -1059,7 +976,11 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
                 onError={() => {
                   console.error('Image failed to load');
                   setPreviewUrl(null);
-                  setValidationError('Failed to load image');
+                  const errorMsg = 'Failed to load image';
+                  setValidationError(errorMsg);
+                  if (onFieldError) {
+                    onFieldError(fieldName, errorMsg);
+                  }
                 }}
               />
             ) : (
@@ -1087,14 +1008,15 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
         </motion.div>
       </motion.div>
 
-      {(fieldErrors?.avatar || validationError) && (
+      {/* Error message display */}
+      {(fieldErrors?.[fieldName] || validationError) && (
         <motion.p
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-1 text-rose-600 text-xs font-medium"
         >
           <XCircle size={12} />
-          {fieldErrors?.avatar || validationError}
+          {fieldErrors?.[fieldName] || validationError}
         </motion.p>
       )}
 
@@ -1110,7 +1032,6 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
   );
 });
 
-// Password Strength Indicator
 const PasswordStrengthIndicator = memo(({ password, isDark }) => {
   const getStrength = () => {
     let score = 0;
@@ -2921,7 +2842,11 @@ const EditProfileModal = memo(({
 
     setShakeFields([]);
 
-    // Validation helper functions (same as before)
+    if (!formData.avatar) {
+  errors.avatar = 'Profile photo is required';
+  invalidFields.push('avatar');
+}
+    
     const isValidName = (name) => {
       return /^[A-Za-z\s]+$/.test(name.trim());
     };
@@ -3343,6 +3268,7 @@ const EditProfileModal = memo(({
                     fieldErrors={fieldErrors}
                     onFieldError={handleFieldError}
                     shakeFields={shakeFields}
+                    fieldName="avatar"
                   />
                 </div>
               </div>
@@ -3854,7 +3780,7 @@ const EditProfileModal = memo(({
                         value={formData.address}
                         onChange={handleChange}
                         placeholder="Lahore, Pakistan"
-                        maxLength={200}
+                        maxLength={100}
                         autoComplete="off"
                         className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
                           ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
@@ -3862,7 +3788,7 @@ const EditProfileModal = memo(({
                           } ${fieldErrors.address ? 'border-rose-500' : ''}`}
                       />
                       <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                        {formData.address.length}/200
+                        {formData.address.length}/100
                       </div>
                     </motion.div>
                     {fieldErrors.address && (
@@ -3895,7 +3821,7 @@ const EditProfileModal = memo(({
                         onChange={handleChange}
                         rows="3"
                         placeholder="Tell us about yourself..."
-                        maxLength={500}
+                        maxLength={300}
                         autoComplete="off"
                         onFocus={(e) => e.target.removeAttribute('readonly')}
                         className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium resize-none ${fieldErrors.bio
@@ -3905,9 +3831,15 @@ const EditProfileModal = memo(({
                             : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
                           }`}
                       />
-                      <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                        {formData.bio.length}/500
-                      </div>
+                      <div className={`absolute right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'
+                          }`}
+                          style={{
+                            bottom: '0.8rem',
+                            pointerEvents: 'none'
+                          }}
+                        >
+                          {formData.bio.length}/300
+                        </div>
                       {fieldErrors.bio && (
                         <p className="text-red-500 text-xs mt-1">{fieldErrors.bio}</p>
                       )}
@@ -4996,7 +4928,6 @@ const ProfileManagement = ({ isDark }) => {
             user={user}
             onClose={() => setShowEditModal(false)}
             onUpdate={handleUpdateProfile}
-          // Remove verification props as they're not needed in edit modal
           />
         )}
       </AnimatePresence>
