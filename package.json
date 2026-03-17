@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "axios": "^1.12.2",
+    "axios": "^1.13.6",
     "clsx": "^2.1.1",
     "crypto": "^1.0.1",
     "framer-motion": "^12.23.22",

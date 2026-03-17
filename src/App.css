@@ -1,0 +1,138 @@
+/* ===== PREVENT BROWSER AUTOFILL POPUP - COMPREHENSIVE SOLUTION ===== */
+
+/* Disable autofill background color and text color for all input types */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px white inset !important;
+  box-shadow: 0 0 0 30px white inset !important;
+  -webkit-text-fill-color: #333 !important;
+}
+
+/* Override autofill text color for visibility */
+input:-webkit-autofill {
+  -webkit-text-fill-color: #333 !important;
+}
+
+/* Override autofill caret/text color on focus */
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #333 !important;
+  caret-color: #333 !important;
+}
+
+/* Remove transition delay that makes autofill visible */
+input:-webkit-autofill {
+  -webkit-transition-delay: 99999s;
+  transition-delay: 99999s;
+}
+
+/* Alternative approach: hide autofill suggestion */
+input:-webkit-autofill::first-line {
+  color: transparent !important;
+}
+
+/* Prevent autofill overlay on password fields */
+input[type="password"]:-webkit-autofill,
+input[type="password"]:-webkit-autofill:hover,
+input[type="password"]:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 30px white inset !important;
+  -webkit-text-fill-color: #333 !important;
+}
+
+/* Disable browser's autofill styling for all input states */
+input:-webkit-autofill::-webkit-contacts-auto-fill-button {
+  visibility: hidden;
+  display: none !important;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+}
+
+/* Remove autofill button/icon */
+input::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  display: none !important;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+}
+
+/* Prevent autofill from overriding border colors */
+input:-webkit-autofill {
+  border: 2px solid transparent !important;
+  border-radius: 0.5rem !important;
+}
+
+/* Override the autofill color for checkbox */
+input[type="checkbox"]:-webkit-autofill {
+  accent-color: #2563eb !important;
+  -webkit-appearance: checkbox;
+}
+
+/* Prevent transition animation on autofill (showing yellow/blue background) */
+input:-webkit-autofill {
+  -webkit-autofill-strong-password-color: #333 !important;
+  -webkit-autofill-strong-password-background-color: white !important;
+}
+
+/* Ensure no autofill suggestion dropdown appears */
+input:-webkit-autofill::selection {
+  background-color: transparent !important;
+}
+
+/* ===== ADDITIONAL FIXES FOR CHROME AND SAFARI ===== */
+
+/* Stop the blue autofill transition by using delay */
+input, textarea, select {
+  -webkit-autofill-strong-password-color: #333;
+  -webkit-autofill-strong-password-background-color: white;
+}
+
+/* Remove the yellow/blue tint from autofilled fields */
+:-webkit-autofill,
+:-webkit-autofill:hover,
+:-webkit-autofill:focus,
+:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px white inset !important;
+}
+
+/* Prevent animation/flash when autofill triggers */
+@-webkit-keyframes autofill {
+  from {
+    background-color: white;
+  }
+  to {
+    background-color: white;
+  }
+}
+
+input:-webkit-autofill {
+  -webkit-animation-name: autofill;
+  -webkit-animation-fill-mode: both;
+  animation-name: autofill;
+  animation-fill-mode: both;
+  -webkit-transition-delay: 86400s;
+  transition-delay: 86400s;
+}
+
+/* ===== ENSURE PROPER TEXT VISIBILITY ===== */
+
+/* Force text color to remain visible and not be hidden by autofill styling */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #333 !important;
+  color: #333 !important;
+}
+
+/* Ensure placeholder text color */
+input::placeholder {
+  color: #999 !important;
+  opacity: 0.7 !important;
+}
+
+input:-webkit-autofill::placeholder {
+  color: #999 !important;
+  opacity: 0.7 !important;
+}

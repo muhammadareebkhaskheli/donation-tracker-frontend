@@ -3,18 +3,24 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { authAPI } from "../services/api";
 import {
-  Eye, EyeOff, Mail, Lock, ArrowRight, HeartHandshake,
-  ShieldCheck, TrendingUp, Star, Zap, Target, Globe,
-  CheckCircle, XCircle, Phone, User, Shield, Key, Fingerprint, Clock
+  Eye, EyeOff, Mail, Lock, ArrowRight, HeartHandshake, ShieldCheck, TrendingUp, CheckCircle, XCircle,
+  Phone, Key, Shield, Users, AlertCircle
 } from "lucide-react";
+
+// Shake animation variants
+const shakeAnimation = {
+  initial: { x: 0 },
+  shake: {
+    x: [0, -10, 10, -10, 10, 0],
+    transition: { duration: 0.6, ease: "easeInOut" }
+  }
+};
 
 export default function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loginType, setLoginType] = useState("email");
-  const [phoneCode, setPhoneCode] = useState("+92");
-  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     phone: "",
@@ -23,25 +29,32 @@ export default function Login() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [shakeFields, setShakeFields] = useState([]);
   const [loginAttempts, setLoginAttempts] = useState(0);
+  const [shakeKey, setShakeKey] = useState(0);
+  const [inputsReady, setInputsReady] = useState(false);
 
   // MANDATORY 2FA - Always enabled
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [showTwoFactor, setShowTwoFactor] = useState(false);
   const [isTwoFactorLoading, setIsTwoFactorLoading] = useState(false);
-  const [verificationMethod, setVerificationMethod] = useState("email"); // email, phone, or authenticator
+  const [verificationMethod, setVerificationMethod] = useState("email");
 
-  // NEW: Remember me state
+  // Remember me state
   const [rememberMe, setRememberMe] = useState(false);
-
-  const dropdownRef = useRef(null);
 
   const [currentUserIdentifier, setCurrentUserIdentifier] = useState("");
 
-  // Add these with your other state variables
+  // Timer for resend cooldown
   const [timer, setTimer] = useState(60);
   const [isTimerActive, setIsTimerActive] = useState(false);
 
-  // Timer effect - ONLY for resend cooldown
+  // Refs for autofill prevention
+  const fieldRefs = {
+    email: useRef(null),
+    phone: useRef(null),
+    password: useRef(null)
+  };
+
+  // Timer effect
   useEffect(() => {
     let interval;
     if (isTimerActive && timer > 0) {
@@ -57,7 +70,7 @@ export default function Login() {
   // Start timer when moving to 2FA step
   useEffect(() => {
     if (showTwoFactor && verificationMethod !== 'authenticator') {
-      setTimer(60); // 60 seconds cooldown for resend
+      setTimer(60);
       setIsTimerActive(true);
     }
   }, [showTwoFactor, verificationMethod]);
@@ -123,35 +136,103 @@ export default function Login() {
     }
   }, []);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowCountryDropdown(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    const t = setTimeout(() => setInputsReady(true), 100);
+    return () => clearTimeout(t);
   }, []);
 
-  // Phone country codes
-  const countryCodes = [
-    { code: "+1", country: "US", flag: "🇺🇸" },
-    { code: "+44", country: "UK", flag: "🇬🇧" },
-    { code: "+91", country: "India", flag: "🇮🇳" },
-    { code: "+92", country: "Pakistan", flag: "🇵🇰" },
-    { code: "+971", country: "UAE", flag: "🇦🇪" },
-    { code: "+966", country: "KSA", flag: "🇸🇦" },
-    { code: "+61", country: "Australia", flag: "🇦🇺" },
-    { code: "+49", country: "Germany", flag: "🇩🇪" },
-    { code: "+33", country: "France", flag: "🇫🇷" },
-    { code: "+81", country: "Japan", flag: "🇯🇵" },
-    { code: "+86", country: "China", flag: "🇨🇳" },
-    { code: "+65", country: "Singapore", flag: "🇸🇬" }
-  ];
+  // ===== AUTOCOMPLETE PREVENTION FUNCTIONS (like signup page) =====
+  const handleInput = (e) => {
+    const input = e.target;
+    const fieldName = input.name;
+
+    if (['email', 'firstName', 'lastName', 'phone', 'password'].includes(fieldName)) {
+      input.setAttribute('data-autofill-prevent', Math.random().toString(36).substring(7));
+      input.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
+      setTimeout(() => {
+        input.setAttribute('autocomplete', 'off');
+      }, 5);
+    }
+  };
+
+  const handleEnhancedFocus = (e) => {
+    const input = e.target;
+    const fieldName = input.name;
+
+    if (['email', 'firstName', 'lastName', 'phone', 'password'].includes(fieldName)) {
+      input.setAttribute('readonly', 'readonly');
+      setTimeout(() => {
+        input.removeAttribute('readonly');
+      }, 5);
+      input.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    const input = e.target;
+    const fieldName = input.name;
+
+    if (['email', 'firstName', 'lastName', 'phone', 'password'].includes(fieldName)) {
+      input.setAttribute('data-typing', 'true');
+    }
+  };
+
+  const handlePaste = (e) => {
+    const input = e.target;
+    const fieldName = input.name;
+
+    if (['email', 'firstName', 'lastName', 'phone', 'password'].includes(fieldName)) {
+      e.stopPropagation();
+    }
+  };
+
+  const handleMouseDown = (e) => {
+    const input = e.target;
+    const fieldName = input.name;
+
+    if (['email', 'firstName', 'lastName', 'phone', 'password'].includes(fieldName)) {
+      input.setAttribute('readonly', 'readonly');
+      setTimeout(() => {
+        input.removeAttribute('readonly');
+      }, 5);
+    }
+  };
+
+  // ===== AUTOCOMPLETE PREVENTION STYLES (EXACTLY LIKE SIGNUP PAGE) =====
+  const autofillStyles = `
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus,
+    input:-webkit-autofill:active {
+      -webkit-box-shadow: 0 0 0 30px white inset !important;
+      box-shadow: 0 0 0 30px white inset !important;
+      -webkit-text-fill-color: #000 !important;
+      transition: background-color 5000s ease-in-out 0s;
+    }
+    
+    input::-webkit-contacts-auto-fill-button,
+    input::-webkit-credentials-auto-fill-button {
+      visibility: hidden;
+      display: none !important;
+      pointer-events: none;
+      height: 0;
+      width: 0;
+      margin: 0;
+    }
+
+    input {
+      autocomplete: off;
+    }
+
+    /* Additional prevention for all input types */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"] {
+      -webkit-autofill: off;
+      autocomplete: off;
+    }
+  `;
 
   // Animation Variants
   const fadeInUp = {
@@ -189,13 +270,6 @@ export default function Login() {
     }
   };
 
-  const shakeAnimation = {
-    shake: {
-      x: [0, -10, 10, -10, 10, 0],
-      transition: { duration: 0.5 }
-    }
-  };
-
   const buttonAnimation = {
     initial: { scale: 1 },
     hover: {
@@ -222,18 +296,16 @@ export default function Login() {
     tap: { scale: 0.9 }
   };
 
-  const primaryButtonAnimation = {
-    initial: { scale: 1 },
+  const pulseAnimation = {
+    initial: { boxShadow: "0 0 0 0 rgba(59, 130, 246, 0.7)" },
     hover: {
-      scale: 1.05,
-      y: -2,
-      transition: {
-        type: "spring",
-        stiffness: 400,
-        damping: 10
-      }
-    },
-    tap: { scale: 0.95 }
+      boxShadow: [
+        "0 0 0 0 rgba(59, 130, 246, 0.7)",
+        "0 0 0 10px rgba(59, 130, 246, 0)",
+        "0 0 0 0 rgba(59, 130, 246, 0)"
+      ],
+      transition: { duration: 1.5, repeat: Infinity }
+    }
   };
 
   const linkAnimation = {
@@ -286,55 +358,43 @@ export default function Login() {
     }
   };
 
-  const pulseAnimation = {
-    initial: { boxShadow: "0 0 0 0 rgba(59, 130, 246, 0.7)" },
-    hover: {
-      boxShadow: [
-        "0 0 0 0 rgba(59, 130, 246, 0.7)",
-        "0 0 0 10px rgba(59, 130, 246, 0)",
-        "0 0 0 0 rgba(59, 130, 246, 0)"
-      ],
-      transition: { duration: 1.5, repeat: Infinity }
-    }
-  };
-
-  // Security Features
+  // Security Features - Converted to STAT CARDS with exact same styling as signup
   const securityFeatures = [
     {
-      icon: ShieldCheck,
-      title: "Bank-Level Encryption",
-      description: "All data protected with AES-256 encryption",
+      icon: HeartHandshake,
+      title: "Connect & Care",
+      description: "A trusted platform connecting donors with verified recipients",
       color: "from-blue-500 to-cyan-400"
     },
     {
-      icon: Key,
-      title: "Multi-Factor Authentication",
-      description: "2FA required for all account access",
+      icon: TrendingUp,
+      title: "Track Impact",
+      description: "See donation progress and the difference you're making",
       color: "from-green-500 to-emerald-400"
     },
     {
-      icon: Fingerprint,
-      title: "Identity Verification",
-      description: "Multi-step verification process",
+      icon: Users,
+      title: "Strong Community",
+      description: "Join a growing network of compassionate people across India",
       color: "from-purple-500 to-pink-400"
     },
     {
-      icon: Clock,
-      title: "Real-time Monitoring",
-      description: "24/7 security monitoring and alerts",
+      icon: Shield,
+      title: "Privacy First",
+      description: "Your information is handled with care and respect",
       color: "from-yellow-500 to-orange-400"
     }
   ];
 
-  // Enhanced Validation functions
+  // Validation functions
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
   const validatePhone = (phone) => {
-    const phoneRegex = /^\+\d{1,4}[\d\s-()]{8,}$/;
-    return phoneRegex.test(phone.replace(/\s/g, ''));
+    const digitsOnly = phone.replace(/\D/g, '');
+    return digitsOnly.length === 10;
   };
 
   const validatePassword = (password) => {
@@ -343,9 +403,31 @@ export default function Login() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    let processedValue = value;
+
+    // Format phone number like signup page
+    if (name === 'phone') {
+      processedValue = value.replace(/\D/g, '');
+      if (processedValue.length > 10) {
+        processedValue = processedValue.slice(0, 10);
+      }
+      if (processedValue.length > 0) {
+        if (processedValue.length <= 3) {
+          // No formatting needed
+        } else if (processedValue.length <= 6) {
+          processedValue = `${processedValue.slice(0, 3)}-${processedValue.slice(3)}`;
+        } else {
+          processedValue = `${processedValue.slice(0, 3)}-${processedValue.slice(3, 6)}-${processedValue.slice(6)}`;
+        }
+      }
+    } else if (name === 'email') {
+      processedValue = value.toLowerCase().replace(/\s/g, '');
+    }
+
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: processedValue
     }));
 
     if (fieldErrors[name]) {
@@ -362,11 +444,40 @@ export default function Login() {
 
   const triggerShake = (fieldNames) => {
     setShakeFields(fieldNames);
+    setShakeKey(prev => prev + 1);
     setTimeout(() => setShakeFields([]), 500);
   };
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollToFirstInvalidField = (invalidFields) => {
+    if (invalidFields.length > 0) {
+      const fieldOrder = ['email', 'phone', 'password'];
+      const firstInvalidField = fieldOrder.find(field => invalidFields.includes(field));
+
+      if (firstInvalidField) {
+        const fieldRef = fieldRefs[firstInvalidField];
+        if (fieldRef && fieldRef.current) {
+          setTimeout(() => {
+            fieldRef.current.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center',
+              inline: 'nearest'
+            });
+
+            const input = fieldRef.current.querySelector('input, select, textarea');
+            if (input) {
+              input.focus();
+              if (input.type !== 'checkbox' && input.type !== 'file') {
+                input.select();
+              }
+            }
+          }, 100);
+        }
+      }
+    }
   };
 
   const saveCredentialsToStorage = () => {
@@ -387,131 +498,144 @@ export default function Login() {
     setRememberMe(false);
   };
 
-  // 🔄 FIXED: First step login handler with better error handling
-const handleFirstStepSubmit = async (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  console.log("🔄 Login form submitted");
+  // First step login handler
+  const handleFirstStepSubmit = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-  if (loginAttempts >= 5) {
-    setFieldErrors({
-      submit: "Too many login attempts. Please try again in 15 minutes."
-    });
-    return;
-  }
-
-  const errors = {};
-
-  if (loginType === 'email') {
-    if (!formData.email) {
-      errors.email = "Email is required";
-    } else if (!validateEmail(formData.email)) {
-      errors.email = "Please enter a valid email address";
-    }
-  } else {
-    if (!formData.phone) {
-      errors.phone = "Phone number is required";
-    } else if (!validatePhone(phoneCode + formData.phone)) {
-      errors.phone = "Please enter a valid phone number with country code";
-    }
-  }
-
-  if (!formData.password) {
-    errors.password = "Password is required";
-  }
-
-  if (Object.keys(errors).length > 0) {
-    console.log("❌ Form validation errors:", errors);
-    setFieldErrors(errors);
-    triggerShake(Object.keys(errors));
-    setLoginAttempts(prev => prev + 1);
-    return;
-  }
-
-  setIsLoading(true);
-  console.log("🔄 Starting API call...");
-
-  try {
     const loginData = {
       password: formData.password,
     };
 
-    if (loginType === 'email') {
-      loginData.email = formData.email;
-    } else {
-      loginData.phone = phoneCode + formData.phone;
-    }
 
-    console.log("📤 Sending login data:", { ...loginData, password: '***' });
-
-    const response = await authAPI.login(loginData);
-    console.log("📥 Login API response:", response);
-
-    if (response.data.success) {
-      console.log("✅ Login successful, moving to 2FA");
-      saveCredentialsToStorage();
-
-      const identifier = loginType === 'email' ? formData.email : phoneCode + formData.phone;
-      setCurrentUserIdentifier(identifier);
-
-      const verificationMethod = response.data.verificationMethod || 'email';
-      setVerificationMethod(verificationMethod);
-
-      setShowTwoFactor(true);
-      setFieldErrors({});
-      scrollToTop();
-
-      window.history.pushState({ showTwoFactor: true }, '', window.location.pathname);
-
-    } else {
-      console.log("❌ Login failed in response:", response.data);
-      throw new Error(response.data.message || "Login failed");
-    }
-
-  } catch (error) {
-    console.error("🔥 CATCH BLOCK - Login error:", {
-      name: error.name,
-      message: error.message,
-      response: error.response,
-      stack: error.stack
-    });
-
-    // Check if this is a network error or actual API error
-    if (!error.response) {
-      console.log("🌐 Network error - no response received");
+    if (loginAttempts >= 5) {
       setFieldErrors({
-        submit: "Network error. Please check your connection and try again."
+        submit: "Too many login attempts. Please try again in 15 minutes."
       });
-    } else {
-      console.log("📡 API error with response:", {
-        status: error.response.status,
-        data: error.response.data,
-        headers: error.response.headers
-      });
+      return;
+    }
 
-      let errorMessage = "Invalid email/phone or password. Please try again.";
-      
-      if (error.response.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response.status === 401) {
-        errorMessage = "Invalid credentials. Please check your email/phone and password.";
-      } else if (error.response.status === 404) {
-        errorMessage = "No account found with this email/phone. Please sign up first.";
-      } else if (error.response.status >= 500) {
-        errorMessage = "Server error. Please try again later.";
+    const errors = {};
+    const invalidFields = [];
+
+    if (loginType === 'email') {
+      if (!formData.email) {
+        errors.email = "Email is required";
+        invalidFields.push('email');
+      } else if (!validateEmail(formData.email)) {
+        errors.email = "Please enter a valid email address";
+        invalidFields.push('email');
+      }
+    } else {
+      if (!formData.phone) {
+        errors.phone = "Phone number is required";
+        invalidFields.push('phone');
+      } else {
+        const digitsOnly = formData.phone.replace(/\D/g, '');
+        if (digitsOnly.length !== 10) {
+          errors.phone = "Please enter a valid 10-digit phone number";
+          invalidFields.push('phone');
+        }
+      }
+    }
+
+    if (!formData.password) {
+      errors.password = "Password is required";
+      invalidFields.push('password');
+    }
+
+    if (Object.keys(errors).length > 0) {
+      console.log("❌ Form validation errors:", errors);
+      setFieldErrors(errors);
+      triggerShake(invalidFields);
+      scrollToFirstInvalidField(invalidFields);
+      setLoginAttempts(prev => prev + 1);
+      return;
+    }
+
+    setIsLoading(true);
+    console.log("🔄 Starting API call...");
+
+    try {
+      const loginData = {
+        password: formData.password,
+      };
+
+      if (loginType === 'email') {
+        loginData.email = formData.email;
+      } else {
+        loginData.phone = `+91${formData.phone.replace(/\D/g, '')}`;
       }
 
-      setFieldErrors({ submit: errorMessage });
-    }
-    
-    setLoginAttempts(prev => prev + 1);
-  } finally {
-    console.log("🏁 Login process completed");
-    setIsLoading(false);
-  }
-};
+      console.log("📤 Sending login data:", { ...loginData, password: '***' });
 
-  // 🔄 COMPLETELY FIXED: 2FA verification handler
+      const response = await authAPI.login(loginData);
+      console.log("📥 Login API response:", response);
+
+      if (response.data.success) {
+        console.log("✅ Login successful, moving to 2FA");
+        saveCredentialsToStorage();
+
+        const identifier = loginType === 'email' ? formData.email : `+91${formData.phone.replace(/\D/g, '')}`;
+        setCurrentUserIdentifier(identifier);
+
+        const verificationMethod = response.data.verificationMethod || 'email';
+        setVerificationMethod(verificationMethod);
+
+        setShowTwoFactor(true);
+        setFieldErrors({});
+        scrollToTop();
+
+        window.history.pushState({ showTwoFactor: true }, '', window.location.pathname);
+
+      } else {
+        console.log("❌ Login failed in response:", response.data);
+        throw new Error(response.data.message || "Login failed");
+      }
+
+    } catch (error) {
+      console.error("🔥 CATCH BLOCK - Login error:", {
+        name: error.name,
+        message: error.message,
+        response: error.response,
+        stack: error.stack
+      });
+
+      if (!error.response) {
+        console.log("🌐 Network error - no response received");
+        setFieldErrors({
+          submit: "Network error. Please check your connection and try again."
+        });
+      } else {
+        console.log("📡 API error with response:", {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+
+        let errorMessage = "Invalid email/phone or password. Please try again.";
+
+        if (error.response.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.status === 401) {
+          errorMessage = "Invalid credentials. Please check your email/phone and password.";
+        } else if (error.response.status === 404) {
+          errorMessage = "No account found with this email/phone. Please sign up first.";
+        } else if (error.response.status >= 500) {
+          errorMessage = "Server error. Please try again later.";
+        }
+
+        setFieldErrors({ submit: errorMessage });
+      }
+
+      setLoginAttempts(prev => prev + 1);
+    } finally {
+      console.log("🏁 Login process completed");
+      setIsLoading(false);
+    }
+  };
+
+  // 2FA verification handler
   const handleTwoFactorSubmit = async (e) => {
     e.preventDefault();
 
@@ -531,7 +655,6 @@ const handleFirstStepSubmit = async (e) => {
 
       console.log("Starting 2FA verification with method:", verificationMethod);
 
-      // 🔄 FIXED: Use the correct verification method determined from login response
       switch (verificationMethod) {
         case 'email':
           verificationData.email = currentUserIdentifier;
@@ -544,14 +667,12 @@ const handleFirstStepSubmit = async (e) => {
           break;
 
         case 'authenticator':
-          // For authenticator, we need to use the authenticator-specific endpoint
           verificationData.email = loginType === 'email' ? currentUserIdentifier : undefined;
           verificationData.phone = loginType === 'phone' ? currentUserIdentifier : undefined;
           response = await authAPI.verifyAuthenticatorLogin(verificationData);
           break;
 
         default:
-          // Fallback to email if method not specified
           verificationData.email = currentUserIdentifier;
           response = await authAPI.verifyLoginEmail(verificationData);
       }
@@ -559,10 +680,8 @@ const handleFirstStepSubmit = async (e) => {
       console.log("2FA verification response:", response.data);
 
       if (response.data.success) {
-        // 🔄 FIXED: Handle successful verification
         handleSuccessfulLogin(response.data);
       } else {
-        // 🔄 FIXED: Handle backend error messages properly
         const errorMessage = response.data.message || "Invalid verification code";
 
         if (errorMessage.includes('authenticator') || errorMessage.includes('Authenticator')) {
@@ -586,7 +705,6 @@ const handleFirstStepSubmit = async (e) => {
     } catch (error) {
       console.error("2FA verification error:", error);
 
-      // 🔄 FIXED: Enhanced error handling with specific messages
       if (error.response?.status === 401) {
         setFieldErrors({
           twoFactor: "Invalid verification code. Please check the code and try again."
@@ -646,9 +764,8 @@ const handleFirstStepSubmit = async (e) => {
     }, 100);
   };
 
-  // 🔄 FIXED: Resend verification functionality with timer
+  // Resend verification functionality with timer
   const handleResendVerification = async () => {
-    // Check if timer is active
     if (isTimerActive && timer > 0) {
       setFieldErrors({
         twoFactor: `Please wait ${timer} seconds before resending`
@@ -663,7 +780,6 @@ const handleFirstStepSubmit = async (e) => {
         type: 'login'
       };
 
-      // Add identifier based on login type
       if (loginType === 'email') {
         resendData.email = currentUserIdentifier;
       } else {
@@ -677,7 +793,6 @@ const handleFirstStepSubmit = async (e) => {
       if (response.data.success) {
         console.log("Verification code resent successfully");
 
-        // Start the timer
         setTimer(60);
         setIsTimerActive(true);
 
@@ -719,9 +834,7 @@ const handleFirstStepSubmit = async (e) => {
     });
   };
 
-  const selectedCountry = countryCodes.find(country => country.code === phoneCode);
-
-  // 🔄 FIXED: Get display text for verification method
+  // Get display text for verification method
   const getVerificationMethodText = () => {
     switch (verificationMethod) {
       case 'email':
@@ -742,6 +855,7 @@ const handleFirstStepSubmit = async (e) => {
       transition={{ duration: 0.6 }}
       className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/30 flex items-center justify-center p-4 lg:p-8"
     >
+      <style>{autofillStyles}</style>
       <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
 
         {/* Left Side - Brand & Security Benefits */}
@@ -782,33 +896,46 @@ const handleFirstStepSubmit = async (e) => {
                 </motion.div>
                 <div>
                   <h1 className="text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-cyan-700 bg-clip-text text-transparent">
-                    Secure Login
+                    Login to Continue
                   </h1>
                   <p className="text-xl text-gray-600 mt-2">
-                    Enhanced security verification
+                    We're glad to see you again
                   </p>
                 </div>
               </motion.div>
 
               <motion.p
                 variants={fadeInUp}
-                className="text-2xl text-gray-700 leading-relaxed font-light"
+                className="text-2xl text-gray-700 leading-relaxed font-light text-justify"
               >
-                Your security is our top priority. We use enterprise-grade encryption and multi-factor authentication to protect your account.
+                A transparent donation platform connecting verified recipients with trusted donors. Track contributions, monitor needs, and see real impact all in one place.
               </motion.p>
             </motion.div>
 
-            {/* Security Features Grid */}
+            {/* STAT CARDS Grid - Updated with same animations as signup page */}
             <motion.div
-              variants={staggerContainer}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
               className="grid grid-cols-2 gap-4"
             >
               {securityFeatures.map((feature, index) => (
                 <motion.div
                   key={index}
-                  variants={fadeInUp}
-                  whileHover={{ y: -5, scale: 1.02 }}
-                  className="bg-white/80 backdrop-blur-sm rounded-2xl p-5 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300"
+                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{
+                    delay: index * 0.05,
+                    duration: 0.5,
+                    type: "spring",
+                    default: { duration: 0.2 }
+                  }}
+                  whileHover={{
+                    y: -5,
+                    scale: 1.02,
+                    transition: { duration: 0.1 }
+                  }}
+                  className="bg-white/80 backdrop-blur-sm rounded-2xl p-5 border border-white/20 shadow-lg hover:shadow-xl"
                 >
                   <motion.div
                     className={`w-14 h-14 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center mb-4 shadow-lg`}
@@ -817,24 +944,10 @@ const handleFirstStepSubmit = async (e) => {
                   >
                     <feature.icon className="w-7 h-7 text-white" />
                   </motion.div>
-                  <h3 className="font-bold text-gray-800 text-sm mb-2">{feature.title}</h3>
-                  <p className="text-gray-600 text-xs leading-relaxed">{feature.description}</p>
+                  <h3 className="font-bold text-gray-800 text-sm mb-1">{feature.title}</h3>
+                  <p className="text-gray-500 text-xs leading-relaxed">{feature.description}</p>
                 </motion.div>
               ))}
-            </motion.div>
-
-            {/* Security Notice */}
-            <motion.div
-              variants={fadeInUp}
-              className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-4 border border-blue-200"
-            >
-              <div className="flex items-center gap-3">
-                <ShieldCheck className="w-6 h-6 text-blue-600" />
-                <div>
-                  <h4 className="font-bold text-blue-800 text-sm">Enhanced Security Protocol</h4>
-                  <p className="text-blue-600 text-xs">Multi-factor authentication ensures account protection</p>
-                </div>
-              </div>
             </motion.div>
           </div>
         </motion.div>
@@ -892,7 +1005,7 @@ const handleFirstStepSubmit = async (e) => {
                   </motion.p>
                 </motion.div>
 
-                {/* Mobile Security Features */}
+                {/* Mobile Security Features - Updated with same animations */}
                 <motion.div
                   variants={fadeInUp}
                   className="lg:hidden mb-6"
@@ -910,10 +1023,13 @@ const handleFirstStepSubmit = async (e) => {
                         >
                           <motion.div
                             className={`w-12 h-12 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg`}
+                            whileHover={{ scale: 1.1, rotate: 5 }}
+                            transition={{ type: "spring", stiffness: 300 }}
                           >
                             <feature.icon className="w-6 h-6 text-white" />
                           </motion.div>
                           <p className="text-xs text-gray-700 font-medium">{feature.title}</p>
+                          <p className="text-xs text-gray-500">{feature.description}</p>
                         </motion.div>
                       ))}
                     </div>
@@ -946,109 +1062,152 @@ const handleFirstStepSubmit = async (e) => {
                   ))}
                 </motion.div>
 
-                <form onSubmit={handleFirstStepSubmit} className="space-y-5">
-                  {/* Email or Phone */}
-                  <motion.div
-                    variants={fadeInUp}
-                  >
+                <form onSubmit={handleFirstStepSubmit} className="space-y-5" autoComplete="off">
+                  {/* Email Field - UPDATED with complete autofill prevention */}
+                  <motion.div variants={fadeInUp}>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {loginType === 'email' ? 'Email Address *' : 'Phone Number *'}
-                    </label>
-                    <motion.div
-                      variants={shakeFields.includes(loginType) ? shakeAnimation : {}}
-                      animate={shakeFields.includes(loginType) ? "shake" : "animate"}
-                      className="relative group"
-                    >
                       {loginType === 'email' ? (
-                        <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
+                        <>&nbsp;Email Address <span className="text-rose-600 font-normal normal-case">&nbsp;*</span></>
                       ) : (
-                        <>
-                          <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
+                        <>&nbsp;Phone Number <span className="text-rose-600 font-normal normal-case">&nbsp;*</span></>
+                      )}
+                    </label>
 
-                          {/* Phone Code Dropdown */}
-                          <div className="absolute left-12 h-full flex items-center z-20" ref={dropdownRef}>
-                            <div className="relative">
-                              <motion.button
-                                type="button"
-                                onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                                variants={buttonAnimation}
-                                whileHover="hover"
-                                whileTap="tap"
-                                className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 focus:outline-none bg-white px-3 py-2 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
-                              >
-                                <span className="text-base">{selectedCountry?.flag}</span>
-                                <span className="font-medium">{selectedCountry?.code}</span>
-                                <svg className={`w-3 h-3 text-gray-400 transition-transform ${showCountryDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </motion.button>
-
-                              {/* Dropdown Menu */}
-                              {showCountryDropdown && (
-                                <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-30 max-h-60 overflow-y-auto">
-                                  {countryCodes.map((country) => (
-                                    <motion.button
-                                      key={country.code}
-                                      type="button"
-                                      onClick={() => {
-                                        setPhoneCode(country.code);
-                                        setShowCountryDropdown(false);
-                                      }}
-                                      variants={linkAnimation}
-                                      whileHover="hover"
-                                      whileTap="tap"
-                                      className={`w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-3 border-b border-gray-100 last:border-b-0 ${phoneCode === country.code ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
-                                        }`}
-                                    >
-                                      <span className="text-base">{country.flag}</span>
-                                      <span className="flex-1 font-medium">{country.country}</span>
-                                      <span className="text-gray-500 text-sm">{country.code}</span>
-                                    </motion.button>
-                                  ))}
+                    {loginType === 'email' ? (
+                      <div ref={fieldRefs.email} className="overflow-visible">
+                        <motion.div
+                          animate={shakeFields.includes('email') ? "shake" : "initial"}
+                          variants={shakeAnimation}
+                          className="overflow-visible relative group"
+                        >
+                          <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
+                          <input
+                            type="text"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            onFocus={handleEnhancedFocus}
+                            onInput={handleInput}
+                            onKeyDown={handleKeyDown}
+                            onPaste={handlePaste}
+                            onMouseDown={handleMouseDown}
+                            maxLength={100}
+                            autoComplete="off"
+                            data-form-type="other"
+                            data-lpignore="true"
+                            data-1p-ignore="true"
+                            className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm
+                              focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
+                              focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
+                              outline-none no-underline
+                              ${fieldErrors.email
+                                ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
+                                : 'border-gray-200'
+                              }`}
+                            placeholder="Enter your email"
+                          />
+                          <div className="absolute bottom-2 right-3 text-xs text-gray-500">
+                            {formData.email.length}/100
+                          </div>
+                          {formData.email && validateEmail(formData.email) && (
+                            <CheckCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 z-10" />
+                          )}
+                          {fieldErrors.email && (
+                            <XCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-rose-500 z-10" />
+                          )}
+                        </motion.div>
+                        {fieldErrors.email && (
+                          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
+                            <AlertCircle className="w-4 h-4" /> {fieldErrors.email}
+                          </motion.p>
+                        )}
+                      </div>
+                    ) : (
+                      /* Phone Field - UPDATED with complete autofill prevention */
+                      <div ref={fieldRefs.phone} className="overflow-visible">
+                        <motion.div
+                          animate={shakeFields.includes('phone') ? "shake" : "initial"}
+                          variants={shakeAnimation}
+                          className="overflow-visible"
+                        >
+                          <div className="flex gap-2">
+                            {/* Fixed +91 country code */}
+                            <div className="flex-shrink-0">
+                              <div className={`h-[56px] flex items-center px-4 rounded-2xl border-2 text-sm ${fieldErrors.phone
+                                ? 'border-rose-500 bg-white/80'
+                                : 'border-gray-200 bg-white/80'
+                                }`}>
+                                <div className={`flex items-center gap-2 ${formData.phone && formData.phone.replace(/\D/g, '').length > 0
+                                  ? 'text-gray-900'
+                                  : 'text-gray-500'
+                                  }`}>
+                                  <span className="text-lg">🇮🇳</span>
+                                  <span className="text-sm">+91</span>
                                 </div>
+                              </div>
+                            </div>
+
+                            <div className="flex-1 relative">
+                              <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
+                              <input
+                                type="text"
+                                name="phone"
+                                value={formData.phone}
+                                onChange={handleChange}
+                                onFocus={handleEnhancedFocus}
+                                onInput={handleInput}
+                                onKeyDown={handleKeyDown}
+                                onPaste={handlePaste}
+                                onMouseDown={handleMouseDown}
+                                placeholder="Enter your phone"
+                                maxLength={12}
+                                autoComplete="off"
+                                data-form-type="other"
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                                className={`w-full pl-12 pr-12 h-[56px] border-2 rounded-2xl bg-white/80 backdrop-blur-sm
+                                  focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
+                                  focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
+                                  outline-none no-underline
+                                  ${fieldErrors.phone
+                                    ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
+                                    : 'border-gray-200'
+                                  }`}
+                              />
+                              <div className={`absolute bottom-2 right-3 text-xs ${fieldErrors.phone ? 'text-rose-600' : 'text-gray-500'
+                                }`}>
+                                {formData.phone.replace(/\D/g, '').length}/10
+                              </div>
+                              {formData.phone && formData.phone.replace(/\D/g, '').length === 10 && (
+                                <CheckCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 z-10" />
+                              )}
+                              {fieldErrors.phone && (
+                                <XCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-rose-500 z-10" />
                               )}
                             </div>
                           </div>
-                        </>
-                      )}
-                      <input
-                        type={loginType === 'email' ? 'email' : 'tel'}
-                        name={loginType}
-                        value={formData[loginType]}
-                        onChange={handleChange}
-                        className={`w-full rounded-2xl border-2 transition-all duration-300 bg-white/80 backdrop-blur-sm
-                          focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
-                          focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-                          hover:border-blue-300 hover:bg-white
-                          ${loginType === 'phone' ? 'pl-[9.5rem]' : 'pl-12'}
-                          pr-12 py-4
-                          ${fieldErrors[loginType]
-                            ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200'
-                            : 'border-gray-200'
-                          }`}
-                        placeholder={loginType === 'email' ? 'Enter your email' : 'Enter your phone'}
-                      />
-                      {formData[loginType] && (
-                        <CheckCircle className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 z-10" />
-                      )}
-                      {fieldErrors[loginType] && (
-                        <XCircle className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-red-500 z-10" />
-                      )}
-                    </motion.div>
-                    {fieldErrors[loginType] && (
-                      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                        <XCircle className="w-4 h-4" /> {fieldErrors[loginType]}
-                      </motion.p>
+                        </motion.div>
+                        {fieldErrors.phone && (
+                          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
+                            <AlertCircle className="w-4 h-4" /> {fieldErrors.phone}
+                          </motion.p>
+                        )}
+                      </div>
                     )}
                   </motion.div>
 
-                  {/* Password */}
-                  <motion.div
-                    variants={fadeInUp}
-                  >
+                  {/* Add these hidden fields right before your password field */}
+                  <div style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', height: 0, overflow: 'hidden' }} aria-hidden="true">
+                    <input type="text" name="username" autoComplete="username" tabIndex="-1" />
+                    <input type="email" name="email" autoComplete="email" tabIndex="-1" />
+                    <input type="password" name="fake-password" autoComplete="new-password" tabIndex="-1" />
+                  </div>
+
+                  {/* Password - EXACTLY like signup page */}
+                  <motion.div variants={fadeInUp}>
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-sm font-medium text-gray-700">
-                        Password *
+                        &nbsp;Password <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
                       </label>
                       <motion.button
                         type="button"
@@ -1062,52 +1221,64 @@ const handleFirstStepSubmit = async (e) => {
                         <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
                       </motion.button>
                     </div>
-                    <motion.div
-                      variants={shakeFields.includes('password') ? shakeAnimation : {}}
-                      animate={shakeFields.includes('password') ? "shake" : "animate"}
-                      className="relative group"
-                    >
-                      <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        name="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl transition-all duration-300 bg-white/80 backdrop-blur-sm
+                    <div ref={fieldRefs.password} className="overflow-visible">
+                      <motion.div
+                        key={`password-${shakeKey}`}
+                        animate={shakeFields.includes('password') ? "shake" : "initial"}
+                        variants={shakeAnimation}
+                        className="overflow-visible relative group"
+                      >
+                        <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          name="password"
+                          value={formData.password}
+                          onChange={handleChange}
+                          onFocus={handleEnhancedFocus}
+                          onInput={handleInput}
+                          onKeyDown={handleKeyDown}
+                          onPaste={handlePaste}
+                          onMouseDown={handleMouseDown}
+                          maxLength={50}
+                          autoComplete="new-password"
+                          data-form-type="other"
+                          data-lpignore="true"
+                          data-1p-ignore="true"
+                          data-autofill-prevent="true"
+                          aria-autocomplete="none"
+                          className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm
                           focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
                           focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-                          hover:border-blue-300 hover:bg-white
+                          outline-none no-underline
                           ${fieldErrors.password
-                            ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200'
-                            : 'border-gray-200'
-                          }`}
-                        placeholder="Enter your password"
-                      />
-
-                      {/* Eye button */}
-                      <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10">
-                        <motion.button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          variants={eyeButtonAnimation}
-                          whileHover="hover"
-                          whileTap="tap"
-                          className="text-gray-400 hover:text-blue-500 transition-colors duration-300 mt-2"
-                        >
-                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                        </motion.button>
-                      </div>
-
-                      {formData.password && formData.password.length >= 1 && (
-                        <CheckCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 z-10" />
-                      )}
-                      {fieldErrors.password && (
-                        <XCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-red-500 z-10" />
-                      )}
-                    </motion.div>
+                              ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
+                              : 'border-gray-200'
+                            }`}
+                          placeholder="Enter your password"
+                        />
+                        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 flex items-center gap-1">
+                          {formData.password && formData.password.length >= 1 && (
+                            <CheckCircle className="w-5 h-5 text-emerald-500" />
+                          )}
+                          {fieldErrors.password && (
+                            <XCircle className="w-5 h-5 text-rose-600" />
+                          )}
+                          <motion.button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            variants={eyeButtonAnimation}
+                            whileHover="hover"
+                            whileTap="tap"
+                            className="text-gray-400 hover:text-blue-500 transition-colors duration-300"
+                          >
+                            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                          </motion.button>
+                        </div>
+                      </motion.div>
+                    </div>
                     {fieldErrors.password && (
-                      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                        <XCircle className="w-4 h-4" /> {fieldErrors.password}
+                      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" /> {fieldErrors.password}
                       </motion.p>
                     )}
                   </motion.div>
@@ -1115,32 +1286,39 @@ const handleFirstStepSubmit = async (e) => {
                   {/* Remember Me */}
                   <motion.div
                     variants={fadeInUp}
-                    className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl border-2 border-blue-100 group hover:border-blue-200 transition-all duration-300"
+                    className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl border-2 border-blue-100 group hover:border-blue-200 transition-all duration-300"
                   >
-                    <input
-                      type="checkbox"
-                      id="remember"
-                      checked={rememberMe}
-                      onChange={handleRememberMeChange}
-                      className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:border-blue-400 transition-all duration-300 cursor-pointer"
-                    />
-                    <label htmlFor="remember" className="text-sm text-gray-700 font-medium cursor-pointer flex-1">
-                      Remember this device for 30 days
-                    </label>
-
-                    {/* Clear remembered data button - only show if there are remembered credentials */}
-                    {localStorage.getItem('rememberedCredentials') && (
-                      <motion.button
-                        type="button"
-                        onClick={handleClearRememberedData}
-                        variants={linkAnimation}
-                        whileHover="hover"
-                        whileTap="tap"
-                        className="text-xs text-red-500 hover:text-red-700 font-medium transition-colors duration-300"
+                    <div className="overflow-visible w-full">
+                      <motion.div
+                        className="overflow-visible flex items-start gap-3 w-full"
                       >
-                        Clear
-                      </motion.button>
-                    )}
+                        <input
+                          type="checkbox"
+                          id="remember"
+                          checked={rememberMe}
+                          onChange={handleRememberMeChange}
+                          autoComplete="off"
+                          className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:border-blue-400 mt-0.5 flex-shrink-0 transition-all duration-300"
+                        />
+                        <label htmlFor="remember" className="text-sm text-gray-700 font-medium flex-1">
+                          Remember this device for 30 days
+                        </label>
+
+                        {/* Clear remembered data button */}
+                        {localStorage.getItem('rememberedCredentials') && (
+                          <motion.button
+                            type="button"
+                            onClick={handleClearRememberedData}
+                            variants={linkAnimation}
+                            whileHover="hover"
+                            whileTap="tap"
+                            className="text-xs text-rose-500 hover:text-rose-700 font-medium transition-colors duration-300"
+                          >
+                            Clear
+                          </motion.button>
+                        )}
+                      </motion.div>
+                    </div>
                   </motion.div>
 
                   {/* Security Notice for Remember Me */}
@@ -1164,9 +1342,9 @@ const handleFirstStepSubmit = async (e) => {
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-red-50 border border-red-200 rounded-2xl p-4"
+                      className="bg-red-50 border border-rose-500 rounded-2xl p-4"
                     >
-                      <div className="flex items-center gap-2 text-red-700">
+                      <div className="flex items-center gap-2 text-rose-700">
                         <Shield className="w-4 h-4" />
                         <span className="text-sm font-medium">{fieldErrors.submit}</span>
                       </div>
@@ -1221,14 +1399,13 @@ const handleFirstStepSubmit = async (e) => {
                 </form>
               </>
             ) : (
-              /* STEP 2: 2FA Verification */
+              /* STEP 2: 2FA Verification - UPDATED with autofill prevention for verification code */
               <>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="text-center mb-8"
                 >
-                  {/* ANIMATED ICON FOR 2FA HEADING */}
                   <motion.div
                     variants={iconAnimation}
                     initial="initial"
@@ -1278,27 +1455,45 @@ const handleFirstStepSubmit = async (e) => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Verification Code *
                     </label>
-                    <input
-                      type="text"
-                      value={twoFactorCode}
-                      onChange={(e) => {
-                        setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6));
-                        if (fieldErrors.twoFactor) {
-                          setFieldErrors(prev => ({ ...prev, twoFactor: null }));
-                        }
-                      }}
-                      className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl text-center text-xl font-mono tracking-widest focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                      placeholder="000000"
-                      maxLength={6}
-                      autoFocus
-                    />
+                    <motion.div
+                      animate={shakeFields.includes('verification') ? "shake" : "initial"}
+                      variants={shakeAnimation}
+                      className="overflow-visible"
+                    >
+                      <input
+                        type="text"
+                        value={twoFactorCode}
+                        onChange={(e) => {
+                          setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                          if (fieldErrors.twoFactor) {
+                            setFieldErrors(prev => ({ ...prev, twoFactor: null }));
+                          }
+                        }}
+                        onFocus={handleEnhancedFocus}
+                        onInput={handleInput}
+                        onKeyDown={handleKeyDown}
+                        onPaste={handlePaste}
+                        onMouseDown={handleMouseDown}
+                        autoComplete="off"
+                        data-form-type="other"
+                        data-lpignore="true"
+                        data-1p-ignore="true"
+                        className={`w-full px-4 py-4 border-2 rounded-2xl text-center text-xl font-mono tracking-widest focus:outline-none focus:ring-4 transition-all
+                          ${fieldErrors.twoFactor
+                            ? 'border-rose-500 bg-white-50 focus:border-rose-500 focus:ring-rose-100'
+                            : 'border-gray-200 focus:border-blue-400 focus:ring-blue-100'
+                          }`}
+                        placeholder="000000"
+                        maxLength={6}
+                        autoFocus
+                      />
+                    </motion.div>
                     {fieldErrors.twoFactor && (
-                      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
                         <XCircle className="w-4 h-4" /> {fieldErrors.twoFactor}
                       </motion.p>
                     )}
 
-                    {/* Success message for resend */}
                     {fieldErrors.success && (
                       <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-green-500 text-sm mt-2 flex items-center gap-1">
                         <CheckCircle className="w-4 h-4" /> {fieldErrors.success}
@@ -1306,7 +1501,6 @@ const handleFirstStepSubmit = async (e) => {
                     )}
                   </motion.div>
 
-                  {/* Resend Code Option - Only show for email/phone, not authenticator */}
                   {verificationMethod !== 'authenticator' && (
                     <motion.div
                       initial={{ opacity: 0 }}
@@ -1345,7 +1539,6 @@ const handleFirstStepSubmit = async (e) => {
                     </motion.div>
                   )}
 
-                  {/* Verify Button */}
                   <motion.button
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -1359,14 +1552,12 @@ const handleFirstStepSubmit = async (e) => {
                              transform transition-all duration-300
                              disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
                   >
-                    {/* Pulse Ring Effect */}
                     <motion.div
                       className="absolute inset-0 rounded-2xl border-2 border-green-400"
                       variants={pulseAnimation}
                       whileHover="hover"
                     />
 
-                    {/* Shine Effect */}
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
 
                     <span className="relative z-10 flex items-center gap-3">
@@ -1393,7 +1584,6 @@ const handleFirstStepSubmit = async (e) => {
                     </span>
                   </motion.button>
 
-                  {/* Back to Login Button */}
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -1409,7 +1599,7 @@ const handleFirstStepSubmit = async (e) => {
                         scrollToTop();
                         window.history.back();
                       }}
-                      variants={linkAnimation}
+                      variants={backLinkAnimation}
                       whileHover="hover"
                       whileTap="tap"
                       className="text-blue-600 hover:text-blue-700 font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden"
