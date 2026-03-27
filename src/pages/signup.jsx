@@ -2,14 +2,11 @@ import { useState, useRef, useEffect, memo } from "react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight,
-  HeartHandshake, ShieldCheck, TrendingUp, Star, Zap, Target,
-  CheckCircle, XCircle, Globe, Smartphone, Gift, HandHeart,
-  Key, Shield, Clock, Fingerprint, AlertCircle
+  Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, HeartHandshake, ShieldCheck, TrendingUp, Star, Zap,
+  Target, CheckCircle, XCircle, Globe, Gift, HandHeart, Shield, Clock, AlertCircle
 } from "lucide-react";
 import { authAPI } from "../services/api";
 
-// Shake animation variants (same as recipients management)
 const shakeAnimation = {
   initial: {
     x: 0
@@ -181,12 +178,24 @@ export default function Signup() {
     }
   }, [location.search]);
 
-  // ===== AUTOCOMPLETE PREVENTION FUNCTIONS =====
+  const handleEnhancedFocus = (e) => {
+    const input = e.target;
+    const fieldName = input.name;
+
+    if (['firstName', 'lastName', 'phone', 'email'].includes(fieldName)) {
+      input.setAttribute('readonly', 'readonly');
+      setTimeout(() => {
+        input.removeAttribute('readonly');
+      }, 5);
+      input.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
+    }
+  };
+
   const handleInput = (e) => {
     const input = e.target;
     const fieldName = input.name;
 
-    if (['firstName', 'lastName', 'phone'].includes(fieldName)) {
+    if (['firstName', 'lastName', 'phone', 'email'].includes(fieldName)) {  // ← ADD 'email'
       input.setAttribute('data-autofill-prevent', Math.random().toString(36).substring(7));
       input.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
       setTimeout(() => {
@@ -195,24 +204,11 @@ export default function Signup() {
     }
   };
 
-  const handleEnhancedFocus = (e) => {
-    const input = e.target;
-    const fieldName = input.name;
-
-    if (['firstName', 'lastName', 'phone'].includes(fieldName)) {
-      input.setAttribute('readonly', 'readonly');
-      setTimeout(() => {
-        input.removeAttribute('readonly');
-      }, 5);
-      input.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
-    }
-  };
-
   const handleKeyDown = (e) => {
     const input = e.target;
     const fieldName = input.name;
 
-    if (['firstName', 'lastName', 'phone'].includes(fieldName)) {
+    if (['firstName', 'lastName', 'phone', 'email'].includes(fieldName)) {  // ← ADD 'email'
       input.setAttribute('data-typing', 'true');
     }
   };
@@ -221,7 +217,7 @@ export default function Signup() {
     const input = e.target;
     const fieldName = input.name;
 
-    if (['firstName', 'lastName', 'phone'].includes(fieldName)) {
+    if (['firstName', 'lastName', 'phone', 'email'].includes(fieldName)) {  // ← ADD 'email'
       e.stopPropagation();
     }
   };
@@ -230,40 +226,56 @@ export default function Signup() {
     const input = e.target;
     const fieldName = input.name;
 
-    if (['firstName', 'lastName', 'phone'].includes(fieldName)) {
+    if (['firstName', 'lastName', 'phone', 'email'].includes(fieldName)) {  // ← ADD 'email'
       input.setAttribute('readonly', 'readonly');
       setTimeout(() => {
         input.removeAttribute('readonly');
       }, 5);
     }
   };
+  
+const autofillStyles = `
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+    box-shadow: 0 0 0 30px white inset !important;
+    -webkit-text-fill-color: #000 !important;
+    transition: background-color 5000s ease-in-out 0s;
+    background-color: white !important;
+  }
+  
+  input[type="password"]:-webkit-autofill,
+  input[type="password"]:-webkit-autofill:hover,
+  input[type="password"]:-webkit-autofill:focus,
+  input[type="password"]:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+    box-shadow: 0 0 0 30px white inset !important;
+    -webkit-text-fill-color: #000 !important;
+    transition: background-color 5000s ease-in-out 0s;
+    background-color: white !important;
+  }
+  
+  input::-webkit-contacts-auto-fill-button,
+  input::-webkit-credentials-auto-fill-button {
+    visibility: hidden;
+    display: none !important;
+    pointer-events: none;
+    height: 0;
+    width: 0;
+    margin: 0;
+  }
 
-  // ===== AUTOCOMPLETE PREVENTION STYLES =====
-  const autofillStyles = `
-    input:-webkit-autofill,
-    input:-webkit-autofill:hover,
-    input:-webkit-autofill:focus,
-    input:-webkit-autofill:active {
-      -webkit-box-shadow: 0 0 0 30px white inset !important;
-      box-shadow: 0 0 0 30px white inset !important;
-      -webkit-text-fill-color: #000 !important;
-      transition: background-color 5000s ease-in-out 0s;
-    }
-    
-    input::-webkit-contacts-auto-fill-button,
-    input::-webkit-credentials-auto-fill-button {
-      visibility: hidden;
-      display: none !important;
-      pointer-events: none;
-      height: 0;
-      width: 0;
-      margin: 0;
-    }
-
-    input {
-      autocomplete: off;
-    }
-  `;
+  input {
+    autocomplete: off !important;
+  }
+  
+  /* Disable autofill for all input fields */
+  input:-internal-autofill-selected {
+    background-color: white !important;
+  }
+`;
 
   const fadeInUp = {
     initial: { y: 40, opacity: 0 },
@@ -1009,6 +1021,7 @@ export default function Signup() {
             &nbsp;Verification Code <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
           </label>
           <motion.div
+            key={`verification-${shakeKey}`}
             animate={shakeFields.includes('verification') ? "shake" : "initial"}
             variants={shakeAnimation}
             className="overflow-visible"
@@ -1028,7 +1041,7 @@ export default function Signup() {
                   ? 'border-rose-500 bg-white-50 focus:border-rose-500 focus:ring-rose-100'
                   : 'border-gray-200 focus:border-blue-400 focus:ring-blue-100'
                 }`}
-              placeholder="000000"
+              placeholder="------"
               maxLength={6}
               autoFocus
             />
@@ -1154,6 +1167,33 @@ export default function Signup() {
             Back to signup
             <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
           </motion.button>
+        </motion.div>
+
+        {/* Sign Up Link */}
+        <motion.div
+          variants={fadeInUp}
+          className="text-center mt-6 pt-6 border-t border-gray-200"
+        >
+          <p className="text-gray-600">
+            Already have an account?{" "}
+            <motion.a
+              href="/login"
+              variants={linkAnimation}
+              whileHover="hover"
+              whileTap="tap"
+              className="text-blue-600 font-semibold hover:text-blue-700 transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden"
+            >
+              Sign In account
+              <motion.span
+                animate={{ x: [0, 3, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="group-hover:translate-x-1 transition-transform duration-300"
+              >
+                →
+              </motion.span>
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
+            </motion.a>
+          </p>
         </motion.div>
       </form>
     </>
@@ -1465,10 +1505,19 @@ export default function Signup() {
                 <input
                   type="text"
                   name="email"
+                  disabled={!inputsReady}
                   value={formData.email}
                   onChange={handleChange}
+                  onFocus={handleEnhancedFocus}
+                  onInput={handleInput}
+                  onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
+                  onMouseDown={handleMouseDown}
                   maxLength={100}
                   autoComplete="off"
+                  data-form-type="other"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
                   className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm
                   focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
                   focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
@@ -1561,64 +1610,75 @@ export default function Signup() {
         </motion.div>
 
         {/* Enhanced Password Field */}
-        <motion.div
-          variants={fadeInUp}
-        >
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            &nbsp;Password <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
-          </label>
-          <div ref={fieldRefs.password} className="overflow-visible">
-            <motion.div
-              key={`password-${shakeKey}`}
-              animate={shakeFields.includes('password') ? "shake" : "initial"}
-              variants={shakeAnimation}
-              className="overflow-visible relative group"
-            >
-              <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                maxLength={50}
-                autoComplete="new-password"
-                className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm
-                focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
-                focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-                outline-none no-underline
-                ${fieldErrors.password
-                    ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
-                    : 'border-gray-200'
-                  }`}
-                placeholder="Create a strong password"
-              />
+        <motion.div variants={fadeInUp}>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    &nbsp;Password <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
+  </label>
+  <div ref={fieldRefs.password} className="overflow-visible">
+    <motion.div
+      key={`password-${shakeKey}`}
+      animate={shakeFields.includes('password') ? "shake" : "initial"}
+      variants={shakeAnimation}
+      className="overflow-visible relative group"
+    >
+      <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
+      <input
+        type={showPassword ? "text" : "password"}
+        name="password"
+        value={formData.password}
+        onChange={handleChange}
+        maxLength={50}
+        // CRITICAL: Change from "new-password" to "off" or a random string
+        autoComplete="off"
+        // Add these attributes to prevent autofill
+        data-form-type="other"
+        data-lpignore="true"
+        data-1p-ignore="true"
+        data-bwignore="true"
+        data-ignore="true"
+        readOnly={false}
+        onFocus={(e) => {
+          // Force remove any autofill attributes
+          e.target.removeAttribute('readonly');
+          e.target.setAttribute('autocomplete', 'off');
+        }}
+        className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm
+        focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
+        focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
+        outline-none no-underline
+        ${fieldErrors.password
+            ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
+            : 'border-gray-200'
+          }`}
+        placeholder="Create a strong password"
+      />
 
-              <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 flex items-center gap-1">
-                {formData.password && validatePassword(formData.password) && (
-                  <CheckCircle className="w-5 h-5 text-emerald-500" />
-                )}
-                {fieldErrors.password && (
-                  <XCircle className="w-5 h-5 text-rose-600" />
-                )}
-                <motion.button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  variants={eyeButtonAnimation}
-                  whileHover="hover"
-                  whileTap="tap"
-                  className="text-gray-400 hover:text-blue-500 transition-colors duration-300"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </motion.button>
-              </div>
-            </motion.div>
-          </div>
-          {fieldErrors.password && (
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" /> {fieldErrors.password}
-            </motion.p>
-          )}
-        </motion.div>
+      <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 flex items-center gap-1">
+        {formData.password && validatePassword(formData.password) && (
+          <CheckCircle className="w-5 h-5 text-emerald-500" />
+        )}
+        {fieldErrors.password && (
+          <XCircle className="w-5 h-5 text-rose-600" />
+        )}
+        <motion.button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          variants={eyeButtonAnimation}
+          whileHover="hover"
+          whileTap="tap"
+          className="text-gray-400 hover:text-blue-500 transition-colors duration-300"
+        >
+          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+        </motion.button>
+      </div>
+    </motion.div>
+  </div>
+  {fieldErrors.password && (
+    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
+      <AlertCircle className="w-4 h-4" /> {fieldErrors.password}
+    </motion.p>
+  )}
+</motion.div>
 
         {/* Password Requirements (shows when user starts typing password) */}
         {formData.password && (
@@ -1667,64 +1727,75 @@ export default function Signup() {
         )}
 
         {/* Enhanced Confirm Password Field */}
-        <motion.div
-          variants={fadeInUp}
-        >
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            &nbsp;Confirm Password <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
-          </label>
-          <div ref={fieldRefs.confirmPassword} className="overflow-visible">
-            <motion.div
-              key={`confirmPassword-${shakeKey}`}
-              animate={shakeFields.includes('confirmPassword') ? "shake" : "initial"}
-              variants={shakeAnimation}
-              className="overflow-visible relative group"
-            >
-              <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                maxLength={50}
-                autoComplete="new-password"
-                className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm
-                focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
-                focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-                outline-none no-underline
-                ${fieldErrors.confirmPassword
-                    ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
-                    : 'border-gray-200'
-                  }`}
-                placeholder="Confirm your password"
-              />
+        <motion.div variants={fadeInUp}>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    &nbsp;Confirm Password <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
+  </label>
+  <div ref={fieldRefs.confirmPassword} className="overflow-visible">
+    <motion.div
+      key={`confirmPassword-${shakeKey}`}
+      animate={shakeFields.includes('confirmPassword') ? "shake" : "initial"}
+      variants={shakeAnimation}
+      className="overflow-visible relative group"
+    >
+      <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
+      <input
+        type={showConfirmPassword ? "text" : "password"}
+        name="confirmPassword"
+        value={formData.confirmPassword}
+        onChange={handleChange}
+        maxLength={50}
+        // CRITICAL: Change from "new-password" to "off" or a random string
+        autoComplete="off"
+        // Add these attributes to prevent autofill
+        data-form-type="other"
+        data-lpignore="true"
+        data-1p-ignore="true"
+        data-bwignore="true"
+        data-ignore="true"
+        readOnly={false}
+        onFocus={(e) => {
+          // Force remove any autofill attributes
+          e.target.removeAttribute('readonly');
+          e.target.setAttribute('autocomplete', 'off');
+        }}
+        className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm
+        focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
+        focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
+        outline-none no-underline
+        ${fieldErrors.confirmPassword
+            ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
+            : 'border-gray-200'
+          }`}
+        placeholder="Confirm your password"
+      />
 
-              <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 flex items-center gap-1">
-                {passwordsMatch && formData.confirmPassword && (
-                  <CheckCircle className="w-5 h-5 text-emerald-500" />
-                )}
-                {fieldErrors.confirmPassword && (
-                  <XCircle className="w-5 h-5 text-rose-600" />
-                )}
-                <motion.button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  variants={eyeButtonAnimation}
-                  whileHover="hover"
-                  whileTap="tap"
-                  className="text-gray-400 hover:text-blue-500 transition-colors duration-300"
-                >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </motion.button>
-              </div>
-            </motion.div>
-          </div>
-          {fieldErrors.confirmPassword && (
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" /> {fieldErrors.confirmPassword}
-            </motion.p>
-          )}
-        </motion.div>
+      <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 flex items-center gap-1">
+        {passwordsMatch && formData.confirmPassword && (
+          <CheckCircle className="w-5 h-5 text-emerald-500" />
+        )}
+        {fieldErrors.confirmPassword && (
+          <XCircle className="w-5 h-5 text-rose-600" />
+        )}
+        <motion.button
+          type="button"
+          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+          variants={eyeButtonAnimation}
+          whileHover="hover"
+          whileTap="tap"
+          className="text-gray-400 hover:text-blue-500 transition-colors duration-300"
+        >
+          {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+        </motion.button>
+      </div>
+    </motion.div>
+  </div>
+  {fieldErrors.confirmPassword && (
+    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
+      <AlertCircle className="w-4 h-4" /> {fieldErrors.confirmPassword}
+    </motion.p>
+  )}
+</motion.div>
 
         {/* Password Match Indicator */}
         {formData.confirmPassword && !passwordsMatch && formData.password && (

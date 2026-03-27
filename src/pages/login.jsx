@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { authAPI } from "../services/api";
 import {
-  Eye, EyeOff, Mail, Lock, ArrowRight, HeartHandshake, ShieldCheck, TrendingUp, CheckCircle, XCircle,
-  Phone, Key, Shield, Users, AlertCircle
+  Users, EyeOff, Shield, Lock, ArrowRight, HeartHandshake, ShieldCheck, TrendingUp, CheckCircle, XCircle,
+  Phone, Mail, Eye, AlertCircle
 } from "lucide-react";
+import { authAPI } from "../services/api";
 
-// Shake animation variants
 const shakeAnimation = {
   initial: { x: 0 },
   shake: {
@@ -28,20 +27,17 @@ export default function Login() {
   });
   const [fieldErrors, setFieldErrors] = useState({});
   const [shakeFields, setShakeFields] = useState([]);
-  const [loginAttempts, setLoginAttempts] = useState(0);
   const [shakeKey, setShakeKey] = useState(0);
   const [inputsReady, setInputsReady] = useState(false);
-
-  // MANDATORY 2FA - Always enabled
-  const [twoFactorCode, setTwoFactorCode] = useState("");
-  const [showTwoFactor, setShowTwoFactor] = useState(false);
-  const [isTwoFactorLoading, setIsTwoFactorLoading] = useState(false);
-  const [verificationMethod, setVerificationMethod] = useState("email");
-
-  // Remember me state
   const [rememberMe, setRememberMe] = useState(false);
 
-  const [currentUserIdentifier, setCurrentUserIdentifier] = useState("");
+  // Verification state - IMPORTANT: This needs to be properly managed
+  const [verificationCode, setVerificationCode] = useState("");
+  const [showVerification, setShowVerification] = useState(false);
+  const [isVerificationLoading, setIsVerificationLoading] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
+  const [loginContextToken, setLoginContextToken] = useState("");
+  const [verificationMessage, setVerificationMessage] = useState("");
 
   // Timer for resend cooldown
   const [timer, setTimer] = useState(60);
@@ -67,14 +63,6 @@ export default function Login() {
     return () => clearInterval(interval);
   }, [isTimerActive, timer]);
 
-  // Start timer when moving to 2FA step
-  useEffect(() => {
-    if (showTwoFactor && verificationMethod !== 'authenticator') {
-      setTimer(60);
-      setIsTimerActive(true);
-    }
-  }, [showTwoFactor, verificationMethod]);
-
   // Fix for browser back button scroll position
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -99,14 +87,11 @@ export default function Login() {
     };
   }, []);
 
-  // Handle browser back button when in 2FA mode
+  // Handle browser back button when in verification mode
   useEffect(() => {
     const handleBackButton = (event) => {
-      if (showTwoFactor) {
-        setShowTwoFactor(false);
-        setTwoFactorCode("");
-        setFieldErrors({});
-        scrollToTop();
+      if (showVerification) {
+        handleBackToLogin();
         window.history.pushState(null, '', window.location.pathname);
       }
     };
@@ -116,23 +101,17 @@ export default function Login() {
     return () => {
       window.removeEventListener('popstate', handleBackButton);
     };
-  }, [showTwoFactor]);
+  }, [showVerification]);
 
-  // Load remembered credentials on component mount
+  // Load remembered email on component mount
   useEffect(() => {
-    const rememberedCredentials = localStorage.getItem('rememberedCredentials');
-    if (rememberedCredentials) {
-      try {
-        const credentials = JSON.parse(rememberedCredentials);
-        setFormData({
-          email: credentials.email || "",
-          phone: credentials.phone || "",
-          password: ""
-        });
-        setRememberMe(true);
-      } catch (error) {
-        console.error('Error loading remembered credentials:', error);
-      }
+    const rememberedEmail = localStorage.getItem('rememberedEmail');
+    if (rememberedEmail) {
+      setFormData(prev => ({
+        ...prev,
+        email: rememberedEmail
+      }));
+      setRememberMe(true);
     }
   }, []);
 
@@ -141,12 +120,12 @@ export default function Login() {
     return () => clearTimeout(t);
   }, []);
 
-  // ===== AUTOCOMPLETE PREVENTION FUNCTIONS (like signup page) =====
+  // ===== AUTOCOMPLETE PREVENTION FUNCTIONS =====
   const handleInput = (e) => {
     const input = e.target;
     const fieldName = input.name;
 
-    if (['email', 'firstName', 'lastName', 'phone', 'password'].includes(fieldName)) {
+    if (['email', 'phone', 'password'].includes(fieldName)) {
       input.setAttribute('data-autofill-prevent', Math.random().toString(36).substring(7));
       input.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
       setTimeout(() => {
@@ -159,7 +138,7 @@ export default function Login() {
     const input = e.target;
     const fieldName = input.name;
 
-    if (['email', 'firstName', 'lastName', 'phone', 'password'].includes(fieldName)) {
+    if (['email', 'phone', 'password'].includes(fieldName)) {
       input.setAttribute('readonly', 'readonly');
       setTimeout(() => {
         input.removeAttribute('readonly');
@@ -172,7 +151,7 @@ export default function Login() {
     const input = e.target;
     const fieldName = input.name;
 
-    if (['email', 'firstName', 'lastName', 'phone', 'password'].includes(fieldName)) {
+    if (['email', 'phone', 'password'].includes(fieldName)) {
       input.setAttribute('data-typing', 'true');
     }
   };
@@ -181,7 +160,7 @@ export default function Login() {
     const input = e.target;
     const fieldName = input.name;
 
-    if (['email', 'firstName', 'lastName', 'phone', 'password'].includes(fieldName)) {
+    if (['email', 'phone', 'password'].includes(fieldName)) {
       e.stopPropagation();
     }
   };
@@ -190,7 +169,7 @@ export default function Login() {
     const input = e.target;
     const fieldName = input.name;
 
-    if (['email', 'firstName', 'lastName', 'phone', 'password'].includes(fieldName)) {
+    if (['email', 'phone', 'password'].includes(fieldName)) {
       input.setAttribute('readonly', 'readonly');
       setTimeout(() => {
         input.removeAttribute('readonly');
@@ -198,7 +177,7 @@ export default function Login() {
     }
   };
 
-  // ===== AUTOCOMPLETE PREVENTION STYLES (EXACTLY LIKE SIGNUP PAGE) =====
+  // ===== AUTOCOMPLETE PREVENTION STYLES =====
   const autofillStyles = `
     input:-webkit-autofill,
     input:-webkit-autofill:hover,
@@ -224,7 +203,6 @@ export default function Login() {
       autocomplete: off;
     }
 
-    /* Additional prevention for all input types */
     input[type="text"],
     input[type="email"],
     input[type="password"],
@@ -358,7 +336,7 @@ export default function Login() {
     }
   };
 
-  // Security Features - Converted to STAT CARDS with exact same styling as signup
+  // Security Features
   const securityFeatures = [
     {
       icon: HeartHandshake,
@@ -398,7 +376,7 @@ export default function Login() {
   };
 
   const validatePassword = (password) => {
-    return password.length > 0;
+    return password.length >= 6;
   };
 
   const handleChange = (e) => {
@@ -406,7 +384,7 @@ export default function Login() {
 
     let processedValue = value;
 
-    // Format phone number like signup page
+    // Format phone number
     if (name === 'phone') {
       processedValue = value.replace(/\D/g, '');
       if (processedValue.length > 10) {
@@ -430,6 +408,7 @@ export default function Login() {
       [name]: processedValue
     }));
 
+    // Clear field error when user types
     if (fieldErrors[name]) {
       setFieldErrors(prev => ({
         ...prev,
@@ -480,44 +459,48 @@ export default function Login() {
     }
   };
 
-  const saveCredentialsToStorage = () => {
+  const saveEmailToStorage = (email) => {
     if (rememberMe) {
-      const credentialsToSave = {
-        email: formData.email,
-        phone: formData.phone,
-        timestamp: Date.now()
-      };
-      localStorage.setItem('rememberedCredentials', JSON.stringify(credentialsToSave));
+      localStorage.setItem('rememberedEmail', email);
     } else {
-      localStorage.removeItem('rememberedCredentials');
+      localStorage.removeItem('rememberedEmail');
     }
   };
 
-  const clearRememberedCredentials = () => {
-    localStorage.removeItem('rememberedCredentials');
+  const clearRememberedEmail = () => {
+    localStorage.removeItem('rememberedEmail');
     setRememberMe(false);
   };
 
-  // First step login handler
+  // Get device info for the request
+  const getDeviceInfo = () => {
+    const ua = navigator.userAgent;
+    let os = "Unknown";
+    let browser = "Unknown";
+
+    if (ua.indexOf("Win") !== -1) os = "Windows";
+    else if (ua.indexOf("Mac") !== -1) os = "MacOS";
+    else if (ua.indexOf("Linux") !== -1) os = "Linux";
+    else if (ua.indexOf("Android") !== -1) os = "Android";
+    else if (ua.indexOf("iOS") !== -1) os = "iOS";
+
+    if (ua.indexOf("Chrome") !== -1) browser = "Chrome";
+    else if (ua.indexOf("Firefox") !== -1) browser = "Firefox";
+    else if (ua.indexOf("Safari") !== -1) browser = "Safari";
+    else if (ua.indexOf("Edge") !== -1) browser = "Edge";
+
+    return `${os} ${browser}`;
+  };
+
+  // FIXED: Handle first step submit - properly check for VERIFICATION_REQUIRED
   const handleFirstStepSubmit = async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const loginData = {
-      password: formData.password,
-    };
-
-
-    if (loginAttempts >= 5) {
-      setFieldErrors({
-        submit: "Too many login attempts. Please try again in 15 minutes."
-      });
-      return;
-    }
-
     const errors = {};
     const invalidFields = [];
 
+    // Validate email/phone
     if (loginType === 'email') {
       if (!formData.email) {
         errors.email = "Email is required";
@@ -539,284 +522,194 @@ export default function Login() {
       }
     }
 
+    // Validate password
     if (!formData.password) {
       errors.password = "Password is required";
+      invalidFields.push('password');
+    } else if (formData.password.length < 6) {
+      errors.password = "Password must be at least 6 characters";
       invalidFields.push('password');
     }
 
     if (Object.keys(errors).length > 0) {
-      console.log("❌ Form validation errors:", errors);
       setFieldErrors(errors);
       triggerShake(invalidFields);
       scrollToFirstInvalidField(invalidFields);
-      setLoginAttempts(prev => prev + 1);
       return;
     }
 
     setIsLoading(true);
-    console.log("🔄 Starting API call...");
+    setFieldErrors({});
 
     try {
+      // Prepare login request
+      const emailToUse = loginType === 'email'
+        ? formData.email.trim().toLowerCase()
+        : `+91${formData.phone.replace(/\D/g, '')}`;
+
       const loginData = {
-        password: formData.password,
+        email: emailToUse,
+        password: formData.password
       };
 
-      if (loginType === 'email') {
-        loginData.email = formData.email;
-      } else {
-        loginData.phone = `+91${formData.phone.replace(/\D/g, '')}`;
-      }
+      console.log("Sending login request with data:", loginData);
 
-      console.log("📤 Sending login data:", { ...loginData, password: '***' });
-
+      // Call login API
       const response = await authAPI.login(loginData);
-      console.log("📥 Login API response:", response);
 
-      if (response.data.success) {
-        console.log("✅ Login successful, moving to 2FA");
-        saveCredentialsToStorage();
+      console.log("Login response:", response.data);
 
-        const identifier = loginType === 'email' ? formData.email : `+91${formData.phone.replace(/\D/g, '')}`;
-        setCurrentUserIdentifier(identifier);
-
-        const verificationMethod = response.data.verificationMethod || 'email';
-        setVerificationMethod(verificationMethod);
-
-        setShowTwoFactor(true);
-        setFieldErrors({});
+      // FIXED: Check if verification is required
+      if (response.data.status === "VERIFICATION_REQUIRED") {
+        // Show verification screen
+        setCurrentUserEmail(response.data.email || emailToUse);
+        setLoginContextToken(response.data.loginContextToken);
+        setShowVerification(true);
+        setTimer(60);
+        setIsTimerActive(true);
         scrollToTop();
 
-        window.history.pushState({ showTwoFactor: true }, '', window.location.pathname);
+        // Clear any previous errors
+        setFieldErrors({});
 
+        // Show success message
+        setVerificationMessage(response.data.message || "Verification code sent to your email");
       } else {
-        console.log("❌ Login failed in response:", response.data);
-        throw new Error(response.data.message || "Login failed");
+        // Direct login (if no 2FA) - but our backend should always require verification
+        handleSuccessfulLogin(response.data);
       }
 
     } catch (error) {
-      console.error("🔥 CATCH BLOCK - Login error:", {
-        name: error.name,
-        message: error.message,
-        response: error.response,
-        stack: error.stack
-      });
+      console.error("Login error details:", error);
 
-      if (!error.response) {
-        console.log("🌐 Network error - no response received");
-        setFieldErrors({
-          submit: "Network error. Please check your connection and try again."
-        });
+      if (error.type === 'LOCKED') {
+        setFieldErrors({ submit: error.message });
+      } else if (error.type === 'AUTH') {
+        setFieldErrors({ submit: error.message || "Invalid email or password" });
+      } else if (error.type === 'NETWORK') {
+        setFieldErrors({ submit: error.message });
+      } else if (error.response) {
+        const message = error.response.data?.message || "Login failed";
+        setFieldErrors({ submit: message });
       } else {
-        console.log("📡 API error with response:", {
-          status: error.response.status,
-          data: error.response.data,
-          headers: error.response.headers
-        });
-
-        let errorMessage = "Invalid email/phone or password. Please try again.";
-
-        if (error.response.data?.message) {
-          errorMessage = error.response.data.message;
-        } else if (error.response.status === 401) {
-          errorMessage = "Invalid credentials. Please check your email/phone and password.";
-        } else if (error.response.status === 404) {
-          errorMessage = "No account found with this email/phone. Please sign up first.";
-        } else if (error.response.status >= 500) {
-          errorMessage = "Server error. Please try again later.";
-        }
-
-        setFieldErrors({ submit: errorMessage });
+        setFieldErrors({ submit: "An error occurred. Please try again." });
       }
-
-      setLoginAttempts(prev => prev + 1);
     } finally {
-      console.log("🏁 Login process completed");
       setIsLoading(false);
     }
   };
 
-  // 2FA verification handler
-  const handleTwoFactorSubmit = async (e) => {
+  // FIXED: Handle verification code submission
+  const handleVerificationSubmit = async (e) => {
     e.preventDefault();
 
-    if (!twoFactorCode || twoFactorCode.length !== 6) {
-      setFieldErrors({ twoFactor: "Please enter a valid 6-digit code" });
+    if (!verificationCode || verificationCode.length !== 6) {
+      setFieldErrors({ verification: "Please enter a valid 6-digit code" });
+      triggerShake(['verification']);
       return;
     }
 
-    setIsTwoFactorLoading(true);
+    setIsVerificationLoading(true);
     setFieldErrors({});
 
     try {
-      let response;
-      const verificationData = {
-        code: twoFactorCode
+      // FIXED: Use verify-login-code endpoint, NOT verify-email
+      const verifyData = {
+        loginContextToken: loginContextToken,
+        code: verificationCode
       };
 
-      console.log("Starting 2FA verification with method:", verificationMethod);
+      console.log("Verifying login code with:", verifyData);
 
-      switch (verificationMethod) {
-        case 'email':
-          verificationData.email = currentUserIdentifier;
-          response = await authAPI.verifyLoginEmail(verificationData);
-          break;
+      const response = await authAPI.verifyLoginCode(verifyData);
 
-        case 'phone':
-          verificationData.phone = currentUserIdentifier;
-          response = await authAPI.verifyLoginPhone(verificationData);
-          break;
+      console.log("✅ Verification successful", response.data);
 
-        case 'authenticator':
-          verificationData.email = loginType === 'email' ? currentUserIdentifier : undefined;
-          verificationData.phone = loginType === 'phone' ? currentUserIdentifier : undefined;
-          response = await authAPI.verifyAuthenticatorLogin(verificationData);
-          break;
-
-        default:
-          verificationData.email = currentUserIdentifier;
-          response = await authAPI.verifyLoginEmail(verificationData);
+      // Save email if remember me is checked
+      if (rememberMe && loginType === 'email') {
+        saveEmailToStorage(formData.email);
       }
 
-      console.log("2FA verification response:", response.data);
-
-      if (response.data.success) {
-        handleSuccessfulLogin(response.data);
-      } else {
-        const errorMessage = response.data.message || "Invalid verification code";
-
-        if (errorMessage.includes('authenticator') || errorMessage.includes('Authenticator')) {
-          setFieldErrors({
-            twoFactor: "This account uses authenticator. Please use your authenticator app code."
-          });
-          setVerificationMethod('authenticator');
-        } else if (errorMessage.includes('expired') || errorMessage.includes('Expired')) {
-          setFieldErrors({
-            twoFactor: "Verification code has expired. Please request a new one."
-          });
-        } else if (errorMessage.includes('attempts') || errorMessage.includes('Attempts')) {
-          setFieldErrors({
-            twoFactor: "Too many failed attempts. Please request a new code."
-          });
-        } else {
-          setFieldErrors({ twoFactor: errorMessage });
-        }
-      }
+      // Handle successful login
+      handleSuccessfulLogin(response.data);
 
     } catch (error) {
-      console.error("2FA verification error:", error);
+      console.error("Verification error:", error);
 
-      if (error.response?.status === 401) {
-        setFieldErrors({
-          twoFactor: "Invalid verification code. Please check the code and try again."
-        });
-      } else if (error.response?.status === 410) {
-        setFieldErrors({
-          twoFactor: "Verification code has expired. Please request a new code."
-        });
-      } else if (error.response?.status === 429) {
-        setFieldErrors({
-          twoFactor: "Too many verification attempts. Please wait before trying again."
-        });
-      } else if (error.response?.status === 400) {
-        setFieldErrors({
-          twoFactor: error.response.data?.message || "Invalid request. Please check your input."
-        });
-      } else if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
-        setFieldErrors({
-          twoFactor: "Network error. Please check your connection and try again."
-        });
-      } else if (error.response?.data?.message) {
-        setFieldErrors({
-          twoFactor: error.response.data.message
-        });
+      if (error.response) {
+        const message = error.response.data?.message || "Verification failed";
+        setFieldErrors({ verification: message });
       } else {
-        setFieldErrors({
-          twoFactor: "Verification failed. Please try again."
-        });
+        setFieldErrors({ verification: "Verification failed. Please try again." });
       }
+      triggerShake(['verification']);
     } finally {
-      setIsTwoFactorLoading(false);
+      setIsVerificationLoading(false);
     }
   };
 
-  // Handle successful login
+  // FIXED: Handle successful login
   const handleSuccessfulLogin = (responseData) => {
-    console.log("Secure login successful with 2FA");
-
-    const loginSession = {
+    // Save user data to localStorage
+    localStorage.setItem('userSession', JSON.stringify({
       isLoggedIn: true,
       loginTime: Date.now(),
-      rememberMe: rememberMe,
-      userType: responseData.user?.userType || 'authenticated',
-      userData: responseData.user || {},
-      token: responseData.token
-    };
+      ...responseData
+    }));
 
-    localStorage.setItem('userSession', JSON.stringify(loginSession));
+    localStorage.setItem('token', responseData.token);
 
-    if (responseData.token) {
-      localStorage.setItem('authToken', responseData.token);
-    }
-
-    scrollToTop();
+    // Navigate based on user type
     setTimeout(() => {
-      navigate('/AdminDashboard');
+      if (responseData.userType === 'RECIPIENT') {
+        navigate('/RecipientDashboard');
+      } else if (responseData.userType === 'DONOR') {
+        navigate('/DonorDashboard');
+      } else if (responseData.userType === 'ADMIN') {
+        navigate('/AdminDashboard');
+      } else {
+        navigate('/DonorDashboard');
+      }
     }, 100);
   };
 
-  // Resend verification functionality with timer
+  // FIXED: Handle resend verification
   const handleResendVerification = async () => {
     if (isTimerActive && timer > 0) {
       setFieldErrors({
-        twoFactor: `Please wait ${timer} seconds before resending`
+        verification: `Please wait ${timer} seconds before resending`
       });
       return;
     }
 
+    setIsVerificationLoading(true);
+
     try {
-      setFieldErrors({});
+      // FIXED: Use resend-login-code endpoint
+      await authAPI.resendLoginCode({ email: currentUserEmail });
 
-      const resendData = {
-        type: 'login'
-      };
+      setTimer(60);
+      setIsTimerActive(true);
 
-      if (loginType === 'email') {
-        resendData.email = currentUserIdentifier;
-      } else {
-        resendData.phone = currentUserIdentifier;
-      }
-
-      console.log("Resending verification to:", currentUserIdentifier);
-
-      const response = await authAPI.resendVerification(resendData);
-
-      if (response.data.success) {
-        console.log("Verification code resent successfully");
-
-        setTimer(60);
-        setIsTimerActive(true);
-
-        setFieldErrors({
-          success: "New verification code sent successfully!"
-        });
-
-        setTimeout(() => {
-          setFieldErrors(prev => {
-            const newErrors = { ...prev };
-            delete newErrors.success;
-            return newErrors;
-          });
-        }, 3000);
-
-      } else {
-        throw new Error(response.data.message || "Failed to resend verification code");
-      }
-    } catch (error) {
-      console.error("Resend verification error:", error);
       setFieldErrors({
-        twoFactor: error.response?.data?.message ||
-          "Failed to resend verification code. Please try again."
+        success: "New verification code sent! Please check your email."
       });
+
+      setTimeout(() => {
+        setFieldErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.success;
+          return newErrors;
+        });
+      }, 3000);
+
+    } catch (error) {
+      console.error("Resend error:", error);
+      setFieldErrors({
+        verification: "Failed to resend code. Please try again."
+      });
+    } finally {
+      setIsVerificationLoading(false);
     }
   };
 
@@ -826,7 +719,7 @@ export default function Login() {
   };
 
   const handleClearRememberedData = () => {
-    clearRememberedCredentials();
+    clearRememberedEmail();
     setFormData({
       email: "",
       phone: "",
@@ -834,18 +727,21 @@ export default function Login() {
     });
   };
 
-  // Get display text for verification method
-  const getVerificationMethodText = () => {
-    switch (verificationMethod) {
-      case 'email':
-        return 'email';
-      case 'phone':
-        return 'phone';
-      case 'authenticator':
-        return 'authenticator app';
-      default:
-        return 'email';
-    }
+  const handleBackToLogin = () => {
+    setShowVerification(false);
+    setVerificationCode("");
+    setCurrentUserEmail("");
+    setLoginContextToken("");
+    setFieldErrors({});
+    scrollToTop();
+  };
+
+  // Get display text for verification
+  const getMaskedEmail = (email) => {
+    if (!email) return "";
+    const [localPart, domain] = email.split('@');
+    if (localPart.length <= 3) return email;
+    return `${localPart.slice(0, 3)}***@${domain}`;
   };
 
   return (
@@ -856,6 +752,7 @@ export default function Login() {
       className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/30 flex items-center justify-center p-4 lg:p-8"
     >
       <style>{autofillStyles}</style>
+
       <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
 
         {/* Left Side - Brand & Security Benefits */}
@@ -912,7 +809,7 @@ export default function Login() {
               </motion.p>
             </motion.div>
 
-            {/* STAT CARDS Grid - Updated with same animations as signup page */}
+            {/* STAT CARDS Grid */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -985,7 +882,7 @@ export default function Login() {
             />
 
             {/* STEP 1: Email/Password Form */}
-            {!showTwoFactor ? (
+            {!showVerification ? (
               <>
                 <motion.div
                   variants={fadeInUp}
@@ -1005,7 +902,7 @@ export default function Login() {
                   </motion.p>
                 </motion.div>
 
-                {/* Mobile Security Features - Updated with same animations */}
+                {/* Mobile Security Features */}
                 <motion.div
                   variants={fadeInUp}
                   className="lg:hidden mb-6"
@@ -1036,6 +933,20 @@ export default function Login() {
                   </div>
                 </motion.div>
 
+                {/* Success Message */}
+                {fieldErrors.success && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-green-50 border border-green-500 rounded-2xl p-4 mb-6"
+                  >
+                    <div className="flex items-center gap-2 text-green-700">
+                      <CheckCircle className="w-4 h-4" />
+                      <span className="text-sm font-medium">{fieldErrors.success}</span>
+                    </div>
+                  </motion.div>
+                )}
+
                 {/* Login Type Toggle */}
                 <motion.div
                   variants={fadeInUp}
@@ -1047,6 +958,7 @@ export default function Login() {
                   ].map((type) => (
                     <motion.button
                       key={type.id}
+                      type="button"
                       onClick={() => setLoginType(type.id)}
                       variants={buttonAnimation}
                       whileHover="hover"
@@ -1063,7 +975,14 @@ export default function Login() {
                 </motion.div>
 
                 <form onSubmit={handleFirstStepSubmit} className="space-y-5" autoComplete="off">
-                  {/* Email Field - UPDATED with complete autofill prevention */}
+                  {/* Hidden fields for autofill prevention */}
+                  <div style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', height: 0, overflow: 'hidden' }} aria-hidden="true">
+                    <input type="text" name="username" autoComplete="username" tabIndex="-1" />
+                    <input type="email" name="email" autoComplete="email" tabIndex="-1" />
+                    <input type="password" name="fake-password" autoComplete="new-password" tabIndex="-1" />
+                  </div>
+
+                  {/* Email/Phone Field */}
                   <motion.div variants={fadeInUp}>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {loginType === 'email' ? (
@@ -1096,15 +1015,14 @@ export default function Login() {
                             data-form-type="other"
                             data-lpignore="true"
                             data-1p-ignore="true"
+                            placeholder="Enter your email"
                             className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm
                               focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
-                              focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-                              outline-none no-underline
+                              focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)]
                               ${fieldErrors.email
-                                ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
+                                ? 'border-rose-500 bg-red-50/50'
                                 : 'border-gray-200'
                               }`}
-                            placeholder="Enter your email"
                           />
                           <div className="absolute bottom-2 right-3 text-xs text-gray-500">
                             {formData.email.length}/100
@@ -1123,7 +1041,7 @@ export default function Login() {
                         )}
                       </div>
                     ) : (
-                      /* Phone Field - UPDATED with complete autofill prevention */
+                      /* Phone Field */
                       <div ref={fieldRefs.phone} className="overflow-visible">
                         <motion.div
                           animate={shakeFields.includes('phone') ? "shake" : "initial"}
@@ -1131,7 +1049,6 @@ export default function Login() {
                           className="overflow-visible"
                         >
                           <div className="flex gap-2">
-                            {/* Fixed +91 country code */}
                             <div className="flex-shrink-0">
                               <div className={`h-[56px] flex items-center px-4 rounded-2xl border-2 text-sm ${fieldErrors.phone
                                 ? 'border-rose-500 bg-white/80'
@@ -1167,10 +1084,9 @@ export default function Login() {
                                 data-1p-ignore="true"
                                 className={`w-full pl-12 pr-12 h-[56px] border-2 rounded-2xl bg-white/80 backdrop-blur-sm
                                   focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
-                                  focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-                                  outline-none no-underline
+                                  focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)]
                                   ${fieldErrors.phone
-                                    ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
+                                    ? 'border-rose-500 bg-red-50/50'
                                     : 'border-gray-200'
                                   }`}
                               />
@@ -1196,14 +1112,7 @@ export default function Login() {
                     )}
                   </motion.div>
 
-                  {/* Add these hidden fields right before your password field */}
-                  <div style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', height: 0, overflow: 'hidden' }} aria-hidden="true">
-                    <input type="text" name="username" autoComplete="username" tabIndex="-1" />
-                    <input type="email" name="email" autoComplete="email" tabIndex="-1" />
-                    <input type="password" name="fake-password" autoComplete="new-password" tabIndex="-1" />
-                  </div>
-
-                  {/* Password - EXACTLY like signup page */}
+                  {/* Password Field */}
                   <motion.div variants={fadeInUp}>
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-sm font-medium text-gray-700">
@@ -1246,18 +1155,17 @@ export default function Login() {
                           data-1p-ignore="true"
                           data-autofill-prevent="true"
                           aria-autocomplete="none"
+                          placeholder="Enter your password"
                           className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm
-                          focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
-                          focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-                          outline-none no-underline
-                          ${fieldErrors.password
-                              ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
+                            focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
+                            focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)]
+                            ${fieldErrors.password
+                              ? 'border-rose-500 bg-red-50/50'
                               : 'border-gray-200'
                             }`}
-                          placeholder="Enter your password"
                         />
                         <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 flex items-center gap-1">
-                          {formData.password && formData.password.length >= 1 && (
+                          {formData.password && formData.password.length >= 6 && (
                             <CheckCircle className="w-5 h-5 text-emerald-500" />
                           )}
                           {fieldErrors.password && (
@@ -1298,14 +1206,14 @@ export default function Login() {
                           checked={rememberMe}
                           onChange={handleRememberMeChange}
                           autoComplete="off"
-                          className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:border-blue-400 mt-0.5 flex-shrink-0 transition-all duration-300"
+                          className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 mt-0.5 flex-shrink-0 transition-all duration-300"
                         />
                         <label htmlFor="remember" className="text-sm text-gray-700 font-medium flex-1">
-                          Remember this device for 30 days
+                          Remember me on this device
                         </label>
 
                         {/* Clear remembered data button */}
-                        {localStorage.getItem('rememberedCredentials') && (
+                        {localStorage.getItem('rememberedEmail') && (
                           <motion.button
                             type="button"
                             onClick={handleClearRememberedData}
@@ -1331,7 +1239,7 @@ export default function Login() {
                       <div className="flex items-center gap-2 text-yellow-700">
                         <Shield className="w-4 h-4" />
                         <span className="text-sm font-medium">
-                          Your email/phone will be remembered on this device for 30 days. Do not use this option on shared devices.
+                          Your email will be remembered on this device. Do not use this option on shared devices.
                         </span>
                       </div>
                     </motion.div>
@@ -1342,10 +1250,10 @@ export default function Login() {
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-red-50 border border-rose-500 rounded-2xl p-4"
+                      className="bg-rose-50 border border-rose-500 rounded-2xl p-4"
                     >
                       <div className="flex items-center gap-2 text-rose-700">
-                        <Shield className="w-4 h-4" />
+                        <AlertCircle className="w-4 h-4" />
                         <span className="text-sm font-medium">{fieldErrors.submit}</span>
                       </div>
                     </motion.div>
@@ -1381,11 +1289,11 @@ export default function Login() {
                             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                             className="w-6 h-6 border-2 border-white border-t-transparent rounded-full"
                           />
-                          Verifying...
+                          Logging in...
                         </>
                       ) : (
                         <>
-                          Continue to Verify
+                          Login
                           <motion.div
                             animate={{ x: [0, 5, 0] }}
                             transition={{ duration: 1.5, repeat: Infinity }}
@@ -1399,7 +1307,7 @@ export default function Login() {
                 </form>
               </>
             ) : (
-              /* STEP 2: 2FA Verification - UPDATED with autofill prevention for verification code */
+              /* STEP 2: Login Verification */
               <>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -1413,47 +1321,51 @@ export default function Login() {
                     whileHover="hover"
                     className="w-20 h-20 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl cursor-pointer"
                   >
-                    <ShieldCheck className="w-10 h-10 text-white" />
+                    <Shield className="w-10 h-10 text-white" />
                   </motion.div>
 
                   <motion.h2
                     className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent mb-3"
                   >
-                    Security Verification Required
+                    Two-Factor Authentication
                   </motion.h2>
                   <motion.p
                     className="text-gray-600 text-lg mb-6"
                   >
-                    {verificationMethod === 'authenticator'
-                      ? 'Check your authenticator app for the verification code'
-                      : `Check your ${getVerificationMethodText()} for the verification code`
-                    }
+                    Enter the verification code sent to your email
                   </motion.p>
 
                   <div className="bg-blue-50 rounded-2xl p-4 border border-blue-200">
                     <div className="flex items-center gap-3">
-                      <Key className="w-5 h-5 text-blue-600" />
+                      <ShieldCheck className="w-5 h-5 text-blue-600" />
                       <div className="text-left">
-                        <p className="text-blue-800 text-sm font-medium">Verify It's You</p>
+                        <p className="text-blue-800 text-sm font-medium">Verification Required</p>
                         <p className="text-blue-600 text-xs">
-                          {verificationMethod === 'authenticator'
-                            ? 'Enter the 6-digit code from your authenticator app'
-                            : `Enter the 6-digit code sent to ${currentUserIdentifier}`
-                          }
+                          Enter the 6-digit code sent to {getMaskedEmail(currentUserEmail)}
                         </p>
                       </div>
                     </div>
                   </div>
+
+                  {verificationMessage && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-4 text-green-600 text-sm"
+                    >
+                      {verificationMessage}
+                    </motion.div>
+                  )}
                 </motion.div>
 
-                <form onSubmit={handleTwoFactorSubmit} className="space-y-5">
+                <form onSubmit={handleVerificationSubmit} className="space-y-5">
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
                   >
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Verification Code *
+                      &nbsp;Verification Code <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
                     </label>
                     <motion.div
                       animate={shakeFields.includes('verification') ? "shake" : "initial"}
@@ -1462,11 +1374,11 @@ export default function Login() {
                     >
                       <input
                         type="text"
-                        value={twoFactorCode}
+                        value={verificationCode}
                         onChange={(e) => {
-                          setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6));
-                          if (fieldErrors.twoFactor) {
-                            setFieldErrors(prev => ({ ...prev, twoFactor: null }));
+                          setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                          if (fieldErrors.verification) {
+                            setFieldErrors(prev => ({ ...prev, verification: null }));
                           }
                         }}
                         onFocus={handleEnhancedFocus}
@@ -1478,82 +1390,82 @@ export default function Login() {
                         data-form-type="other"
                         data-lpignore="true"
                         data-1p-ignore="true"
+                        placeholder="------"
                         className={`w-full px-4 py-4 border-2 rounded-2xl text-center text-xl font-mono tracking-widest focus:outline-none focus:ring-4 transition-all
-                          ${fieldErrors.twoFactor
-                            ? 'border-rose-500 bg-white-50 focus:border-rose-500 focus:ring-rose-100'
+                          ${fieldErrors.verification
+                            ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100'
                             : 'border-gray-200 focus:border-blue-400 focus:ring-blue-100'
                           }`}
-                        placeholder="000000"
                         maxLength={6}
                         autoFocus
                       />
                     </motion.div>
-                    {fieldErrors.twoFactor && (
+                    {fieldErrors.verification && (
                       <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
-                        <XCircle className="w-4 h-4" /> {fieldErrors.twoFactor}
+                        <XCircle className="w-4 h-4" /> {fieldErrors.verification}
                       </motion.p>
                     )}
 
                     {fieldErrors.success && (
-                      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-green-500 text-sm mt-2 flex items-center gap-1">
+                      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-green-600 text-sm mt-2 flex items-center gap-1">
                         <CheckCircle className="w-4 h-4" /> {fieldErrors.success}
                       </motion.p>
                     )}
                   </motion.div>
 
-                  {verificationMethod !== 'authenticator' && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.25 }}
-                      className="text-center"
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.25 }}
+                    className="text-center"
+                  >
+                    <motion.button
+                      type="button"
+                      onClick={handleResendVerification}
+                      disabled={isTimerActive && timer > 0 || isVerificationLoading}
+                      variants={linkAnimation}
+                      whileHover="hover"
+                      whileTap="tap"
+                      className={`font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden ${(isTimerActive && timer > 0) || isVerificationLoading
+                        ? "text-gray-400 cursor-not-allowed"
+                        : "text-blue-600 hover:text-blue-700"
+                        }`}
                     >
-                      <motion.button
-                        type="button"
-                        onClick={handleResendVerification}
-                        disabled={isTimerActive && timer > 0}
-                        variants={linkAnimation}
-                        whileHover="hover"
-                        whileTap="tap"
-                        className={`font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden ${isTimerActive && timer > 0
-                          ? "text-gray-400 cursor-not-allowed"
-                          : "text-blue-600 hover:text-blue-700"
-                          }`}
-                      >
-                        {isTimerActive && timer > 0 ? (
-                          `Resend available in ${timer}s`
-                        ) : (
-                          <>
-                            Didn't receive code? Resend
-                            <motion.span
-                              animate={{ x: [0, 3, 0] }}
-                              transition={{ duration: 1.5, repeat: Infinity }}
-                              className="group-hover:translate-x-1 transition-transform duration-300"
-                            >
-                              →
-                            </motion.span>
-                            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
-                          </>
-                        )}
-                      </motion.button>
-                    </motion.div>
-                  )}
+                      {isVerificationLoading ? (
+                        "Sending..."
+                      ) : isTimerActive && timer > 0 ? (
+                        `Resend available in ${timer}s`
+                      ) : (
+                        <>
+                          Didn't receive code? Resend
+                          <motion.span
+                            animate={{ x: [0, 3, 0] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                            className="group-hover:translate-x-1 transition-transform duration-300"
+                          >
+                            →
+                          </motion.span>
+                          <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
+                        </>
+                      )}
+                    </motion.button>
+                  </motion.div>
 
                   <motion.button
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.3 }}
                     type="submit"
-                    disabled={isTwoFactorLoading || twoFactorCode.length !== 6}
+                    disabled={isVerificationLoading || verificationCode.length !== 6}
                     whileHover="hover"
                     whileTap="tap"
-                    className="w-full py-5 px-6 bg-gradient-to-r from-green-600 to-emerald-500 
+                    className="w-full py-5 px-6 bg-gradient-to-r from-blue-600 to-cyan-500 
                              text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
                              transform transition-all duration-300
                              disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
                   >
                     <motion.div
-                      className="absolute inset-0 rounded-2xl border-2 border-green-400"
+                      className="absolute inset-0 rounded-2xl border-2 border-blue-400"
                       variants={pulseAnimation}
                       whileHover="hover"
                     />
@@ -1561,7 +1473,7 @@ export default function Login() {
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
 
                     <span className="relative z-10 flex items-center gap-3">
-                      {isTwoFactorLoading ? (
+                      {isVerificationLoading ? (
                         <>
                           <motion.div
                             animate={{ rotate: 360 }}
@@ -1572,7 +1484,7 @@ export default function Login() {
                         </>
                       ) : (
                         <>
-                          Verify & Login to Your Account
+                          Verify & Continue
                           <motion.div
                             animate={{ x: [0, 5, 0] }}
                             transition={{ duration: 1.5, repeat: Infinity }}
@@ -1592,13 +1504,7 @@ export default function Login() {
                   >
                     <motion.button
                       type="button"
-                      onClick={() => {
-                        setShowTwoFactor(false);
-                        setTwoFactorCode("");
-                        setFieldErrors({});
-                        scrollToTop();
-                        window.history.back();
-                      }}
+                      onClick={handleBackToLogin}
                       variants={backLinkAnimation}
                       whileHover="hover"
                       whileTap="tap"
