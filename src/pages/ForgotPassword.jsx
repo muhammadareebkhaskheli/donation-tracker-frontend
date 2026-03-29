@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
     Mail, Phone, Key, ArrowRight, ArrowLeft,
     CheckCircle, XCircle, Eye, EyeOff, Clock, ShieldCheck,
-    User, Fingerprint, Zap, Target
+    User, Fingerprint, Zap, Target, Lock, AlertCircle
 } from "lucide-react";
 
 export default function ForgotPassword() {
@@ -15,8 +15,9 @@ export default function ForgotPassword() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
+    const [shakeKey, setShakeKey] = useState(0);
+    const [inputsReady, setInputsReady] = useState(false);
 
-    // Form states
     const [formData, setFormData] = useState({
         email: "",
         phone: "",
@@ -27,34 +28,26 @@ export default function ForgotPassword() {
 
     const [fieldErrors, setFieldErrors] = useState({});
     const [shakeFields, setShakeFields] = useState([]);
-    const [phoneCode, setPhoneCode] = useState("+92");
-    const [showCountryDropdown, setShowCountryDropdown] = useState(false);
     const [codeSent, setCodeSent] = useState(false);
     const [codeVerified, setCodeVerified] = useState(false);
     const [countdown, setCountdown] = useState(0);
-
-    const dropdownRef = useRef(null);
+    const [isResending, setIsResending] = useState(false);
     const verificationCodeRef = useRef(null);
     const containerRef = useRef(null);
+    const newPasswordRef = useRef(null);
+    const confirmPasswordRef = useRef(null);
 
-    // Dummy data for testing
     const dummyUsers = [
-        { email: "test@example.com", phone: "+921234567890", validCode: "123456" },
-        { email: "user@demo.com", phone: "+921122334455", validCode: "654321" },
-        { email: "john@doe.com", phone: "+923001234567", validCode: "111222" }
+        { email: "test@example.com", phone: "+919876543210", validCode: "123456" },
+        { email: "user@demo.com", phone: "+919876543211", validCode: "654321" },
+        { email: "john@doe.com", phone: "+919876543212", validCode: "111222" }
     ];
 
-    // Country codes
-    const countryCodes = [
-        { code: "+1", country: "US", flag: "🇺🇸" },
-        { code: "+44", country: "UK", flag: "🇬🇧" },
-        { code: "+91", country: "India", flag: "🇮🇳" },
-        { code: "+92", country: "Pakistan", flag: "🇵🇰" },
-        { code: "+971", country: "UAE", flag: "🇦🇪" },
-        { code: "+966", country: "KSA", flag: "🇸🇦" }
-    ];
+    useEffect(() => {
+        const t = setTimeout(() => setInputsReady(true), 100);
+        return () => clearTimeout(t);
+    }, []);
 
-    // Enhanced Animation Variants
     const fadeInUp = {
         initial: { y: 40, opacity: 0 },
         animate: {
@@ -91,13 +84,18 @@ export default function ForgotPassword() {
     };
 
     const shakeAnimation = {
+        initial: {
+            x: 0
+        },
         shake: {
             x: [0, -10, 10, -10, 10, 0],
-            transition: { duration: 0.5 }
+            transition: {
+                duration: 0.6,
+                ease: "easeInOut"
+            }
         }
     };
 
-    // Premium Button Animations
     const buttonAnimation = {
         initial: { scale: 1 },
         hover: {
@@ -151,7 +149,6 @@ export default function ForgotPassword() {
         tap: { scale: 0.98 }
     };
 
-    // Icon animations
     const iconAnimation = {
         initial: { scale: 0, rotate: -180 },
         animate: {
@@ -175,7 +172,6 @@ export default function ForgotPassword() {
         }
     };
 
-    // Pulse animation for primary buttons
     const pulseAnimation = {
         initial: { boxShadow: "0 0 0 0 rgba(59, 130, 246, 0.7)" },
         hover: {
@@ -188,7 +184,6 @@ export default function ForgotPassword() {
         }
     };
 
-    // Step transition animations
     const stepTransition = {
         initial: { opacity: 0, x: 50 },
         animate: { opacity: 1, x: 0 },
@@ -196,7 +191,6 @@ export default function ForgotPassword() {
         transition: { duration: 0.5, ease: "easeInOut" }
     };
 
-    // Progress bar animation
     const progressAnimation = {
         initial: { width: "0%" },
         animate: {
@@ -205,18 +199,6 @@ export default function ForgotPassword() {
         }
     };
 
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setShowCountryDropdown(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    // Countdown timer
     useEffect(() => {
         if (countdown > 0) {
             const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -224,7 +206,6 @@ export default function ForgotPassword() {
         }
     }, [countdown]);
 
-    // AUTO SCROLL TO TOP AND FOCUS MANAGEMENT
     useEffect(() => {
         requestAnimationFrame(() => {
             window.scrollTo({
@@ -252,11 +233,10 @@ export default function ForgotPassword() {
                     }
                     break;
                 case 3:
-                    const newPasswordInput = document.querySelector('input[name="newPassword"]');
-                    if (newPasswordInput) {
-                        newPasswordInput.focus();
-                        const value = newPasswordInput.value;
-                        newPasswordInput.setSelectionRange(value.length, value.length);
+                    if (newPasswordRef.current) {
+                        newPasswordRef.current.focus();
+                        const value = newPasswordRef.current.value;
+                        newPasswordRef.current.setSelectionRange(value.length, value.length);
                     }
                     break;
                 default:
@@ -267,9 +247,43 @@ export default function ForgotPassword() {
         return () => clearTimeout(focusTimer);
     }, [currentStep]);
 
-    // Validation functions
-    const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    const validatePhone = (phone) => /^\+\d{1,4}[\d\s-()]{8,}$/.test(phone.replace(/\s/g, ''));
+    const isValidEmail = (email) => {
+        email = email.trim().toLowerCase();
+
+        if (!email) return false;
+
+        if (!email.endsWith('@gmail.com')) return false;
+
+        const username = email.slice(0, -10);
+
+        if (username.length === 0) return false;
+        if (username.length > 64) return false;
+
+        const usernameRegex = /^[a-z0-9._]+$/;
+        if (!usernameRegex.test(username)) return false;
+
+        if (username.includes('..')) return false;
+
+        if (username.startsWith('.') || username.endsWith('.')) return false;
+
+        if (username.startsWith('_')) return false;
+
+        if (email.split('@gmail.com').length !== 2) return false;
+
+        const parts = email.split('@');
+        if (parts.length !== 2) return false;
+
+        const domain = parts[1];
+        if (domain !== 'gmail.com') return false;
+
+        return true;
+    };
+
+    const isValidPhone = (phone) => {
+        const digitsOnly = phone.replace(/\D/g, '');
+        return digitsOnly.length === 10;
+    };
+
     const validatePassword = (password) => {
         const hasMinLength = password.length >= 8;
         const hasUpperCase = /[A-Z]/.test(password);
@@ -279,13 +293,32 @@ export default function ForgotPassword() {
         return hasMinLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar;
     };
 
-    // Check if passwords match
     const passwordsMatch = formData.newPassword && formData.confirmPassword &&
         formData.newPassword === formData.confirmPassword;
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        let processedValue = value;
+
+        if (name === 'email') {
+            processedValue = value.toLowerCase().replace(/\s/g, '');
+            if (processedValue.length > 100) {
+                processedValue = processedValue.slice(0, 100);
+            }
+        } else if (name === 'phone') {
+            processedValue = value.replace(/\D/g, '');
+            if (processedValue.length > 10) {
+                processedValue = processedValue.slice(0, 10);
+            }
+            if (processedValue.length <= 3) {
+            } else if (processedValue.length <= 6) {
+                processedValue = `${processedValue.slice(0, 3)}-${processedValue.slice(3)}`;
+            } else {
+                processedValue = `${processedValue.slice(0, 3)}-${processedValue.slice(3, 6)}-${processedValue.slice(6)}`;
+            }
+        }
+
+        setFormData(prev => ({ ...prev, [name]: processedValue }));
         if (fieldErrors[name]) {
             setFieldErrors(prev => ({ ...prev, [name]: null }));
         }
@@ -293,30 +326,47 @@ export default function ForgotPassword() {
 
     const triggerShake = (fieldNames) => {
         setShakeFields(fieldNames);
-        setTimeout(() => setShakeFields([]), 500);
+        setShakeKey(prev => prev + 1);
+
+        if (fieldNames.includes('newPassword')) {
+            setTimeout(() => {
+                newPasswordRef.current?.focus();
+            }, 100);
+        } else if (fieldNames.includes('confirmPassword')) {
+            setTimeout(() => {
+                confirmPasswordRef.current?.focus();
+            }, 100);
+        } else if (fieldNames.includes('verificationCode')) {
+            setTimeout(() => {
+                verificationCodeRef.current?.focus();
+            }, 100);
+        }
+
+        setTimeout(() => setShakeFields([]), 600);
     };
 
-    // Step 1: Send verification code (DUMMY DATA)
     const handleSendCode = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         setFieldErrors({});
 
         try {
-            // Enhanced validation with specific field errors
             const errors = {};
 
             if (resetMethod === 'email') {
                 if (!formData.email) {
-                    errors.email = "Email is required";
-                } else if (!validateEmail(formData.email)) {
+                    errors.email = "Email Address is required";
+                } else if (!isValidEmail(formData.email)) {
                     errors.email = "Please enter a valid email address";
                 }
             } else {
                 if (!formData.phone) {
-                    errors.phone = "Phone number is required";
-                } else if (!validatePhone(phoneCode + formData.phone)) {
-                    errors.phone = "Please enter a valid phone number";
+                    errors.phone = "Phone Number is required";
+                } else {
+                    const digitsOnly = formData.phone.replace(/\D/g, '');
+                    if (!isValidPhone(digitsOnly)) {
+                        errors.phone = "Please enter a valid 10-digit phone number";
+                    }
                 }
             }
 
@@ -326,13 +376,11 @@ export default function ForgotPassword() {
                 return;
             }
 
-            // SIMULATE API CALL with dummy data
             await new Promise(resolve => setTimeout(resolve, 1500));
 
-            const userIdentifier = resetMethod === 'email' ? formData.email : phoneCode + formData.phone;
-            
-            // Check if user exists in dummy data
-            const userExists = dummyUsers.some(user => 
+            const userIdentifier = resetMethod === 'email' ? formData.email : `+91${formData.phone.replace(/\D/g, '')}`;
+
+            const userExists = dummyUsers.some(user =>
                 resetMethod === 'email' ? user.email === userIdentifier : user.phone === userIdentifier
             );
 
@@ -341,13 +389,12 @@ export default function ForgotPassword() {
                 setCountdown(60);
                 setCurrentStep(2);
                 setFieldErrors({});
-                
-                // Show success message with dummy code
-                const dummyCode = dummyUsers.find(user => 
+
+                const dummyCode = dummyUsers.find(user =>
                     resetMethod === 'email' ? user.email === userIdentifier : user.phone === userIdentifier
                 )?.validCode || "123456";
-                
-                console.log(`✅ Dummy verification code for ${userIdentifier}: ${dummyCode}`);
+
+                console.log(`Verification code for ${userIdentifier}: ${dummyCode}`);
             } else {
                 throw new Error("Account not found. Please check your credentials.");
             }
@@ -360,7 +407,6 @@ export default function ForgotPassword() {
         }
     };
 
-    // Step 2: Verify code (DUMMY DATA)
     const handleVerifyCode = async (e) => {
         e.preventDefault();
         setIsLoading(true);
@@ -373,17 +419,14 @@ export default function ForgotPassword() {
                 return;
             }
 
-            // SIMULATE API CALL with dummy data
             await new Promise(resolve => setTimeout(resolve, 1500));
 
-            const userIdentifier = resetMethod === 'email' ? formData.email : phoneCode + formData.phone;
-            
-            // Find user in dummy data
-            const user = dummyUsers.find(user => 
+            const userIdentifier = resetMethod === 'email' ? formData.email : `+91${formData.phone.replace(/\D/g, '')}`;
+
+            const user = dummyUsers.find(user =>
                 resetMethod === 'email' ? user.email === userIdentifier : user.phone === userIdentifier
             );
 
-            // Check if code matches dummy code
             if (user && user.validCode === formData.verificationCode) {
                 setCodeVerified(true);
                 setCurrentStep(3);
@@ -400,24 +443,22 @@ export default function ForgotPassword() {
         }
     };
 
-    // Step 3: Reset password (DUMMY DATA)
     const handleResetPassword = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         setFieldErrors({});
 
         try {
-            // Enhanced validation with specific field errors
             const errors = {};
 
             if (!formData.newPassword) {
-                errors.newPassword = "New password is required";
+                errors.newPassword = "New Password is required";
             } else if (!validatePassword(formData.newPassword)) {
                 errors.newPassword = "Password must be at least 8 characters with uppercase, lowercase, number, and special character";
             }
 
             if (!formData.confirmPassword) {
-                errors.confirmPassword = "Please confirm your password";
+                errors.confirmPassword = "Confirm New Password is required";
             } else if (formData.newPassword !== formData.confirmPassword) {
                 errors.confirmPassword = "Passwords do not match";
             }
@@ -428,10 +469,8 @@ export default function ForgotPassword() {
                 return;
             }
 
-            // SIMULATE API CALL with dummy data
             await new Promise(resolve => setTimeout(resolve, 1500));
 
-            // Show success page
             setPasswordResetSuccess(true);
             setCurrentStep(4);
             setFieldErrors({});
@@ -447,26 +486,39 @@ export default function ForgotPassword() {
     const resendCode = async () => {
         if (countdown > 0) return;
 
-        setIsLoading(true);
+        setIsResending(true);
         try {
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const userIdentifier = resetMethod === 'email' ? formData.email : phoneCode + formData.phone;
-            const dummyCode = dummyUsers.find(user => 
+
+            const userIdentifier = resetMethod === 'email' ? formData.email : `+91${formData.phone.replace(/\D/g, '')}`;
+            const dummyCode = dummyUsers.find(user =>
                 resetMethod === 'email' ? user.email === userIdentifier : user.phone === userIdentifier
             )?.validCode || "123456";
-            
-            console.log(`✅ New dummy verification code: ${dummyCode}`);
+
+            console.log(`New verification code: ${dummyCode}`);
             setCountdown(60);
             setFieldErrors({});
         } catch (error) {
             setFieldErrors({ submit: "Failed to resend code. Please try again." });
         } finally {
-            setIsLoading(false);
+            setIsResending(false);
         }
     };
 
-    const selectedCountry = countryCodes.find(country => country.code === phoneCode);
+    const getMaskedIdentifier = () => {
+        if (resetMethod === 'email') {
+            const email = formData.email;
+            if (!email) return "";
+            const [localPart, domain] = email.split('@');
+            if (localPart.length <= 3) return email;
+            return `${localPart.slice(0, 3)}***@${domain}`;
+        } else {
+            const phone = formData.phone.replace(/\D/g, '');
+            if (!phone) return "";
+            if (phone.length <= 4) return phone;
+            return `${phone.slice(0, 2)}****${phone.slice(-2)}`;
+        }
+    };
 
     const stepIcons = [
         { icon: User, color: "from-blue-500 to-cyan-400" },
@@ -482,6 +534,48 @@ export default function ForgotPassword() {
         "Success"
     ];
 
+    const autofillStyles = `
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus,
+    input:-webkit-autofill:active {
+        -webkit-box-shadow: 0 0 0 30px white inset !important;
+        box-shadow: 0 0 0 30px white inset !important;
+        -webkit-text-fill-color: #000 !important;
+        transition: background-color 5000s ease-in-out 0s;
+        background-color: white !important;
+    }
+    
+    input[type="password"]:-webkit-autofill,
+    input[type="password"]:-webkit-autofill:hover,
+    input[type="password"]:-webkit-autofill:focus,
+    input[type="password"]:-webkit-autofill:active {
+        -webkit-box-shadow: 0 0 0 30px white inset !important;
+        box-shadow: 0 0 0 30px white inset !important;
+        -webkit-text-fill-color: #000 !important;
+        transition: background-color 5000s ease-in-out 0s;
+        background-color: white !important;
+    }
+    
+    input::-webkit-contacts-auto-fill-button,
+    input::-webkit-credentials-auto-fill-button {
+        visibility: hidden;
+        display: none !important;
+        pointer-events: none;
+        height: 0;
+        width: 0;
+        margin: 0;
+    }
+  
+    input {
+        autocomplete: off !important;
+    }
+    
+    input:-internal-autofill-selected {
+        background-color: white !important;
+    }
+    `;
+
     return (
         <motion.div
             ref={containerRef}
@@ -490,7 +584,6 @@ export default function ForgotPassword() {
             transition={{ duration: 0.6 }}
             className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/30 flex items-center justify-center p-4 lg:p-8 overflow-auto"
         >
-            {/* Floating background elements */}
             <motion.div
                 className="absolute top-10 left-10 w-32 h-32 bg-blue-200 rounded-full opacity-20 blur-xl"
                 animate={{ y: [0, -20, 0], rotate: [0, 180, 360] }}
@@ -509,7 +602,6 @@ export default function ForgotPassword() {
                     transition={{ duration: 0.8, ease: "easeOut" }}
                     className="bg-white rounded-3xl shadow-2xl p-8 border border-white/20 backdrop-blur-sm relative overflow-hidden"
                 >
-                    {/* Security Badge */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -520,7 +612,6 @@ export default function ForgotPassword() {
                         Secure
                     </motion.div>
 
-                    {/* Animated border */}
                     <motion.div
                         className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-cyan-400"
                         initial={{ scaleX: 0 }}
@@ -528,7 +619,6 @@ export default function ForgotPassword() {
                         transition={{ duration: 1, delay: 0.3 }}
                     />
 
-                    {/* Progress Header */}
                     <motion.div
                         initial="initial"
                         animate="animate"
@@ -558,7 +648,6 @@ export default function ForgotPassword() {
                             Step {currentStep} of 4: {stepTitles[currentStep - 1]}
                         </motion.p>
 
-                        {/* Animated Progress Bar */}
                         <div className="w-full bg-gray-200 rounded-full h-2 mb-4 overflow-hidden">
                             <motion.div
                                 className="bg-gradient-to-r from-blue-500 to-cyan-400 h-2 rounded-full"
@@ -568,7 +657,6 @@ export default function ForgotPassword() {
                             />
                         </div>
 
-                        {/* Progress Steps with Circular Icons Only */}
                         <div className="flex justify-between items-center px-4">
                             {[1, 2, 3, 4].map((step) => {
                                 const StepIcon = stepIcons[step - 1].icon;
@@ -599,7 +687,6 @@ export default function ForgotPassword() {
                         </div>
                     </motion.div>
 
-                    {/* Step Content */}
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={currentStep}
@@ -608,30 +695,13 @@ export default function ForgotPassword() {
                             exit="exit"
                             variants={stepTransition}
                         >
-                            {/* Step 1: Choose Method */}
                             {currentStep === 1 && (
                                 <motion.div
                                     variants={staggerContainer}
                                     initial="initial"
                                     animate="animate"
                                 >
-                                    <motion.div
-                                        variants={fadeInUp}
-                                        className="text-center mb-8"
-                                    >
-                                        <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                                            How would you like to reset your password?
-                                        </h3>
-                                        <p className="text-gray-600">
-                                            Choose your preferred verification method
-                                        </p>
-                                    </motion.div>
-
-                                    {/* Method Selection */}
-                                    <motion.div
-                                        variants={fadeInUp}
-                                        className="flex bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-1 mb-6 border border-blue-100"
-                                    >
+                                    <div className="flex bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-1 mb-6 border border-blue-100">
                                         {[
                                             { id: "email", label: "Email", icon: Mail },
                                             { id: "phone", label: "Phone", icon: Phone }
@@ -651,110 +721,113 @@ export default function ForgotPassword() {
                                                 <span className="font-medium text-sm">{type.label}</span>
                                             </motion.button>
                                         ))}
-                                    </motion.div>
+                                    </div>
 
-                                    <form onSubmit={handleSendCode} className="space-y-5">
-                                        {/* Email or Phone Input */}
+                                    <form onSubmit={handleSendCode} className="space-y-5" autoComplete="off">
                                         <motion.div variants={fadeInUp}>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                {resetMethod === 'email' ? 'Email Address *' : 'Phone Number *'}
+                                                &nbsp;{resetMethod === 'email' ? 'Email Address' : 'Phone Number'} <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
                                             </label>
                                             <motion.div
-                                                variants={shakeFields.includes(resetMethod) ? shakeAnimation : {}}
-                                                animate={shakeFields.includes(resetMethod) ? "shake" : "animate"}
-                                                className="relative group"
+                                                key={`${resetMethod}-${shakeKey}`}
+                                                animate={shakeFields.includes(resetMethod) ? "shake" : "initial"}
+                                                variants={shakeAnimation}
+                                                className="overflow-visible"
                                             >
                                                 {resetMethod === 'email' ? (
-                                                    <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
+                                                    <div className="relative">
+                                                        <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
+                                                        <input
+                                                            type="text"
+                                                            name="email"
+                                                            value={formData.email}
+                                                            onChange={handleChange}
+                                                            disabled={!inputsReady}
+                                                            maxLength={100}
+                                                            autoComplete="off"
+                                                            data-form-type="other"
+                                                            data-lpignore="true"
+                                                            data-1p-ignore="true"
+                                                            className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm
+                                                            focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
+                                                            focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
+                                                            hover:bg-white outline-none
+                                                            ${fieldErrors.email
+                                                                    ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
+                                                                    : 'border-gray-200'
+                                                                }`}
+                                                            placeholder="Enter your email"
+                                                        />
+                                                        <div className="absolute bottom-2 right-3 text-xs text-gray-500">
+                                                            {formData.email.length}/100
+                                                        </div>
+                                                        {formData.email && isValidEmail(formData.email) && (
+                                                            <CheckCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 z-10" />
+                                                        )}
+                                                        {fieldErrors.email && (
+                                                            <XCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-rose-500 z-10" />
+                                                        )}
+                                                    </div>
                                                 ) : (
-                                                    <>
-                                                        <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
-                                                        <div className="absolute left-12 h-full flex items-center z-20" ref={dropdownRef}>
-                                                            <div className="relative">
-                                                                <motion.button
-                                                                    type="button"
-                                                                    onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                                                                    variants={buttonAnimation}
-                                                                    whileHover="hover"
-                                                                    whileTap="tap"
-                                                                    className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 focus:outline-none bg-white px-3 py-2 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
-                                                                >
-                                                                    <span className="text-base">{selectedCountry?.flag}</span>
-                                                                    <span className="font-medium">{selectedCountry?.code}</span>
-                                                                    <svg className={`w-3 h-3 text-gray-400 transition-transform ${showCountryDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                                    </svg>
-                                                                </motion.button>
-
-                                                                {showCountryDropdown && (
-                                                                    <motion.div
-                                                                        initial={{ opacity: 0, y: -10 }}
-                                                                        animate={{ opacity: 1, y: 0 }}
-                                                                        className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-30 max-h-60 overflow-y-auto"
-                                                                    >
-                                                                        {countryCodes.map((country) => (
-                                                                            <motion.button
-                                                                                key={country.code}
-                                                                                type="button"
-                                                                                onClick={() => {
-                                                                                    setPhoneCode(country.code);
-                                                                                    setShowCountryDropdown(false);
-                                                                                }}
-                                                                                variants={linkAnimation}
-                                                                                whileHover="hover"
-                                                                                whileTap="tap"
-                                                                                className={`w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-3 border-b border-gray-100 last:border-b-0 ${phoneCode === country.code ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
-                                                                                    }`}
-                                                                            >
-                                                                                <span className="text-base">{country.flag}</span>
-                                                                                <span className="flex-1 font-medium">{country.country}</span>
-                                                                                <span className="text-gray-500 text-sm">{country.code}</span>
-                                                                            </motion.button>
-                                                                        ))}
-                                                                    </motion.div>
-                                                                )}
+                                                    <div className="flex gap-2">
+                                                        <div className="flex-shrink-0">
+                                                            <div className={`h-[56px] flex items-center px-4 rounded-2xl border-2 text-sm ${fieldErrors.phone
+                                                                ? 'border-rose-500 bg-white/80'
+                                                                : 'border-gray-200 bg-white/80'
+                                                                }`}>
+                                                                <div className={`flex items-center gap-2 ${formData.phone && formData.phone.replace(/\D/g, '').length > 0
+                                                                    ? 'text-gray-900'
+                                                                    : 'text-gray-500'
+                                                                    }`}>
+                                                                    <span className="text-lg">🇮🇳</span>
+                                                                    <span className="text-sm">+91</span>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </>
-                                                )}
-                                                <input
-                                                    type={resetMethod === 'email' ? 'email' : 'tel'}
-                                                    name={resetMethod}
-                                                    value={formData[resetMethod]}
-                                                    onChange={handleChange}
-                                                    className={`w-full rounded-2xl border-2 transition-all duration-300 bg-white/80 backdrop-blur-sm
-                            focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
-                            focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-                            hover:border-blue-300 hover:bg-white
-                            ${resetMethod === 'phone' ? 'pl-[9.5rem]' : 'pl-12'}
-                            pr-12 py-4
-                            ${fieldErrors[resetMethod]
-                                                            ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200'
-                                                            : 'border-gray-200'
-                                                        }`}
-                                                    placeholder={resetMethod === 'email' ? 'Enter your email' : 'Enter your phone'}
-                                                />
-                                                {formData[resetMethod] && (
-                                                    resetMethod === 'email' ?
-                                                        validateEmail(formData.email) && (
-                                                            <CheckCircle className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 z-10" />
-                                                        ) :
-                                                        validatePhone(phoneCode + formData.phone) && (
-                                                            <CheckCircle className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 z-10" />
-                                                        )
-                                                )}
-                                                {fieldErrors[resetMethod] && (
-                                                    <XCircle className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-red-500 z-10" />
+
+                                                        <div className="flex-1 relative">
+                                                            <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
+                                                            <input
+                                                                type="text"
+                                                                name="phone"
+                                                                value={formData.phone}
+                                                                onChange={handleChange}
+                                                                disabled={!inputsReady}
+                                                                placeholder="Enter your phone"
+                                                                maxLength={12}
+                                                                autoComplete="off"
+                                                                data-form-type="other"
+                                                                data-lpignore="true"
+                                                                data-1p-ignore="true"
+                                                                className={`w-full pl-12 pr-12 h-[56px] border-2 rounded-2xl bg-white/80 backdrop-blur-sm
+                                                                focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
+                                                                focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
+                                                                outline-none no-underline
+                                                                ${fieldErrors.phone
+                                                                        ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
+                                                                        : 'border-gray-200'
+                                                                    }`}
+                                                            />
+                                                            <div className={`absolute bottom-2 right-3 text-xs ${fieldErrors.phone ? 'text-rose-600' : 'text-gray-500'}`}>
+                                                                {formData.phone.replace(/\D/g, '').length}/10
+                                                            </div>
+                                                            {formData.phone && isValidPhone(formData.phone.replace(/\D/g, '')) && (
+                                                                <CheckCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 z-10" />
+                                                            )}
+                                                            {fieldErrors.phone && (
+                                                                <XCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-rose-500 z-10" />
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 )}
                                             </motion.div>
-                                            {/* Show specific field error message */}
                                             {fieldErrors[resetMethod] && (
                                                 <motion.p
                                                     initial={{ opacity: 0 }}
                                                     animate={{ opacity: 1 }}
-                                                    className="text-red-500 text-sm mt-2 flex items-center gap-1"
+                                                    className="text-rose-500 text-sm mt-2 flex items-center gap-1"
                                                 >
-                                                    <XCircle className="w-4 h-4" /> {fieldErrors[resetMethod]}
+                                                    <AlertCircle className="w-4 h-4" /> {fieldErrors[resetMethod]}
                                                 </motion.p>
                                             )}
                                         </motion.div>
@@ -763,9 +836,9 @@ export default function ForgotPassword() {
                                             <motion.div
                                                 initial={{ opacity: 0, y: -10 }}
                                                 animate={{ opacity: 1, y: 0 }}
-                                                className="bg-red-50 border border-red-200 rounded-2xl p-4"
+                                                className="bg-red-50 border border-rose-500 rounded-2xl p-4"
                                             >
-                                                <div className="flex items-center gap-2 text-red-700">
+                                                <div className="flex items-center gap-2 text-rose-700">
                                                     <ShieldCheck className="w-4 h-4" />
                                                     <span className="text-sm font-medium">{fieldErrors.submit}</span>
                                                 </div>
@@ -779,9 +852,9 @@ export default function ForgotPassword() {
                                             whileHover="hover"
                                             whileTap="tap"
                                             className="w-full py-5 px-6 bg-gradient-to-r from-blue-600 to-cyan-500 
-                    text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
-                    transform transition-all duration-300
-                    disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
+                                            text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
+                                            transform transition-all duration-300
+                                            disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
                                         >
                                             <motion.div
                                                 className="absolute inset-0 rounded-2xl border-2 border-blue-400"
@@ -813,18 +886,9 @@ export default function ForgotPassword() {
                                             </span>
                                         </motion.button>
                                     </form>
-
-                                    {/* Dummy data hint */}
-                                    <motion.p
-                                        variants={fadeInUp}
-                                        className="text-xs text-center text-gray-400 mt-4"
-                                    >
-                                        Test with: test@example.com or +921234567890 (Code: 123456)
-                                    </motion.p>
                                 </motion.div>
                             )}
 
-                            {/* Step 2: Verify Code */}
                             {currentStep === 2 && (
                                 <motion.div
                                     variants={staggerContainer}
@@ -848,19 +912,19 @@ export default function ForgotPassword() {
                                             variants={fadeInUp}
                                             className="text-2xl font-bold text-gray-900 mb-2"
                                         >
-                                            Check Your {resetMethod === 'email' ? 'Email' : 'Phone'}
+                                            Verify It's You
                                         </motion.h3>
                                         <motion.p
                                             variants={fadeInUp}
                                             className="text-gray-600 mb-2"
                                         >
-                                            We sent a 6-digit verification code to:
+                                            We sent a 6-digit verification code to your {resetMethod === 'email' ? 'email' : 'phone'}:
                                         </motion.p>
                                         <motion.p
                                             variants={fadeInUp}
                                             className="text-sm text-blue-600 font-medium"
                                         >
-                                            {resetMethod === 'email' ? formData.email : phoneCode + formData.phone}
+                                            {getMaskedIdentifier()}
                                         </motion.p>
                                         <motion.p
                                             variants={fadeInUp}
@@ -873,11 +937,13 @@ export default function ForgotPassword() {
                                     <form onSubmit={handleVerifyCode} className="space-y-5">
                                         <motion.div variants={fadeInUp}>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Verification Code *
+                                                &nbsp;Verification Code <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
                                             </label>
                                             <motion.div
-                                                variants={shakeFields.includes('verificationCode') ? shakeAnimation : {}}
-                                                animate={shakeFields.includes('verificationCode') ? "shake" : "animate"}
+                                                key={`verification-${shakeKey}`}
+                                                animate={shakeFields.includes('verificationCode') ? "shake" : "initial"}
+                                                variants={shakeAnimation}
+                                                className="overflow-visible"
                                             >
                                                 <input
                                                     ref={verificationCodeRef}
@@ -886,12 +952,17 @@ export default function ForgotPassword() {
                                                     value={formData.verificationCode}
                                                     onChange={handleChange}
                                                     maxLength={6}
-                                                    className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl text-center text-xl font-mono tracking-widest focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)]"
+                                                    autoComplete="off"
+                                                    className={`w-full px-4 py-4 border-2 rounded-2xl text-center text-xl font-mono tracking-widest focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
+                                                    ${fieldErrors.verificationCode
+                                                            ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100'
+                                                            : 'border-gray-200'
+                                                        }`}
                                                     placeholder="000000"
                                                 />
                                             </motion.div>
                                             {fieldErrors.verificationCode && (
-                                                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                                                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-500 text-sm mt-2 flex items-center gap-1">
                                                     <XCircle className="w-4 h-4" /> {fieldErrors.verificationCode}
                                                 </motion.p>
                                             )}
@@ -904,21 +975,31 @@ export default function ForgotPassword() {
                                             <motion.button
                                                 type="button"
                                                 onClick={resendCode}
-                                                disabled={countdown > 0 || isLoading}
+                                                disabled={countdown > 0 || isResending || isLoading}
                                                 variants={linkAnimation}
                                                 whileHover="hover"
                                                 whileTap="tap"
-                                                className="text-blue-600 hover:text-blue-700 text-sm font-medium disabled:text-gray-400 disabled:cursor-not-allowed inline-flex items-center gap-1 group"
+                                                className={`font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden ${countdown > 0 || isResending || isLoading
+                                                    ? "text-gray-400 cursor-not-allowed"
+                                                    : "text-blue-600 hover:text-blue-700"
+                                                    }`}
                                             >
-                                                {countdown > 0 ? `Resend code in ${countdown}s` : 'Resend code'}
-                                                {countdown === 0 && (
-                                                    <motion.span
-                                                        animate={{ x: [0, 3, 0] }}
-                                                        transition={{ duration: 1.5, repeat: Infinity }}
-                                                        className="group-hover:translate-x-1 transition-transform"
-                                                    >
-                                                        →
-                                                    </motion.span>
+                                                {isResending ? (
+                                                    "Sending..."
+                                                ) : countdown > 0 ? (
+                                                    `Resend code in ${countdown}s`
+                                                ) : (
+                                                    <>
+                                                        Didn't receive code? Resend
+                                                        <motion.span
+                                                            animate={{ x: [0, 3, 0] }}
+                                                            transition={{ duration: 1.5, repeat: Infinity }}
+                                                            className="group-hover:translate-x-1 transition-transform duration-300"
+                                                        >
+                                                            →
+                                                        </motion.span>
+                                                        <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
+                                                    </>
                                                 )}
                                             </motion.button>
                                         </motion.div>
@@ -930,9 +1011,9 @@ export default function ForgotPassword() {
                                             whileHover="hover"
                                             whileTap="tap"
                                             className="w-full py-5 px-6 bg-gradient-to-r from-green-600 to-emerald-500 
-                                                text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
-                                                transform transition-all duration-300
-                                                disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
+                                                    text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
+                                                    transform transition-all duration-300
+                                                    disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
                                         >
                                             <motion.div
                                                 className="absolute inset-0 rounded-2xl border-2 border-green-400"
@@ -967,7 +1048,6 @@ export default function ForgotPassword() {
                                 </motion.div>
                             )}
 
-                            {/* Step 3: Set New Password */}
                             {currentStep === 3 && (
                                 <motion.div
                                     variants={staggerContainer}
@@ -1002,28 +1082,36 @@ export default function ForgotPassword() {
                                     </motion.div>
 
                                     <form onSubmit={handleResetPassword} className="space-y-5">
-                                        {/* New Password */}
                                         <motion.div variants={fadeInUp}>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                New Password *
+                                                &nbsp;New Password <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
                                             </label>
                                             <motion.div
-                                                variants={shakeFields.includes('newPassword') ? shakeAnimation : {}}
-                                                animate={shakeFields.includes('newPassword') ? "shake" : "animate"}
-                                                className="relative group"
+                                                key={`newPassword-${shakeKey}`}
+                                                animate={shakeFields.includes('newPassword') ? "shake" : "initial"}
+                                                variants={shakeAnimation}
+                                                className="overflow-visible relative group"
                                             >
                                                 <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
                                                 <input
+                                                    ref={newPasswordRef}
                                                     type={showPassword ? "text" : "password"}
                                                     name="newPassword"
                                                     value={formData.newPassword}
                                                     onChange={handleChange}
+                                                    maxLength={50}
+                                                    autoComplete="off"
+                                                    data-form-type="other"
+                                                    data-lpignore="true"
+                                                    data-1p-ignore="true"
+                                                    data-bwignore="true"
+                                                    data-ignore="true"
                                                     className={`w-full pl-12 pr-16 py-4 border-2 rounded-2xl transition-all duration-300 bg-white/80 backdrop-blur-sm
-                            focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
-                            focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-                            hover:border-blue-300 hover:bg-white
-                            ${fieldErrors.newPassword
-                                                            ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200'
+                                                            focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
+                                                            focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
+                                                            hover:bg-white
+                                                            ${fieldErrors.newPassword
+                                                            ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
                                                             : 'border-gray-200'
                                                         }`}
                                                     placeholder="Enter new password"
@@ -1034,7 +1122,7 @@ export default function ForgotPassword() {
                                                         <CheckCircle className="w-5 h-5 text-green-500" />
                                                     )}
                                                     {fieldErrors.newPassword && (
-                                                        <XCircle className="w-5 h-5 text-red-500" />
+                                                        <XCircle className="w-5 h-5 text-rose-500" />
                                                     )}
                                                     <motion.button
                                                         type="button"
@@ -1049,34 +1137,42 @@ export default function ForgotPassword() {
                                                 </div>
                                             </motion.div>
                                             {fieldErrors.newPassword && (
-                                                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                                                    <XCircle className="w-4 h-4" /> {fieldErrors.newPassword}
+                                                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-500 text-sm mt-2 flex items-center gap-1">
+                                                    <AlertCircle className="w-4 h-4" /> {fieldErrors.newPassword}
                                                 </motion.p>
                                             )}
                                         </motion.div>
 
-                                        {/* Confirm Password */}
                                         <motion.div variants={fadeInUp}>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Confirm New Password *
+                                                &nbsp;Confirm New Password <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
                                             </label>
                                             <motion.div
-                                                variants={shakeFields.includes('confirmPassword') ? shakeAnimation : {}}
-                                                animate={shakeFields.includes('confirmPassword') ? "shake" : "animate"}
-                                                className="relative group"
+                                                key={`confirmPassword-${shakeKey}`}
+                                                animate={shakeFields.includes('confirmPassword') ? "shake" : "initial"}
+                                                variants={shakeAnimation}
+                                                className="overflow-visible relative group"
                                             >
                                                 <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-500 z-10" />
                                                 <input
+                                                    ref={confirmPasswordRef}
                                                     type={showConfirmPassword ? "text" : "password"}
                                                     name="confirmPassword"
                                                     value={formData.confirmPassword}
                                                     onChange={handleChange}
+                                                    maxLength={50}
+                                                    autoComplete="off"
+                                                    data-form-type="other"
+                                                    data-lpignore="true"
+                                                    data-1p-ignore="true"
+                                                    data-bwignore="true"
+                                                    data-ignore="true"
                                                     className={`w-full pl-12 pr-16 py-4 border-2 rounded-2xl transition-all duration-300 bg-white/80 backdrop-blur-sm
-                            focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
-                            focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-                            hover:border-blue-300 hover:bg-white
-                            ${fieldErrors.confirmPassword
-                                                            ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200'
+                                                            focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
+                                                            focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
+                                                            hover:bg-white
+                                                            ${fieldErrors.confirmPassword
+                                                            ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
                                                             : 'border-gray-200'
                                                         }`}
                                                     placeholder="Confirm new password"
@@ -1087,7 +1183,7 @@ export default function ForgotPassword() {
                                                         <CheckCircle className="w-5 h-5 text-green-500" />
                                                     )}
                                                     {fieldErrors.confirmPassword && (
-                                                        <XCircle className="w-5 h-5 text-red-500" />
+                                                        <XCircle className="w-5 h-5 text-rose-500" />
                                                     )}
                                                     <motion.button
                                                         type="button"
@@ -1102,13 +1198,23 @@ export default function ForgotPassword() {
                                                 </div>
                                             </motion.div>
                                             {fieldErrors.confirmPassword && (
-                                                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                                                    <XCircle className="w-4 h-4" /> {fieldErrors.confirmPassword}
+                                                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-500 text-sm mt-2 flex items-center gap-1">
+                                                    <AlertCircle className="w-4 h-4" /> {fieldErrors.confirmPassword}
                                                 </motion.p>
                                             )}
                                         </motion.div>
 
-                                        {/* Password Requirements */}
+                                        {formData.confirmPassword && !passwordsMatch && formData.newPassword && (
+                                            <motion.p
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                className="text-rose-500 text-sm mt-2 flex items-center gap-1"
+                                            >
+                                                <Clock className="w-3 h-3" />
+                                                Passwords do not match
+                                            </motion.p>
+                                        )}
+
                                         <motion.div
                                             variants={fadeInUp}
                                             className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-4 border border-blue-200"
@@ -1150,9 +1256,9 @@ export default function ForgotPassword() {
                                             whileHover="hover"
                                             whileTap="tap"
                                             className="w-full py-5 px-6 bg-gradient-to-r from-orange-600 to-red-500 
-                    text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
-                    transform transition-all duration-300
-                    disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
+                                                    text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
+                                                    transform transition-all duration-300
+                                                    disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
                                         >
                                             <motion.div
                                                 className="absolute inset-0 rounded-2xl border-2 border-orange-400"
@@ -1187,7 +1293,6 @@ export default function ForgotPassword() {
                                 </motion.div>
                             )}
 
-                            {/* Step 4: Success Page */}
                             {currentStep === 4 && (
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.9 }}
@@ -1229,24 +1334,21 @@ export default function ForgotPassword() {
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.7, duration: 0.6 }}
                                     >
-                                        {/* Login button */}
                                         <motion.button
                                             onClick={() => navigate('/login')}
                                             whileHover="hover"
                                             whileTap="tap"
                                             className="w-full py-5 px-6 bg-gradient-to-r from-blue-600 to-cyan-500 
-                    text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
-                    transform transition-all duration-300
-                    flex items-center justify-center gap-3 relative overflow-hidden group"
+                                                    text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
+                                                    transform transition-all duration-300
+                                                    flex items-center justify-center gap-3 relative overflow-hidden group"
                                         >
-                                            {/* Pulse Ring Effect */}
                                             <motion.div
                                                 className="absolute inset-0 rounded-2xl border-2 border-blue-400"
                                                 variants={pulseAnimation}
                                                 whileHover="hover"
                                             />
 
-                                            {/* Shine Effect */}
                                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
 
                                             <span className="relative z-10 flex items-center gap-3">
@@ -1298,7 +1400,6 @@ export default function ForgotPassword() {
                         </motion.div>
                     </AnimatePresence>
 
-                    {/* Back Button */}
                     {currentStep > 1 && currentStep < 4 && (
                         <motion.div
                             initial={{ opacity: 0 }}
@@ -1327,7 +1428,6 @@ export default function ForgotPassword() {
                         </motion.div>
                     )}
 
-                    {/* Back to Login - Only show on first 3 steps */}
                     {currentStep < 4 && (
                         <motion.div
                             variants={fadeInUp}
@@ -1357,25 +1457,7 @@ export default function ForgotPassword() {
                     )}
                 </motion.div>
             </div>
+            <style>{autofillStyles}</style>
         </motion.div>
     );
 }
-
-// Lock icon component needed for password fields
-const Lock = (props) => (
-    <svg
-        {...props}
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-    </svg>
-);

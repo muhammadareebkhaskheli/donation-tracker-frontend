@@ -30,27 +30,22 @@ export default function Login() {
   const [shakeKey, setShakeKey] = useState(0);
   const [inputsReady, setInputsReady] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-
-  // Verification state - IMPORTANT: This needs to be properly managed
   const [verificationCode, setVerificationCode] = useState("");
   const [showVerification, setShowVerification] = useState(false);
   const [isVerificationLoading, setIsVerificationLoading] = useState(false);
+  const [isResendLoading, setIsResendLoading] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [loginContextToken, setLoginContextToken] = useState("");
   const [verificationMessage, setVerificationMessage] = useState("");
-
-  // Timer for resend cooldown
   const [timer, setTimer] = useState(60);
   const [isTimerActive, setIsTimerActive] = useState(false);
-
-  // Refs for autofill prevention
+  
   const fieldRefs = {
     email: useRef(null),
     phone: useRef(null),
     password: useRef(null)
   };
 
-  // Timer effect
   useEffect(() => {
     let interval;
     if (isTimerActive && timer > 0) {
@@ -63,7 +58,6 @@ export default function Login() {
     return () => clearInterval(interval);
   }, [isTimerActive, timer]);
 
-  // Fix for browser back button scroll position
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -87,7 +81,6 @@ export default function Login() {
     };
   }, []);
 
-  // Handle browser back button when in verification mode
   useEffect(() => {
     const handleBackButton = (event) => {
       if (showVerification) {
@@ -103,7 +96,6 @@ export default function Login() {
     };
   }, [showVerification]);
 
-  // Load remembered email on component mount
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberedEmail');
     if (rememberedEmail) {
@@ -120,7 +112,6 @@ export default function Login() {
     return () => clearTimeout(t);
   }, []);
 
-  // ===== AUTOCOMPLETE PREVENTION FUNCTIONS =====
   const handleInput = (e) => {
     const input = e.target;
     const fieldName = input.name;
@@ -177,7 +168,6 @@ export default function Login() {
     }
   };
 
-  // ===== AUTOCOMPLETE PREVENTION STYLES =====
   const autofillStyles = `
     input:-webkit-autofill,
     input:-webkit-autofill:hover,
@@ -212,7 +202,6 @@ export default function Login() {
     }
   `;
 
-  // Animation Variants
   const fadeInUp = {
     initial: { y: 40, opacity: 0 },
     animate: {
@@ -336,7 +325,6 @@ export default function Login() {
     }
   };
 
-  // Security Features
   const securityFeatures = [
     {
       icon: HeartHandshake,
@@ -364,10 +352,36 @@ export default function Login() {
     }
   ];
 
-  // Validation functions
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  const isValidGmail = (email) => {
+    email = email.trim().toLowerCase();
+
+    if (!email) return false;
+    
+    if (!email.endsWith('@gmail.com')) return false;
+    
+    const username = email.slice(0, -10);
+    
+    if (username.length === 0) return false;
+    if (username.length > 64) return false;
+    
+    const usernameRegex = /^[a-z0-9._]+$/;
+    if (!usernameRegex.test(username)) return false;
+    
+    if (username.includes('..')) return false;
+    
+    if (username.startsWith('.') || username.endsWith('.')) return false;
+    
+    if (username.startsWith('_')) return false;
+    
+    if (email.split('@gmail.com').length !== 2) return false;
+    
+    const parts = email.split('@');
+    if (parts.length !== 2) return false;
+    
+    const domain = parts[1];
+    if (domain !== 'gmail.com') return false;
+    
+    return true;
   };
 
   const validatePhone = (phone) => {
@@ -384,7 +398,6 @@ export default function Login() {
 
     let processedValue = value;
 
-    // Format phone number
     if (name === 'phone') {
       processedValue = value.replace(/\D/g, '');
       if (processedValue.length > 10) {
@@ -392,7 +405,6 @@ export default function Login() {
       }
       if (processedValue.length > 0) {
         if (processedValue.length <= 3) {
-          // No formatting needed
         } else if (processedValue.length <= 6) {
           processedValue = `${processedValue.slice(0, 3)}-${processedValue.slice(3)}`;
         } else {
@@ -408,7 +420,6 @@ export default function Login() {
       [name]: processedValue
     }));
 
-    // Clear field error when user types
     if (fieldErrors[name]) {
       setFieldErrors(prev => ({
         ...prev,
@@ -472,7 +483,6 @@ export default function Login() {
     setRememberMe(false);
   };
 
-  // Get device info for the request
   const getDeviceInfo = () => {
     const ua = navigator.userAgent;
     let os = "Unknown";
@@ -492,7 +502,6 @@ export default function Login() {
     return `${os} ${browser}`;
   };
 
-  // FIXED: Handle first step submit - properly check for VERIFICATION_REQUIRED
   const handleFirstStepSubmit = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -500,12 +509,11 @@ export default function Login() {
     const errors = {};
     const invalidFields = [];
 
-    // Validate email/phone
     if (loginType === 'email') {
       if (!formData.email) {
         errors.email = "Email is required";
         invalidFields.push('email');
-      } else if (!validateEmail(formData.email)) {
+      } else if (!isValidGmail(formData.email)) {
         errors.email = "Please enter a valid email address";
         invalidFields.push('email');
       }
@@ -522,7 +530,6 @@ export default function Login() {
       }
     }
 
-    // Validate password
     if (!formData.password) {
       errors.password = "Password is required";
       invalidFields.push('password');
@@ -542,7 +549,6 @@ export default function Login() {
     setFieldErrors({});
 
     try {
-      // Prepare login request
       const emailToUse = loginType === 'email'
         ? formData.email.trim().toLowerCase()
         : `+91${formData.phone.replace(/\D/g, '')}`;
@@ -552,36 +558,22 @@ export default function Login() {
         password: formData.password
       };
 
-      console.log("Sending login request with data:", loginData);
-
-      // Call login API
       const response = await authAPI.login(loginData);
 
-      console.log("Login response:", response.data);
-
-      // FIXED: Check if verification is required
       if (response.data.status === "VERIFICATION_REQUIRED") {
-        // Show verification screen
-        setCurrentUserEmail(response.data.email || emailToUse);
+        setCurrentUserEmail(emailToUse);
         setLoginContextToken(response.data.loginContextToken);
         setShowVerification(true);
         setTimer(60);
         setIsTimerActive(true);
         scrollToTop();
-
-        // Clear any previous errors
         setFieldErrors({});
-
-        // Show success message
         setVerificationMessage(response.data.message || "Verification code sent to your email");
       } else {
-        // Direct login (if no 2FA) - but our backend should always require verification
         handleSuccessfulLogin(response.data);
       }
 
     } catch (error) {
-      console.error("Login error details:", error);
-
       if (error.type === 'LOCKED') {
         setFieldErrors({ submit: error.message });
       } else if (error.type === 'AUTH') {
@@ -599,7 +591,6 @@ export default function Login() {
     }
   };
 
-  // FIXED: Handle verification code submission
   const handleVerificationSubmit = async (e) => {
     e.preventDefault();
 
@@ -613,29 +604,23 @@ export default function Login() {
     setFieldErrors({});
 
     try {
-      // FIXED: Use verify-login-code endpoint, NOT verify-email
       const verifyData = {
         loginContextToken: loginContextToken,
-        code: verificationCode
+        code: verificationCode,
+        deviceInfo: getDeviceInfo(),
+        ipAddress: null,
+        location: null
       };
-
-      console.log("Verifying login code with:", verifyData);
 
       const response = await authAPI.verifyLoginCode(verifyData);
 
-      console.log("✅ Verification successful", response.data);
-
-      // Save email if remember me is checked
       if (rememberMe && loginType === 'email') {
         saveEmailToStorage(formData.email);
       }
 
-      // Handle successful login
       handleSuccessfulLogin(response.data);
 
     } catch (error) {
-      console.error("Verification error:", error);
-
       if (error.response) {
         const message = error.response.data?.message || "Verification failed";
         setFieldErrors({ verification: message });
@@ -648,9 +633,7 @@ export default function Login() {
     }
   };
 
-  // FIXED: Handle successful login
   const handleSuccessfulLogin = (responseData) => {
-    // Save user data to localStorage
     localStorage.setItem('userSession', JSON.stringify({
       isLoggedIn: true,
       loginTime: Date.now(),
@@ -659,7 +642,6 @@ export default function Login() {
 
     localStorage.setItem('token', responseData.token);
 
-    // Navigate based on user type
     setTimeout(() => {
       if (responseData.userType === 'RECIPIENT') {
         navigate('/RecipientDashboard');
@@ -672,8 +654,7 @@ export default function Login() {
       }
     }, 100);
   };
-
-  // FIXED: Handle resend verification
+  
   const handleResendVerification = async () => {
     if (isTimerActive && timer > 0) {
       setFieldErrors({
@@ -682,34 +663,22 @@ export default function Login() {
       return;
     }
 
-    setIsVerificationLoading(true);
+    setIsResendLoading(true);
 
     try {
-      // FIXED: Use resend-login-code endpoint
-      await authAPI.resendLoginCode({ email: currentUserEmail });
+      await authAPI.resendLoginCode(currentUserEmail);
 
       setTimer(60);
       setIsTimerActive(true);
-
-      setFieldErrors({
-        success: "New verification code sent! Please check your email."
-      });
-
-      setTimeout(() => {
-        setFieldErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors.success;
-          return newErrors;
-        });
-      }, 3000);
+      
+      setFieldErrors({});
 
     } catch (error) {
-      console.error("Resend error:", error);
       setFieldErrors({
         verification: "Failed to resend code. Please try again."
       });
     } finally {
-      setIsVerificationLoading(false);
+      setIsResendLoading(false);
     }
   };
 
@@ -736,7 +705,6 @@ export default function Login() {
     scrollToTop();
   };
 
-  // Get display text for verification
   const getMaskedEmail = (email) => {
     if (!email) return "";
     const [localPart, domain] = email.split('@');
@@ -755,14 +723,12 @@ export default function Login() {
 
       <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
 
-        {/* Left Side - Brand & Security Benefits */}
         <motion.div
           initial="initial"
           animate="animate"
           variants={staggerContainer}
           className="hidden lg:block relative"
         >
-          {/* Floating background elements */}
           <motion.div
             className="absolute top-10 left-10 w-32 h-32 bg-blue-200 rounded-full opacity-20 blur-xl"
             animate={{ y: [0, -20, 0], rotate: [0, 180, 360] }}
@@ -775,7 +741,6 @@ export default function Login() {
           />
 
           <div className="space-y-8 relative z-10">
-            {/* Brand Section */}
             <motion.div
               variants={fadeInUp}
               className="space-y-6"
@@ -809,7 +774,6 @@ export default function Login() {
               </motion.p>
             </motion.div>
 
-            {/* STAT CARDS Grid */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -849,7 +813,6 @@ export default function Login() {
           </div>
         </motion.div>
 
-        {/* Right Side - Login Form */}
         <motion.div
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
@@ -862,7 +825,6 @@ export default function Login() {
             animate="animate"
             className="bg-white rounded-3xl shadow-2xl p-6 lg:p-8 border border-white/20 backdrop-blur-sm relative overflow-hidden"
           >
-            {/* Security Badge */}
             <motion.div
               initial={{ opacity: 0, scale: 0 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -873,7 +835,6 @@ export default function Login() {
               Secure
             </motion.div>
 
-            {/* Animated border */}
             <motion.div
               className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-cyan-400"
               initial={{ scaleX: 0 }}
@@ -881,7 +842,6 @@ export default function Login() {
               transition={{ duration: 1, delay: 0.3 }}
             />
 
-            {/* STEP 1: Email/Password Form */}
             {!showVerification ? (
               <>
                 <motion.div
@@ -902,7 +862,6 @@ export default function Login() {
                   </motion.p>
                 </motion.div>
 
-                {/* Mobile Security Features */}
                 <motion.div
                   variants={fadeInUp}
                   className="lg:hidden mb-6"
@@ -933,7 +892,6 @@ export default function Login() {
                   </div>
                 </motion.div>
 
-                {/* Success Message */}
                 {fieldErrors.success && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -947,7 +905,6 @@ export default function Login() {
                   </motion.div>
                 )}
 
-                {/* Login Type Toggle */}
                 <motion.div
                   variants={fadeInUp}
                   className="flex bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-1 mb-6 border border-blue-100"
@@ -975,14 +932,12 @@ export default function Login() {
                 </motion.div>
 
                 <form onSubmit={handleFirstStepSubmit} className="space-y-5" autoComplete="off">
-                  {/* Hidden fields for autofill prevention */}
                   <div style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', height: 0, overflow: 'hidden' }} aria-hidden="true">
                     <input type="text" name="username" autoComplete="username" tabIndex="-1" />
                     <input type="email" name="email" autoComplete="email" tabIndex="-1" />
                     <input type="password" name="fake-password" autoComplete="new-password" tabIndex="-1" />
                   </div>
 
-                  {/* Email/Phone Field */}
                   <motion.div variants={fadeInUp}>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {loginType === 'email' ? (
@@ -1027,7 +982,7 @@ export default function Login() {
                           <div className="absolute bottom-2 right-3 text-xs text-gray-500">
                             {formData.email.length}/100
                           </div>
-                          {formData.email && validateEmail(formData.email) && (
+                          {formData.email && isValidGmail(formData.email) && (
                             <CheckCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 z-10" />
                           )}
                           {fieldErrors.email && (
@@ -1041,7 +996,6 @@ export default function Login() {
                         )}
                       </div>
                     ) : (
-                      /* Phone Field */
                       <div ref={fieldRefs.phone} className="overflow-visible">
                         <motion.div
                           animate={shakeFields.includes('phone') ? "shake" : "initial"}
@@ -1112,7 +1066,6 @@ export default function Login() {
                     )}
                   </motion.div>
 
-                  {/* Password Field */}
                   <motion.div variants={fadeInUp}>
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-sm font-medium text-gray-700">
@@ -1191,7 +1144,6 @@ export default function Login() {
                     )}
                   </motion.div>
 
-                  {/* Remember Me */}
                   <motion.div
                     variants={fadeInUp}
                     className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl border-2 border-blue-100 group hover:border-blue-200 transition-all duration-300"
@@ -1212,7 +1164,6 @@ export default function Login() {
                           Remember me on this device
                         </label>
 
-                        {/* Clear remembered data button */}
                         {localStorage.getItem('rememberedEmail') && (
                           <motion.button
                             type="button"
@@ -1229,7 +1180,6 @@ export default function Login() {
                     </div>
                   </motion.div>
 
-                  {/* Security Notice for Remember Me */}
                   {rememberMe && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
@@ -1245,7 +1195,6 @@ export default function Login() {
                     </motion.div>
                   )}
 
-                  {/* Submit Error */}
                   {fieldErrors.submit && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
@@ -1259,7 +1208,6 @@ export default function Login() {
                     </motion.div>
                   )}
 
-                  {/* Submit Button */}
                   <motion.button
                     variants={fadeInUp}
                     type="submit"
@@ -1271,14 +1219,12 @@ export default function Login() {
                              transform transition-all duration-300
                              disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
                   >
-                    {/* Pulse Ring Effect */}
                     <motion.div
                       className="absolute inset-0 rounded-2xl border-2 border-blue-400"
                       variants={pulseAnimation}
                       whileHover="hover"
                     />
 
-                    {/* Shine Effect */}
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
 
                     <span className="relative z-10 flex items-center gap-3">
@@ -1307,7 +1253,6 @@ export default function Login() {
                 </form>
               </>
             ) : (
-              /* STEP 2: Login Verification */
               <>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -1327,12 +1272,12 @@ export default function Login() {
                   <motion.h2
                     className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent mb-3"
                   >
-                    Two-Factor Authentication
+                    Verify It's You
                   </motion.h2>
                   <motion.p
                     className="text-gray-600 text-lg mb-6"
                   >
-                    Enter the verification code sent to your email
+                    We sent a 6-digit code to your email
                   </motion.p>
 
                   <div className="bg-blue-50 rounded-2xl p-4 border border-blue-200">
@@ -1341,7 +1286,7 @@ export default function Login() {
                       <div className="text-left">
                         <p className="text-blue-800 text-sm font-medium">Verification Required</p>
                         <p className="text-blue-600 text-xs">
-                          Enter the 6-digit code sent to {getMaskedEmail(currentUserEmail)}
+                          Enter the code sent to {getMaskedEmail(currentUserEmail)}
                         </p>
                       </div>
                     </div>
@@ -1393,7 +1338,7 @@ export default function Login() {
                         placeholder="------"
                         className={`w-full px-4 py-4 border-2 rounded-2xl text-center text-xl font-mono tracking-widest focus:outline-none focus:ring-4 transition-all
                           ${fieldErrors.verification
-                            ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100'
+                            ? 'border-rose-500 bg-white-50 focus:border-rose-500 focus:ring-rose-100'
                             : 'border-gray-200 focus:border-blue-400 focus:ring-blue-100'
                           }`}
                         maxLength={6}
@@ -1403,12 +1348,6 @@ export default function Login() {
                     {fieldErrors.verification && (
                       <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
                         <XCircle className="w-4 h-4" /> {fieldErrors.verification}
-                      </motion.p>
-                    )}
-
-                    {fieldErrors.success && (
-                      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-green-600 text-sm mt-2 flex items-center gap-1">
-                        <CheckCircle className="w-4 h-4" /> {fieldErrors.success}
                       </motion.p>
                     )}
                   </motion.div>
@@ -1422,16 +1361,17 @@ export default function Login() {
                     <motion.button
                       type="button"
                       onClick={handleResendVerification}
-                      disabled={isTimerActive && timer > 0 || isVerificationLoading}
+                      disabled={isTimerActive && timer > 0 || isResendLoading || isVerificationLoading}
                       variants={linkAnimation}
                       whileHover="hover"
                       whileTap="tap"
-                      className={`font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden ${(isTimerActive && timer > 0) || isVerificationLoading
-                        ? "text-gray-400 cursor-not-allowed"
-                        : "text-blue-600 hover:text-blue-700"
-                        }`}
+                      className={`font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden ${
+                        (isTimerActive && timer > 0) || isResendLoading || isVerificationLoading
+                          ? "text-gray-400 cursor-not-allowed"
+                          : "text-blue-600 hover:text-blue-700"
+                      }`}
                     >
-                      {isVerificationLoading ? (
+                      {isResendLoading || isVerificationLoading ? (
                         "Sending..."
                       ) : isTimerActive && timer > 0 ? (
                         `Resend available in ${timer}s`
@@ -1484,7 +1424,7 @@ export default function Login() {
                         </>
                       ) : (
                         <>
-                          Verify & Continue
+                          Verify & Continue →
                           <motion.div
                             animate={{ x: [0, 5, 0] }}
                             transition={{ duration: 1.5, repeat: Infinity }}
@@ -1525,7 +1465,6 @@ export default function Login() {
               </>
             )}
 
-            {/* Sign Up Link */}
             <motion.div
               variants={fadeInUp}
               className="text-center mt-6 pt-6 border-t border-gray-200"
