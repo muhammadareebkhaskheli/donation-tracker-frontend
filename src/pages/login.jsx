@@ -484,23 +484,8 @@ export default function Login() {
   };
 
   const getDeviceInfo = () => {
-    const ua = navigator.userAgent;
-    let os = "Unknown";
-    let browser = "Unknown";
-
-    if (ua.indexOf("Win") !== -1) os = "Windows";
-    else if (ua.indexOf("Mac") !== -1) os = "MacOS";
-    else if (ua.indexOf("Linux") !== -1) os = "Linux";
-    else if (ua.indexOf("Android") !== -1) os = "Android";
-    else if (ua.indexOf("iOS") !== -1) os = "iOS";
-
-    if (ua.indexOf("Chrome") !== -1) browser = "Chrome";
-    else if (ua.indexOf("Firefox") !== -1) browser = "Firefox";
-    else if (ua.indexOf("Safari") !== -1) browser = "Safari";
-    else if (ua.indexOf("Edge") !== -1) browser = "Edge";
-
-    return `${os} ${browser}`;
-  };
+    return navigator.userAgent;
+};
 
   const handleFirstStepSubmit = async (e) => {
     e.preventDefault();
@@ -607,9 +592,7 @@ export default function Login() {
       const verifyData = {
         loginContextToken: loginContextToken,
         code: verificationCode,
-        deviceInfo: getDeviceInfo(),
-        ipAddress: null,
-        location: null
+        deviceInfo: getDeviceInfo()
       };
 
       const response = await authAPI.verifyLoginCode(verifyData);
@@ -1336,7 +1319,7 @@ export default function Login() {
                         data-lpignore="true"
                         data-1p-ignore="true"
                         placeholder="------"
-                        className={`w-full px-4 py-4 border-2 rounded-2xl text-center text-xl font-mono tracking-widest focus:outline-none focus:ring-4 transition-all
+                        className={`w-full px-4 py-4 border-2 rounded-2xl text-center text-xl font-mono tracking-widest focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
                           ${fieldErrors.verification
                             ? 'border-rose-500 bg-white-50 focus:border-rose-500 focus:ring-rose-100'
                             : 'border-gray-200 focus:border-blue-400 focus:ring-blue-100'
@@ -1424,7 +1407,7 @@ export default function Login() {
                         </>
                       ) : (
                         <>
-                          Verify & Continue →
+                          Verify & Continue
                           <motion.div
                             animate={{ x: [0, 5, 0] }}
                             transition={{ duration: 1.5, repeat: Infinity }}
