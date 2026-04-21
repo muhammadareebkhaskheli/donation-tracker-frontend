@@ -1,12 +1,59 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { authAPI } from "../services/api";
 import {
     Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight,
     ShieldCheck, CheckCircle, XCircle, Key, Shield,
-    Users, Settings, Database, ChevronDown
+    Users, Settings, Database, AlertCircle, Clock
 } from "lucide-react";
+
+const shakeAnimation = {
+    initial: {
+        x: 0
+    },
+    shake: {
+        x: [0, -10, 10, -10, 10, 0],
+        transition: {
+            duration: 0.6,
+            ease: "easeInOut"
+        }
+    }
+};
+
+const PasswordStrengthIndicator = memo(({ password, isDark }) => {
+    const getStrength = () => {
+        let score = 0;
+        if (password.length >= 8) score++;
+        if (password.match(/[a-z]/)) score++;
+        if (password.match(/[A-Z]/)) score++;
+        if (password.match(/[0-9]/)) score++;
+        if (password.match(/[^a-zA-Z0-9]/)) score++;
+        return score;
+    };
+
+    const strength = getStrength();
+    const strengthText = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'][strength - 1] || 'Very Weak';
+    const strengthColor = strength <= 2 ? 'text-rose-500' : strength <= 3 ? 'text-amber-500' : 'text-emerald-500';
+    const strengthBg = strength <= 2 ? 'bg-rose-500' : strength <= 3 ? 'bg-amber-500' : 'bg-emerald-500';
+
+    return (
+        <div className="space-y-2">
+            <div className="flex justify-between text-xs">
+                <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Password Strength</span>
+                <span className={strengthColor}>{strengthText}</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                <motion.div
+                    className={`h-full ${strengthBg}`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${strength * 20}%` }}
+                    transition={{ duration: 0.5 }}
+                />
+            </div>
+        </div>
+    );
+});
 
 export default function AdminSignup() {
     const location = useLocation();
@@ -15,9 +62,9 @@ export default function AdminSignup() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isResending, setIsResending] = useState(false);
+    const [inputsReady, setInputsReady] = useState(false);
     const [loginType, setLoginType] = useState("email");
-    const [phoneCode, setPhoneCode] = useState("+92");
-    const [showCountryDropdown, setShowCountryDropdown] = useState(false);
     const [formData, setFormData] = useState({
         firstName: "",
         lastName: "",
@@ -30,25 +77,84 @@ export default function AdminSignup() {
     });
     const [fieldErrors, setFieldErrors] = useState({});
     const [shakeFields, setShakeFields] = useState([]);
+    const [shakeKey, setShakeKey] = useState(0);
 
-    // REAL API Integration States
     const [currentStep, setCurrentStep] = useState('signup');
     const [verificationCode, setVerificationCode] = useState("");
-    const [twoFactorCode, setTwoFactorCode] = useState("");
+    const [verificationMessage, setVerificationMessage] = useState("");
     const [verificationMethod, setVerificationMethod] = useState("email");
     const [isVerifying, setIsVerifying] = useState(false);
-    const [twoFactorSecret, setTwoFactorSecret] = useState("");
-    const [twoFactorQRCode, setTwoFactorQRCode] = useState("");
-    const [isTwoFactorVerifying, setIsTwoFactorVerifying] = useState(false);
     const [currentUserIdentifier, setCurrentUserIdentifier] = useState("");
+    const [verificationToken, setVerificationToken] = useState("");
 
-    // Timer state for code expiration
     const [timer, setTimer] = useState(60);
     const [isTimerActive, setIsTimerActive] = useState(false);
 
-    const dropdownRef = useRef(null);
+    const fieldRefs = {
+        firstName: useRef(null),
+        lastName: useRef(null),
+        email: useRef(null),
+        phone: useRef(null),
+        password: useRef(null),
+        confirmPassword: useRef(null),
+        adminCode: useRef(null),
+        agreeTerms: useRef(null)
+    };
 
-    // Timer effect - ONLY for resend cooldown
+    const validatePassword = (password) => {
+        const hasMinLength = password.length >= 8;
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasLowerCase = /[a-z]/.test(password);
+        const hasNumbers = /\d/.test(password);
+        const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+        return hasMinLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar;
+    };
+
+    const passwordsMatch = formData.password && formData.confirmPassword &&
+        formData.password === formData.confirmPassword;
+
+    const autofillStyles = `
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px white inset !important;
+            box-shadow: 0 0 0 30px white inset !important;
+            -webkit-text-fill-color: #000 !important;
+            transition: background-color 5000s ease-in-out 0s;
+            background-color: white !important;
+        }
+
+        input[type="password"]:-webkit-autofill,
+        input[type="password"]:-webkit-autofill:hover,
+        input[type="password"]:-webkit-autofill:focus,
+        input[type="password"]:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px white inset !important;
+            box-shadow: 0 0 0 30px white inset !important;
+            -webkit-text-fill-color: #000 !important;
+            transition: background-color 5000s ease-in-out 0s;
+            background-color: white !important;
+        }
+
+        input::-webkit-contacts-auto-fill-button,
+        input::-webkit-credentials-auto-fill-button {
+            visibility: hidden;
+            display: none !important;
+            pointer-events: none;
+            height: 0;
+            width: 0;
+            margin: 0;
+        }
+
+        input {
+            autocomplete: off !important;
+        }
+
+        input:-internal-autofill-selected {
+            background-color: white !important;
+        }
+    `;
+
     useEffect(() => {
         let interval;
         if (isTimerActive && timer > 0) {
@@ -61,7 +167,11 @@ export default function AdminSignup() {
         return () => clearInterval(interval);
     }, [isTimerActive, timer]);
 
-    // Start timer when moving to verification step
+    useEffect(() => {
+        const t = setTimeout(() => setInputsReady(true), 100);
+        return () => clearTimeout(t);
+    }, []);
+
     useEffect(() => {
         if (currentStep === 'verify') {
             setTimer(60);
@@ -69,7 +179,6 @@ export default function AdminSignup() {
         }
     }, [currentStep]);
 
-    // Fix for browser back button scroll position
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         if ('scrollRestoration' in history) {
@@ -91,42 +200,66 @@ export default function AdminSignup() {
         };
     }, []);
 
-    // Auto scroll to top when step changes
     useEffect(() => {
         scrollToTop();
     }, [currentStep]);
 
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setShowCountryDropdown(false);
-            }
-        };
+    const handleEnhancedFocus = (e) => {
+        const input = e.target;
+        const fieldName = input.name;
 
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, []);
+        if (['firstName', 'lastName', 'phone', 'email', 'adminCode'].includes(fieldName)) {
+            input.setAttribute('readonly', 'readonly');
+            setTimeout(() => {
+                input.removeAttribute('readonly');
+            }, 5);
+            input.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
+        }
+    };
 
-    // Phone country codes
-    const countryCodes = [
-        { code: "+1", country: "US", flag: "🇺🇸" },
-        { code: "+44", country: "UK", flag: "🇬🇧" },
-        { code: "+91", country: "India", flag: "🇮🇳" },
-        { code: "+92", country: "Pakistan", flag: "🇵🇰" },
-        { code: "+971", country: "UAE", flag: "🇦🇪" },
-        { code: "+966", country: "KSA", flag: "🇸🇦" },
-        { code: "+61", country: "Australia", flag: "🇦🇺" },
-        { code: "+49", country: "Germany", flag: "🇩🇪" },
-        { code: "+33", country: "France", flag: "🇫🇷" },
-        { code: "+81", country: "Japan", flag: "🇯🇵" },
-        { code: "+86", country: "China", flag: "🇨🇳" },
-        { code: "+65", country: "Singapore", flag: "🇸🇬" }
-    ];
+    const handleInput = (e) => {
+        const input = e.target;
+        const fieldName = input.name;
 
-    // Enhanced Animation Variants
+        if (['firstName', 'lastName', 'phone', 'email', 'adminCode'].includes(fieldName)) {
+            input.setAttribute('data-autofill-prevent', Math.random().toString(36).substring(7));
+            input.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
+            setTimeout(() => {
+                input.setAttribute('autocomplete', 'off');
+            }, 5);
+        }
+    };
+
+    const handleKeyDown = (e) => {
+        const input = e.target;
+        const fieldName = input.name;
+
+        if (['firstName', 'lastName', 'phone', 'email', 'adminCode'].includes(fieldName)) {
+            input.setAttribute('data-typing', 'true');
+        }
+    };
+
+    const handlePaste = (e) => {
+        const input = e.target;
+        const fieldName = input.name;
+
+        if (['firstName', 'lastName', 'phone', 'email', 'adminCode'].includes(fieldName)) {
+            e.stopPropagation();
+        }
+    };
+
+    const handleMouseDown = (e) => {
+        const input = e.target;
+        const fieldName = input.name;
+
+        if (['firstName', 'lastName', 'phone', 'email', 'adminCode'].includes(fieldName)) {
+            input.setAttribute('readonly', 'readonly');
+            setTimeout(() => {
+                input.removeAttribute('readonly');
+            }, 5);
+        }
+    };
+
     const fadeInUp = {
         initial: { y: 40, opacity: 0 },
         animate: {
@@ -161,14 +294,6 @@ export default function AdminSignup() {
         }
     };
 
-    const shakeAnimation = {
-        shake: {
-            x: [0, -10, 10, -10, 10, 0],
-            transition: { duration: 0.5 }
-        }
-    };
-
-    // Premium Button Animations
     const buttonAnimation = {
         initial: { scale: 1 },
         hover: {
@@ -257,72 +382,95 @@ export default function AdminSignup() {
         }
     };
 
-    // Admin-specific benefits
     const adminBenefits = [
         {
             icon: Users,
             title: "User Management",
             description: "Approve, reject, and manage recipient requests with full control",
-            color: "from-purple-500 to-pink-400"
+            color: "from-violet-600 to-fuchsia-500"
         },
         {
             icon: Database,
             title: "Advanced Reporting",
             description: "Generate comprehensive reports in XLSX and PDF formats",
-            color: "from-blue-500 to-cyan-400"
+            color: "from-indigo-600 to-blue-500"
         },
         {
             icon: Settings,
             title: "System Configuration",
             description: "Configure donation limits, approver settings, and system parameters",
-            color: "from-green-500 to-emerald-400"
+            color: "from-cyan-600 to-teal-500"
         },
         {
             icon: Shield,
             title: "Security Controls",
             description: "Manage user roles, permissions, and security settings",
-            color: "from-orange-500 to-red-400"
+            color: "from-rose-600 to-orange-500"
         }
     ];
 
-    // Admin roles information
     const adminRoles = [
         {
             role: "Super Admin",
             permissions: "Full system access, user management, configuration",
-            color: "from-purple-600 to-pink-500"
+            color: "from-violet-700 to-fuchsia-600"
         },
         {
             role: "Approver",
             permissions: "Review and approve/reject recipient requests",
-            color: "from-blue-600 to-cyan-500"
+            color: "from-indigo-700 to-blue-600"
         },
         {
             role: "Co-Approver",
             permissions: "Collaborate with other approvers in the approval workflow",
-            color: "from-green-600 to-emerald-500"
+            color: "from-cyan-700 to-teal-600"
         },
         {
             role: "Support Staff",
             permissions: "Register requests and assist donors/recipients",
-            color: "from-orange-600 to-red-500"
+            color: "from-rose-700 to-orange-600"
         }
     ];
 
-    // Auto scroll to top function
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // Validation functions
-    const validateEmail = (email) => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
+    const isValidEmail = (email) => {
+        email = email.trim().toLowerCase();
+
+        if (!email) return false;
+
+        if (!email.endsWith('@gmail.com')) return false;
+
+        const username = email.slice(0, -10);
+
+        if (username.length === 0) return false;
+        if (username.length > 64) return false;
+
+        const usernameRegex = /^[a-z0-9._]+$/;
+        if (!usernameRegex.test(username)) return false;
+
+        if (username.includes('..')) return false;
+
+        if (username.startsWith('.') || username.endsWith('.')) return false;
+
+        if (username.startsWith('_')) return false;
+
+        if (email.split('@gmail.com').length !== 2) return false;
+
+        const parts = email.split('@');
+        if (parts.length !== 2) return false;
+
+        const domain = parts[1];
+        if (domain !== 'gmail.com') return false;
+
+        return true;
     };
 
-    const validatePhone = (phone) => {
-        const phoneRegex = /^\+?[\d\s-()]{10,}$/;
-        return phoneRegex.test(phone.replace(/\s/g, ''));
+    const isValidPhone = (phone) => {
+        const digitsOnly = phone.replace(/\D/g, '');
+        return digitsOnly.length === 10;
     };
 
     const validateAdminCode = (code) => {
@@ -332,11 +480,11 @@ export default function AdminSignup() {
     const validateField = (name, value) => {
         switch (name) {
             case 'email':
-                return value ? validateEmail(value) : false;
+                return value ? isValidEmail(value) : false;
             case 'phone':
-                return value ? validatePhone(value) : true;
+                return value ? isValidPhone(value) : true;
             case 'password':
-                return value.length >= 8;
+                return value.length >= 6;
             case 'confirmPassword':
                 return value === formData.password;
             case 'adminCode':
@@ -346,340 +494,343 @@ export default function AdminSignup() {
         }
     };
 
-    const handleChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }));
+    const triggerShake = (fieldNames) => {
+        setShakeFields(fieldNames);
+        setShakeKey(prev => prev + 1);
 
-        // Clear error when user starts typing
-        if (fieldErrors[name]) {
-            setFieldErrors(prev => ({
-                ...prev,
-                [name]: null
-            }));
+        if (fieldNames.includes('password')) {
+            setTimeout(() => {
+                fieldRefs.password.current?.focus();
+            }, 100);
+        } else if (fieldNames.includes('confirmPassword')) {
+            setTimeout(() => {
+                fieldRefs.confirmPassword.current?.focus();
+            }, 100);
         }
+
+        setTimeout(() => setShakeFields([]), 600);
     };
 
-    // 🔧 ADD THIS MISSING FUNCTION - Fix the white page issue
-    const handleAdminCodeChange = async (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+    const scrollToFirstInvalidField = (invalidFields) => {
+        if (invalidFields.length > 0) {
+            const fieldOrder = [
+                'adminCode', 'firstName', 'lastName', 'email', 'phone', 'password',
+                'confirmPassword', 'agreeTerms'
+            ];
 
-        // Clear error when user starts typing
-        if (fieldErrors[name]) {
-            setFieldErrors(prev => ({ ...prev, [name]: null }));
-        }
+            const firstInvalidField = fieldOrder.find(field =>
+                invalidFields.includes(field)
+            );
 
-        // Validate admin code in real-time (if needed)
-        if (name === 'adminCode' && value.length >= 8) {
-            try {
-                const response = await authAPI.validateInvitation(value);
-                if (response.data.valid) {
-                    setFieldErrors(prev => ({ ...prev, adminCode: null }));
-                } else {
-                    setFieldErrors(prev => ({
-                        ...prev,
-                        adminCode: response.data.message || 'Invalid invitation code'
-                    }));
+            if (firstInvalidField) {
+                const fieldRef = fieldRefs[firstInvalidField];
+
+                if (fieldRef && fieldRef.current) {
+                    setTimeout(() => {
+                        fieldRef.current.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center',
+                            inline: 'nearest'
+                        });
+
+                        const input = fieldRef.current.querySelector('input, select, textarea');
+                        if (input) {
+                            input.focus();
+                            if (input.type !== 'checkbox' && input.type !== 'file') {
+                                input.select();
+                            }
+                        }
+                    }, 100);
                 }
-            } catch (error) {
-                console.error("Invitation validation error:", error);
-                // Don't show error for network issues during typing
             }
         }
     };
 
-    const triggerShake = (fieldNames) => {
-        setShakeFields(fieldNames);
-        setTimeout(() => setShakeFields([]), 500);
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        let processedValue = value;
+
+        if (name === 'firstName' || name === 'lastName') {
+            processedValue = value.replace(/[^a-zA-Z\s]/g, '');
+        } else if (name === 'phone') {
+            processedValue = value.replace(/\D/g, '');
+            if (processedValue.length > 0) {
+                if (processedValue.length > 10) {
+                    processedValue = processedValue.slice(0, 10);
+                }
+                if (processedValue.length <= 3) {
+                } else if (processedValue.length <= 6) {
+                    processedValue = `${processedValue.slice(0, 3)}-${processedValue.slice(3)}`;
+                } else {
+                    processedValue = `${processedValue.slice(0, 3)}-${processedValue.slice(3, 6)}-${processedValue.slice(6)}`;
+                }
+            }
+        } else if (name === 'email') {
+            processedValue = value.toLowerCase().replace(/\s/g, '');
+        }
+
+        const previousValue = formData[name];
+        if (previousValue !== processedValue) {
+            setFormData(prev => ({
+                ...prev,
+                [name]: type === 'checkbox' ? checked : processedValue
+            }));
+
+            if (fieldErrors[name]) {
+                setFieldErrors(prev => ({
+                    ...prev,
+                    [name]: null
+                }));
+            }
+        }
     };
 
-    // 🔄 REAL API INTEGRATION - Admin signup handler
     const handleAdminSignup = async (e) => {
         e.preventDefault();
 
-        // Validate all fields
         const errors = {};
-        const requiredFields = ['firstName', 'lastName', 'password', 'confirmPassword', 'adminCode', 'agreeTerms'];
+        const invalidFields = [];
+
+        setShakeFields([]);
+
+        if (!formData.adminCode.trim()) {
+            errors.adminCode = "Admin invitation code is required";
+            invalidFields.push('adminCode');
+        } else if (!validateAdminCode(formData.adminCode)) {
+            errors.adminCode = "Invalid admin invitation code (minimum 8 characters)";
+            invalidFields.push('adminCode');
+        }
+
+        if (!formData.firstName.trim()) {
+            errors.firstName = "First name is required";
+            invalidFields.push('firstName');
+        } else if (!/^[A-Za-z\s]+$/.test(formData.firstName.trim())) {
+            errors.firstName = "Name can only contain alphabets and spaces";
+            invalidFields.push('firstName');
+        }
+
+        if (!formData.lastName.trim()) {
+            errors.lastName = "Last name is required";
+            invalidFields.push('lastName');
+        } else if (!/^[A-Za-z\s]+$/.test(formData.lastName.trim())) {
+            errors.lastName = "Name can only contain alphabets and spaces";
+            invalidFields.push('lastName');
+        }
 
         if (loginType === 'email') {
-            requiredFields.push('email');
-            if (!validateEmail(formData.email)) {
-                errors.email = "Please enter a valid email address";
-            }
-        } else {
-            requiredFields.push('phone');
-            if (!validatePhone(phoneCode + formData.phone)) {
-                errors.phone = "Please enter a valid phone number with country code";
+            if (!formData.email) {
+                errors.email = "Email is required";
+                invalidFields.push('email');
+            } else if (!isValidEmail(formData.email)) {
+                errors.email = "Please enter a valid Gmail address";
+                invalidFields.push('email');
             }
         }
 
-        requiredFields.forEach(field => {
-            if (field === 'agreeTerms') {
-                if (!formData.agreeTerms) {
-                    errors.agreeTerms = "You must agree to the terms";
+        if (loginType === 'phone') {
+            if (!formData.phone) {
+                errors.phone = "Phone number is required";
+                invalidFields.push('phone');
+            } else {
+                const digitsOnly = formData.phone.replace(/\D/g, '');
+                if (digitsOnly.length !== 10) {
+                    errors.phone = "Please enter a valid 10-digit phone number";
+                    invalidFields.push('phone');
                 }
-            } else if (!formData[field]) {
-                errors[field] = "This field is required";
             }
-        });
-
-        if (formData.password.length < 8) {
-            errors.password = "Password must be at least 8 characters";
         }
 
-        if (formData.password !== formData.confirmPassword) {
+        if (!formData.password) {
+            errors.password = "Password is required";
+            invalidFields.push('password');
+        } else if (!validatePassword(formData.password)) {
+            errors.password = "Password must be at least 8 characters with uppercase, lowercase, number, and special character";
+            invalidFields.push('password');
+        }
+
+        if (!formData.confirmPassword) {
+            errors.confirmPassword = "Please confirm your password";
+            invalidFields.push('confirmPassword');
+        } else if (formData.password !== formData.confirmPassword) {
             errors.confirmPassword = "Passwords do not match";
+            invalidFields.push('confirmPassword');
         }
 
-        if (!validateAdminCode(formData.adminCode)) {
-            errors.adminCode = "Invalid admin invitation code";
+        if (!formData.agreeTerms) {
+            errors.agreeTerms = "You must agree to the terms";
+            invalidFields.push('agreeTerms');
         }
 
         if (Object.keys(errors).length > 0) {
             setFieldErrors(errors);
-            triggerShake(Object.keys(errors));
+            triggerShake(invalidFields);
+            scrollToFirstInvalidField(invalidFields);
             return;
         }
 
         setIsLoading(true);
+        setFieldErrors({});
 
         try {
-            const adminRegistrationData = {
-                firstName: formData.firstName,
-                lastName: formData.lastName,
+            const signupData = {
+                fullName: `${formData.firstName} ${formData.lastName}`.trim(),
+                email: loginType === 'email' ? formData.email : null,
                 password: formData.password,
-                userType: 'admin',
-                adminCode: formData.adminCode,
-                role: 'admin'
+                userType: 'ADMIN',
+                phone: loginType === 'phone' ? `+91${formData.phone.replace(/\D/g, '')}` : null,
+                adminCode: formData.adminCode
             };
 
-            if (loginType === 'email') {
-                adminRegistrationData.email = formData.email;
-                adminRegistrationData.phone = null;
-            } else {
-                adminRegistrationData.phone = phoneCode + formData.phone;
-                adminRegistrationData.email = null;
+            if (!signupData.email) delete signupData.email;
+            if (!signupData.phone) delete signupData.phone;
+
+            const response = await authAPI.adminSignup(signupData);
+            
+            if (response.data.verificationToken) {
+                setVerificationToken(response.data.verificationToken);
             }
 
-            console.log("Sending admin registration data:", adminRegistrationData);
-
-            const response = await authAPI.registerAdmin({
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                email: formData.email,
-                phone: formData.phone,
-                password: formData.password,
-                adminCode: formData.adminCode,
-                userType: 'admin'
-            });
-
-            // Add this function to validate invitation code
-            const validateAdminCode = async (code) => {
-                try {
-                    const response = await authAPI.validateInvitation(code);
-                    if (response.data.valid) {
-                        return { isValid: true, role: response.data.role };
-                    } else {
-                        return { isValid: false, error: response.data.message || 'Invalid invitation code' };
-                    }
-                } catch (error) {
-                    return { isValid: false, error: 'Failed to validate invitation code' };
-                }
-            };
-
-            // Use it in your form validation
-            const handleAdminCodeChange = async (e) => {
-                const code = e.target.value;
-                setFormData(prev => ({ ...prev, adminCode: code }));
-
-                if (code.length >= 8) {
-                    const validation = await validateAdminCode(code);
-                    if (!validation.isValid) {
-                        setFieldErrors({ adminCode: validation.error });
-                    } else {
-                        setFieldErrors(prev => ({ ...prev, adminCode: null }));
-                    }
-                }
-            };
-
-            if (response.data.success) {
-                const identifier = loginType === 'email' ? formData.email : phoneCode + formData.phone;
-                setCurrentUserIdentifier(identifier);
-                setVerificationMethod(loginType);
-                setCurrentStep('verify');
-                setFieldErrors({});
-
-                console.log("Admin registration successful, moving to verification:", response.data);
-                scrollToTop();
-
-            } else {
-                throw new Error(response.data.message || "Admin registration failed");
-            }
+            const identifier = loginType === 'email' ? formData.email : `+91${formData.phone.replace(/\D/g, '')}`;
+            setCurrentUserIdentifier(identifier);
+            setVerificationMethod(loginType);
+            setCurrentStep('verify');
+            setVerificationMessage(response.data.message || "Verification code sent to your email");
 
         } catch (error) {
-            console.error("Admin registration error:", error);
-            setFieldErrors({
-                submit: error.response?.data?.message || "Admin registration failed. Please check your invitation code and information."
-            });
+            console.error('Admin signup error:', error);
+
+            if (error.type === 'VALIDATION') {
+                if (error.message.includes('Email is already in use')) {
+                    setFieldErrors({ email: 'This email is already registered' });
+                    triggerShake(['email']);
+                    scrollToFirstInvalidField(['email']);
+                } else if (error.message.includes('Phone number is already in use')) {
+                    setFieldErrors({ phone: 'This phone number is already registered' });
+                    triggerShake(['phone']);
+                    scrollToFirstInvalidField(['phone']);
+                } else if (error.message.includes('Invalid admin code')) {
+                    setFieldErrors({ adminCode: 'Invalid admin invitation code' });
+                    triggerShake(['adminCode']);
+                    scrollToFirstInvalidField(['adminCode']);
+                } else {
+                    setFieldErrors({ submit: error.message });
+                }
+            } else if (error.type === 'NETWORK') {
+                setFieldErrors({ submit: 'Network error. Please check your connection and try again.' });
+            } else {
+                setFieldErrors({ submit: error.message || 'Registration failed. Please try again.' });
+            }
         } finally {
             setIsLoading(false);
+            scrollToTop();
         }
     };
 
-    // 🔄 REAL API INTEGRATION - Verification code submission
     const handleVerificationSubmit = async (e) => {
         e.preventDefault();
 
         if (!verificationCode || verificationCode.length !== 6) {
             setFieldErrors({ verification: "Please enter a valid 6-digit code" });
+            triggerShake(['verification']);
             return;
         }
 
         setIsVerifying(true);
+        setFieldErrors({});
 
         try {
-            let response;
-
-            if (verificationMethod === 'email') {
-                response = await authAPI.verifyEmail(currentUserIdentifier, verificationCode);
-            } else {
-                response = await authAPI.verifyPhone(currentUserIdentifier, verificationCode);
-            }
-
-            if (response.data.success) {
-                // Move to 2FA setup
-                const twoFactorResponse = await authAPI.setupAuthenticator({
-                    [verificationMethod]: currentUserIdentifier
-                });
-
-                if (twoFactorResponse.data.success) {
-                    setTwoFactorSecret(twoFactorResponse.data.secret);
-                    setTwoFactorQRCode(twoFactorResponse.data.qrCodeUrl);
-                    setCurrentStep('setup2fa');
-                    setVerificationCode("");
-                    setTwoFactorCode("");
-                    setFieldErrors({});
-
-                    console.log("Admin verification successful, moving to 2FA setup");
-                    scrollToTop();
-                } else {
-                    throw new Error("Failed to setup authenticator");
-                }
-            } else {
-                setFieldErrors({ verification: response.data.message || "Invalid verification code" });
-            }
-        } catch (error) {
-            console.error("Admin verification error:", error);
-            setFieldErrors({
-                verification: error.response?.data?.message || "Verification failed. Please try again."
+            const response = await authAPI.verifyEmail({
+                email: formData.email,
+                code: verificationCode
             });
+
+            setCurrentStep('complete');
+            setVerificationCode("");
+
+        } catch (error) {
+            console.error('Verification error:', error);
+
+            if (error.type === 'VALIDATION') {
+                if (error.message.includes('Invalid or expired')) {
+                    setFieldErrors({ verification: 'Invalid or expired verification code' });
+                } else {
+                    setFieldErrors({ verification: error.message });
+                }
+            } else if (error.type === 'NETWORK') {
+                setFieldErrors({ verification: 'Network error. Please check your connection.' });
+            } else {
+                setFieldErrors({ verification: 'Verification failed. Please try again.' });
+            }
+
+            triggerShake(['verification']);
         } finally {
             setIsVerifying(false);
+            scrollToTop();
         }
     };
 
-    // 🔄 REAL API INTEGRATION - 2FA setup verification
-    const handleTwoFactorSetup = async (e) => {
-        e.preventDefault();
-
-        if (!twoFactorCode || twoFactorCode.length !== 6) {
-            setFieldErrors({ twoFactor: "Please enter a valid 6-digit code" });
-            return;
-        }
-
-        setIsTwoFactorVerifying(true);
-
-        try {
-            const response = await authAPI.verifyAuthenticatorSetup({
-                [verificationMethod]: currentUserIdentifier,
-                code: twoFactorCode,
-                secret: twoFactorSecret
-            });
-
-            if (response.data.success) {
-                setCurrentStep('complete');
-                console.log("Admin 2FA setup completed successfully");
-                scrollToTop();
-            } else {
-                setFieldErrors({ twoFactor: response.data.message || "Invalid authentication code" });
-            }
-        } catch (error) {
-            console.error("Admin 2FA verification error:", error);
-            setFieldErrors({
-                twoFactor: error.response?.data?.message || "Setup failed. Please try again."
-            });
-        } finally {
-            setIsTwoFactorVerifying(false);
-        }
-    };
-
-    // Handle completion and redirect to admin login
-    const handleCompletion = () => {
-        scrollToTop();
-        setTimeout(() => {
-            navigate('/signin');
-        }, 100);
-    };
-
-    // Handle back button
-    const handleBackToSignup = () => {
-        setCurrentStep('signup');
-        setVerificationCode("");
-        setTwoFactorCode("");
-        setIsTimerActive(false);
-        setFieldErrors({});
-        scrollToTop();
-    };
-
-    // Handle back from 2FA setup
-    const handleBackToVerification = () => {
-        setCurrentStep('verify');
-        setTwoFactorCode("");
-        setFieldErrors({});
-        scrollToTop();
-    };
-
-    // Resend verification code
     const handleResendVerification = async () => {
         if (isTimerActive && timer > 0) {
             setFieldErrors({ verification: `Please wait ${timer} seconds before resending` });
             return;
         }
 
-        try {
-            const response = await authAPI.resendVerification({
-                [verificationMethod]: currentUserIdentifier,
-                type: verificationMethod === 'email' ? 'email_verification' : 'phone_verification'
-            });
+        setIsResending(true);
+        setFieldErrors({});
 
-            if (response.data.success) {
-                console.log("Verification code resent successfully");
-                setTimer(60);
-                setIsTimerActive(true);
-                setFieldErrors({});
-            } else {
-                throw new Error("Failed to resend verification code");
-            }
+        try {
+            await authAPI.resendVerification(formData.email);
+
+            setTimer(60);
+            setIsTimerActive(true);
+
         } catch (error) {
-            console.error("Resend verification error:", error);
-            setFieldErrors({
-                verification: "Failed to resend verification code. Please try again."
-            });
+            console.error('Resend error:', error);
+
+            if (error.type === 'VALIDATION') {
+                if (error.message.includes('already verified')) {
+                    setFieldErrors({ verification: 'This email is already verified. Please login.' });
+                } else {
+                    setFieldErrors({ verification: error.message || 'Failed to resend code' });
+                }
+            } else if (error.type === 'NETWORK') {
+                setFieldErrors({ verification: 'Network error. Please check your connection.' });
+            } else {
+                setFieldErrors({ verification: 'Failed to resend code. Please try again.' });
+            }
+
+            triggerShake(['verification']);
+        } finally {
+            setIsResending(false);
         }
     };
 
-    const selectedCountry = countryCodes.find(country => country.code === phoneCode);
+    const getMaskedEmail = (email) => {
+        if (!email) return "";
+        const [localPart, domain] = email.split('@');
+        if (localPart.length <= 3) return email;
+        return `${localPart.slice(0, 3)}***@${domain}`;
+    };
 
-    // Render different steps
+    const handleCompletion = () => {
+        scrollToTop();
+        setTimeout(() => {
+            navigate('/login');
+        }, 100);
+    };
+
+    const handleBackToSignup = () => {
+        setCurrentStep('signup');
+        setVerificationCode("");
+        setIsTimerActive(false);
+        setFieldErrors({});
+        scrollToTop();
+    };
+
     const renderStep = () => {
         switch (currentStep) {
             case 'verify':
                 return renderVerificationStep();
-            case 'setup2fa':
-                return renderTwoFactorSetupStep();
             case 'complete':
                 return renderCompletionStep();
             default:
@@ -687,106 +838,108 @@ export default function AdminSignup() {
         }
     };
 
-    // Mobile Benefits Section
-    const MobileBenefits = () => (
-        <motion.div
-            variants={fadeInUp}
-            className="lg:hidden mb-6 space-y-4"
-        >
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
-                <h3 className="font-bold text-gray-800 text-center mb-3 text-lg">
-                    Admin Benefits
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                    {adminBenefits.map((benefit, index) => (
-                        <motion.div
-                            key={index}
-                            className="text-center p-3 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-100"
-                            whileHover={{ scale: 1.05 }}
-                        >
-                            <motion.div
-                                className={`w-10 h-10 bg-gradient-to-br ${benefit.color} rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg`}
-                            >
-                                <benefit.icon className="w-5 h-5 text-white" />
-                            </motion.div>
-                            <p className="text-xs text-gray-700 font-semibold leading-tight">{benefit.title}</p>
-                        </motion.div>
-                    ))}
-                </div>
-            </div>
-        </motion.div>
-    );
 
-    // Verification Step
+
     const renderVerificationStep = () => (
         <>
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-center mb-6"
+                className="text-center mb-8"
             >
                 <motion.div
                     variants={iconAnimation}
                     initial="initial"
                     animate="animate"
-                    className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-purple-500 to-pink-400 rounded-2xl lg:rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl"
+                    whileHover="hover"
+                    className="w-20 h-20 bg-gradient-to-br from-violet-600 to-fuchsia-500 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl cursor-pointer"
                 >
-                    <Mail className="w-8 h-8 lg:w-10 lg:h-10 text-white" />
+                    <Mail className="w-10 h-10 text-white" />
                 </motion.div>
 
                 <motion.h2
-                    className="text-2xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-purple-800 bg-clip-text text-transparent mb-3"
+                    className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-violet-800 bg-clip-text text-transparent mb-3"
                 >
                     Verify Admin Account
                 </motion.h2>
                 <motion.p
-                    className="text-gray-600 text-base lg:text-lg mb-4"
+                    className="text-gray-600 text-lg mb-6"
                 >
                     We sent a 6-digit code to your {verificationMethod}
                 </motion.p>
 
-                <div className="bg-purple-50 rounded-xl lg:rounded-2xl p-3 lg:p-4 border border-purple-200">
+                <div className="bg-violet-50 rounded-2xl p-4 border border-violet-200">
                     <div className="flex items-center gap-3">
-                        <ShieldCheck className="w-4 h-4 lg:w-5 lg:h-5 text-purple-600" />
+                        <ShieldCheck className="w-5 h-5 text-violet-600" />
                         <div className="text-left">
-                            <p className="text-purple-800 text-sm font-medium">Admin Account Verification</p>
-                            <p className="text-purple-600 text-xs">Enter the code sent to {currentUserIdentifier}</p>
+                            <p className="text-violet-800 text-sm font-medium">Admin Account Verification</p>
+                            <p className="text-violet-600 text-xs">Enter the code sent to {getMaskedEmail(currentUserIdentifier)}</p>
                         </div>
                     </div>
                 </div>
+
+                {verificationMessage && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-4 text-green-600 text-sm"
+                    >
+                        {verificationMessage}
+                    </motion.div>
+                )}
             </motion.div>
 
-            <form onSubmit={handleVerificationSubmit} className="space-y-4 lg:space-y-5">
+            <form onSubmit={handleVerificationSubmit} className="space-y-5" autoComplete="off">
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
                 >
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Verification Code *
+                        &nbsp;Verification Code <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
                     </label>
-                    <input
-                        type="text"
-                        value={verificationCode}
-                        onChange={(e) => {
-                            setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6));
-                            if (fieldErrors.verification) {
-                                setFieldErrors(prev => ({ ...prev, verification: null }));
-                            }
-                        }}
-                        className="w-full px-4 py-3 lg:py-4 border-2 border-gray-200 rounded-xl lg:rounded-2xl text-center text-lg lg:text-xl font-mono tracking-widest focus:outline-none focus:border-purple-400 focus:ring-2 lg:focus:ring-4 focus:ring-purple-100"
-                        placeholder="000000"
-                        maxLength={6}
-                        autoFocus
-                    />
+                    <motion.div
+                        key={`verification-${shakeKey}`}
+                        animate={shakeFields.includes('verification') ? "shake" : "initial"}
+                        variants={shakeAnimation}
+                        className="overflow-visible"
+                    >
+                        <input
+                            type="text"
+                            name="verificationCode"
+                            value={verificationCode}
+                            onChange={(e) => {
+                                setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                                if (fieldErrors.verification) {
+                                    setFieldErrors(prev => ({ ...prev, verification: null }));
+                                }
+                            }}
+                            onFocus={handleEnhancedFocus}
+                            onInput={handleInput}
+                            onKeyDown={handleKeyDown}
+                            onPaste={handlePaste}
+                            onMouseDown={handleMouseDown}
+                            autoComplete="off"
+                            data-form-type="other"
+                            data-lpignore="true"
+                            data-1p-ignore="true"
+                            className={`w-full px-4 py-4 border-2 rounded-2xl text-center text-xl font-mono tracking-widest focus:outline-none focus:ring-4 transition-all
+                                ${fieldErrors.verification
+                                    ? 'border-rose-500 bg-white-50 focus:border-rose-500 focus:ring-rose-100'
+                                    : 'border-gray-200 focus:border-violet-400 focus:ring-violet-100'
+                                }`}
+                            placeholder="------"
+                            maxLength={6}
+                            autoFocus
+                        />
+                    </motion.div>
                     {fieldErrors.verification && (
-                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
                             <XCircle className="w-4 h-4" /> {fieldErrors.verification}
                         </motion.p>
                     )}
                 </motion.div>
 
-                {/* Resend Code Link */}
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -796,16 +949,20 @@ export default function AdminSignup() {
                     <motion.button
                         type="button"
                         onClick={handleResendVerification}
-                        disabled={isTimerActive && timer > 0}
+                        disabled={isTimerActive && timer > 0 || isResending || isVerifying}
                         variants={linkAnimation}
                         whileHover="hover"
                         whileTap="tap"
-                        className={`font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden ${isTimerActive && timer > 0
+                        className={`font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden ${isTimerActive && timer > 0 || isResending || isVerifying
                             ? "text-gray-400 cursor-not-allowed"
-                            : "text-purple-600 hover:text-purple-700"
+                            : "text-violet-600 hover:text-violet-700"
                             }`}
                     >
-                        {isTimerActive && timer > 0 ? (
+                        {isResending ? (
+                            "Sending..."
+                        ) : isVerifying ? (
+                            "Sending..."
+                        ) : isTimerActive && timer > 0 ? (
                             `Resend available in ${timer}s`
                         ) : (
                             <>
@@ -817,13 +974,12 @@ export default function AdminSignup() {
                                 >
                                     →
                                 </motion.span>
-                                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-purple-600 transition-all duration-300 group-hover:w-full" />
+                                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-violet-600 transition-all duration-300 group-hover:w-full" />
                             </>
                         )}
                     </motion.button>
                 </motion.div>
 
-                {/* Continue Button */}
                 <motion.button
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -832,11 +988,17 @@ export default function AdminSignup() {
                     disabled={isVerifying || verificationCode.length !== 6}
                     whileHover="hover"
                     whileTap="tap"
-                    className="w-full py-4 lg:py-5 px-6 bg-gradient-to-r from-purple-600 to-pink-500 
-                   text-white font-bold text-base lg:text-lg rounded-xl lg:rounded-2xl shadow-xl lg:shadow-2xl hover:shadow-2xl lg:hover:shadow-3xl
-                   transform transition-all duration-300
-                   disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
+                    className="w-full py-5 px-6 bg-gradient-to-r from-violet-600 to-fuchsia-500 
+                             text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
+                             transform transition-all duration-300
+                             disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
                 >
+                    <motion.div
+                        className="absolute inset-0 rounded-2xl border-2 border-violet-400"
+                        variants={pulseAnimation}
+                        whileHover="hover"
+                    />
+
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
 
                     <span className="relative z-10 flex items-center gap-3">
@@ -845,25 +1007,24 @@ export default function AdminSignup() {
                                 <motion.div
                                     animate={{ rotate: 360 }}
                                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                    className="w-5 h-5 lg:w-6 lg:h-6 border-2 border-white border-t-transparent rounded-full"
+                                    className="w-6 h-6 border-2 border-white border-t-transparent rounded-full"
                                 />
                                 Verifying...
                             </>
                         ) : (
                             <>
-                                Continue to Security Setup
+                                Complete Verification
                                 <motion.div
                                     animate={{ x: [0, 5, 0] }}
                                     transition={{ duration: 1.5, repeat: Infinity }}
                                 >
-                                    <ArrowRight className="w-4 h-4 lg:w-5 lg:h-5" />
+                                    <ArrowRight className="w-5 h-5" />
                                 </motion.div>
                             </>
                         )}
                     </span>
                 </motion.button>
 
-                {/* Back Button */}
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -876,7 +1037,7 @@ export default function AdminSignup() {
                         variants={backLinkAnimation}
                         whileHover="hover"
                         whileTap="tap"
-                        className="text-purple-600 hover:text-purple-700 font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden text-sm lg:text-base"
+                        className="text-violet-600 hover:text-violet-700 font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden"
                     >
                         <motion.span
                             animate={{ x: [0, -3, 0] }}
@@ -886,234 +1047,86 @@ export default function AdminSignup() {
                             ←
                         </motion.span>
                         Back to admin signup
-                        <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-purple-600 transition-all duration-300 group-hover:w-full" />
+                        <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-violet-600 transition-all duration-300 group-hover:w-full" />
                     </motion.button>
+                </motion.div>
+
+                <motion.div
+                    variants={fadeInUp}
+                    className="text-center mt-6 pt-6 border-t border-gray-200"
+                >
+                    <p className="text-gray-600">
+                        Already have an account?{" "}
+                        <motion.a
+                            href="/login"
+                            variants={linkAnimation}
+                            whileHover="hover"
+                            whileTap="tap"
+                            className="text-violet-600 font-semibold hover:text-violet-700 transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden"
+                        >
+                            Sign In account
+                            <motion.span
+                                animate={{ x: [0, 3, 0] }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                                className="group-hover:translate-x-1 transition-transform duration-300"
+                            >
+                                →
+                            </motion.span>
+                            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-violet-600 transition-all duration-300 group-hover:w-full" />
+                        </motion.a>
+                    </p>
                 </motion.div>
             </form>
         </>
     );
 
-    // 2FA Setup Step with QR Code
-    const renderTwoFactorSetupStep = () => (
-        <>
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center mb-6"
-            >
-                <motion.div
-                    variants={iconAnimation}
-                    initial="initial"
-                    animate="animate"
-                    className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-green-500 to-emerald-400 rounded-2xl lg:rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl"
-                >
-                    <Shield className="w-8 h-8 lg:w-10 lg:h-10 text-white" />
-                </motion.div>
-
-                <motion.h2
-                    className="text-2xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-green-800 bg-clip-text text-transparent mb-3"
-                >
-                    Setup Two-Factor Authentication
-                </motion.h2>
-                <motion.p
-                    className="text-gray-600 text-base lg:text-lg mb-4"
-                >
-                    Secure your admin account with 2FA (Mandatory)
-                </motion.p>
-
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl lg:rounded-2xl p-3 lg:p-4 border border-green-200">
-                    <div className="flex items-center gap-3">
-                        <Key className="w-4 h-4 lg:w-5 lg:h-5 text-green-600" />
-                        <div className="text-left">
-                            <p className="text-green-800 text-sm font-medium">Enhanced Security Required</p>
-                            <p className="text-green-600 text-xs">2FA is mandatory for all admin accounts</p>
-                        </div>
-                    </div>
-                </div>
-            </motion.div>
-
-            <div className="space-y-4 lg:space-y-6">
-                {/* QR Code Section */}
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="bg-white rounded-xl lg:rounded-2xl p-4 lg:p-6 border-2 border-gray-100 text-center"
-                >
-                    <h3 className="font-bold text-gray-800 mb-3 lg:mb-4">Scan QR Code</h3>
-                    <div className="bg-gray-50 rounded-lg lg:rounded-xl p-3 lg:p-4 inline-block mb-3 lg:mb-4">
-                        {twoFactorQRCode ? (
-                            <img
-                                src={twoFactorQRCode}
-                                alt="QR Code for 2FA Setup"
-                                className="w-40 h-40 lg:w-48 lg:h-48 rounded-lg"
-                                onError={(e) => {
-                                    e.target.style.display = 'none';
-                                    const fallback = e.target.parentElement.querySelector('.qr-fallback');
-                                    if (fallback) fallback.style.display = 'block';
-                                }}
-                            />
-                        ) : null}
-                        <div className={`w-40 h-40 lg:w-48 lg:h-48 bg-gray-200 rounded-lg flex items-center justify-center qr-fallback ${twoFactorQRCode ? 'hidden' : 'block'}`}>
-                            <span className="text-gray-500 text-sm">Generating QR Code...</span>
-                        </div>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3 lg:mb-4">
-                        Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
-                    </p>
-                    <div className="bg-blue-50 rounded-lg lg:rounded-xl p-2 lg:p-3">
-                        <p className="text-xs text-blue-700 font-mono break-all">
-                            Secret: {twoFactorSecret}
-                        </p>
-                    </div>
-                </motion.div>
-
-                {/* Manual Setup Form */}
-                <form onSubmit={handleTwoFactorSetup} className="space-y-4 lg:space-y-5">
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.2 }}
-                    >
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Enter 6-digit code from authenticator *
-                        </label>
-                        <input
-                            type="text"
-                            value={twoFactorCode}
-                            onChange={(e) => {
-                                setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6));
-                                if (fieldErrors.twoFactor) {
-                                    setFieldErrors(prev => ({ ...prev, twoFactor: null }));
-                                }
-                            }}
-                            className="w-full px-4 py-3 lg:py-4 border-2 border-gray-200 rounded-xl lg:rounded-2xl text-center text-lg lg:text-xl font-mono tracking-widest focus:outline-none focus:border-green-400 focus:ring-2 lg:focus:ring-4 focus:ring-green-100"
-                            placeholder="000000"
-                            maxLength={6}
-                            autoFocus
-                        />
-                        {fieldErrors.twoFactor && (
-                            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                                <XCircle className="w-4 h-4" /> {fieldErrors.twoFactor}
-                            </motion.p>
-                        )}
-                    </motion.div>
-
-                    <motion.button
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.3 }}
-                        type="submit"
-                        disabled={isTwoFactorVerifying || twoFactorCode.length !== 6}
-                        whileHover="hover"
-                        whileTap="tap"
-                        className="w-full py-4 lg:py-5 px-6 bg-gradient-to-r from-green-600 to-emerald-500 
-                     text-white font-bold text-base lg:text-lg rounded-xl lg:rounded-2xl shadow-xl lg:shadow-2xl hover:shadow-2xl lg:hover:shadow-3xl
-                     transform transition-all duration-300
-                     disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-
-                        <span className="relative z-10 flex items-center gap-3">
-                            {isTwoFactorVerifying ? (
-                                <>
-                                    <motion.div
-                                        animate={{ rotate: 360 }}
-                                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                        className="w-5 h-5 lg:w-6 lg:h-6 border-2 border-white border-t-transparent rounded-full"
-                                    />
-                                    Verifying 2FA...
-                                </>
-                            ) : (
-                                <>
-                                    Complete Admin Setup
-                                    <motion.div
-                                        animate={{ x: [0, 5, 0] }}
-                                        transition={{ duration: 1.5, repeat: Infinity }}
-                                    >
-                                        <ArrowRight className="w-4 h-4 lg:w-5 lg:h-5" />
-                                    </motion.div>
-                                </>
-                            )}
-                        </span>
-                    </motion.button>
-
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.4 }}
-                        className="text-center"
-                    >
-                        <motion.button
-                            type="button"
-                            onClick={handleBackToVerification}
-                            variants={backLinkAnimation}
-                            whileHover="hover"
-                            whileTap="tap"
-                            className="text-purple-600 hover:text-purple-700 font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden text-sm lg:text-base"
-                        >
-                            <motion.span
-                                animate={{ x: [0, -3, 0] }}
-                                transition={{ duration: 2, repeat: Infinity }}
-                                className="group-hover:-translate-x-1 transition-transform duration-300"
-                            >
-                                ←
-                            </motion.span>
-                            Back to verification
-                            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-purple-600 transition-all duration-300 group-hover:w-full" />
-                        </motion.button>
-                    </motion.div>
-                </form>
-            </div>
-        </>
-    );
-
-    // Completion Step
     const renderCompletionStep = () => (
         <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-center py-6 lg:py-8"
+            className="text-center py-8"
         >
             <motion.div
                 variants={iconAnimation}
                 initial="initial"
                 animate="animate"
-                className="w-20 h-20 lg:w-24 lg:h-24 bg-gradient-to-br from-green-500 to-emerald-400 rounded-2xl lg:rounded-3xl flex items-center justify-center mx-auto mb-4 lg:mb-6 shadow-2xl"
+                whileHover="hover"
+                className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-400 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl cursor-pointer"
             >
-                <CheckCircle className="w-10 h-10 lg:w-12 lg:h-12 text-white" />
+                <CheckCircle className="w-12 h-12 text-white" />
             </motion.div>
 
             <motion.h2
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-2xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-green-800 bg-clip-text text-transparent mb-3 lg:mb-4"
+                className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-green-800 bg-clip-text text-transparent mb-4"
             >
-                Admin Account Created!
+                Admin Account Created Successfully!
             </motion.h2>
 
             <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.6 }}
-                className="text-gray-600 text-base lg:text-lg mb-6 lg:mb-8 leading-relaxed"
+                className="text-gray-600 text-lg mb-8"
             >
-                Your admin account has been created and secured with two-factor authentication.
-                <br className="hidden lg:block" />
-                You can now access the admin dashboard.
+                Your admin account has been verified successfully.
+                <br />
+                You can now sign in to access the admin dashboard.
             </motion.p>
 
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.8 }}
-                className="bg-green-50 rounded-xl lg:rounded-2xl p-4 lg:p-6 border border-green-200 mb-6 lg:mb-8"
+                className="bg-green-50 rounded-2xl p-6 border border-green-200 mb-8"
             >
                 <div className="flex items-center gap-3 justify-center">
-                    <ShieldCheck className="w-5 h-5 lg:w-6 lg:h-6 text-green-600" />
+                    <ShieldCheck className="w-6 h-6 text-green-600" />
                     <div>
-                        <p className="text-green-800 font-semibold text-sm lg:text-base">Admin Security Features Enabled</p>
-                        <p className="text-green-600 text-xs lg:text-sm">Email verification • Two-factor authentication • Encrypted data • Role-based access</p>
+                        <p className="text-green-800 font-semibold">Admin Account Ready</p>
+                        <p className="text-green-600 text-sm">Email verified • Account active • Ready to use</p>
                     </div>
                 </div>
             </motion.div>
@@ -1125,96 +1138,82 @@ export default function AdminSignup() {
                 onClick={handleCompletion}
                 whileHover="hover"
                 whileTap="tap"
-                className="w-full py-4 lg:py-5 px-6 bg-gradient-to-r from-purple-600 to-pink-500 
-                 text-white font-bold text-base lg:text-lg rounded-xl lg:rounded-2xl shadow-xl lg:shadow-2xl hover:shadow-2xl lg:hover:shadow-3xl
-                 transform transition-all duration-300 flex items-center justify-center gap-3 relative overflow-hidden group"
+                className="w-full py-5 px-6 bg-gradient-to-r from-violet-600 to-fuchsia-500 
+                         text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
+                         transform transition-all duration-300 flex items-center justify-center gap-3 relative overflow-hidden group"
             >
+                <motion.div
+                    className="absolute inset-0 rounded-2xl border-2 border-violet-400"
+                    variants={pulseAnimation}
+                    whileHover="hover"
+                />
+
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
 
                 <span className="relative z-10 flex items-center gap-3">
-                    Access Admin Dashboard
+                    Continue to Login
                     <motion.div
                         animate={{ x: [0, 5, 0] }}
                         transition={{ duration: 1.5, repeat: Infinity }}
                     >
-                        <ArrowRight className="w-4 h-4 lg:w-5 lg:h-5" />
+                        <ArrowRight className="w-5 h-5" />
                     </motion.div>
                 </span>
             </motion.button>
         </motion.div>
     );
 
-    // Main Admin Signup Step
     const renderSignupStep = () => (
         <>
             <motion.div
                 variants={fadeInUp}
-                className="text-center mb-6 lg:mb-8"
+                className="text-center mb-8"
             >
                 <motion.h2
                     variants={fadeInUp}
-                    className="text-2xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-purple-800 bg-clip-text text-transparent mb-2 lg:mb-3"
+                    className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-violet-800 bg-clip-text text-transparent mb-3 mt-6"
                 >
-                    Admin Portal Access
+                    Start Your Journey
                 </motion.h2>
                 <motion.p
                     variants={fadeInUp}
-                    className="text-gray-600 text-base lg:text-lg"
+                    className="text-gray-600 text-lg"
                 >
-                    Create your administrator account with enhanced security
+                    Join as an administrator
                 </motion.p>
             </motion.div>
 
-            {/* Mobile Benefits */}
-            <MobileBenefits />
-
-            {/* Admin Code Field */}
             <motion.div
                 variants={fadeInUp}
-                className="mb-4 lg:mb-6"
+                className="lg:hidden mb-6"
             >
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Admin Invitation Code *
-                </label>
-                <motion.div
-                    variants={shakeFields.includes('adminCode') ? shakeAnimation : {}}
-                    animate={shakeFields.includes('adminCode') ? "shake" : "animate"}
-                    className="relative group"
-                >
-                    <Key className="absolute left-3 lg:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-purple-500 z-10" />
-                    <input
-                        type="text"
-                        name="adminCode"
-                        value={formData.adminCode}
-                        onChange={handleAdminCodeChange}
-                        className={`w-full pl-10 lg:pl-12 pr-4 py-3 lg:py-4 border-2 rounded-xl lg:rounded-2xl transition-all duration-300 bg-white/80 backdrop-blur-sm
-              focus:outline-none focus:border-purple-400 focus:ring-2 lg:focus:ring-4 focus:ring-purple-100 focus:ring-opacity-50
-              focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
-              hover:border-purple-300 hover:bg-white
-              ${fieldErrors.adminCode
-                                ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200'
-                                : 'border-gray-200'
-                            }`}
-                        placeholder="Enter admin invitation code"
-                    />
-                    {fieldErrors.adminCode && (
-                        <XCircle className="absolute right-3 lg:right-4 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-red-500" />
-                    )}
-                </motion.div>
-                {fieldErrors.adminCode && (
-                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                        <XCircle className="w-4 h-4" /> {fieldErrors.adminCode}
-                    </motion.p>
-                )}
-                <p className="text-xs text-gray-500 mt-2">
-                    You need a valid admin invitation code to create an account
-                </p>
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
+                    <h3 className="font-bold text-gray-800 text-center mb-4">
+                        Admin Benefits
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                        {adminBenefits.map((benefit, index) => (
+                            <motion.div
+                                key={index}
+                                className="text-center"
+                                whileHover={{ scale: 1.05 }}
+                            >
+                                <motion.div
+                                    className={`w-12 h-12 bg-gradient-to-br ${benefit.color} rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg`}
+                                >
+                                    <benefit.icon className="w-6 h-6 text-white" />
+                                </motion.div>
+                                <p className="text-xs text-gray-700 font-medium mb-1">{benefit.title}</p>
+                                <p className="text-xs text-gray-500">{benefit.description}</p>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
             </motion.div>
 
-            {/* Login Type Toggle */}
             <motion.div
                 variants={fadeInUp}
-                className="flex bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl lg:rounded-2xl p-1 mb-4 lg:mb-6 border border-purple-100"
+                className="flex bg-gradient-to-r from-violet-50 to-fuchsia-50 rounded-2xl p-1 mb-6 border border-violet-100"
             >
                 {[
                     { id: "email", label: "Email", icon: Mail },
@@ -1226,8 +1225,8 @@ export default function AdminSignup() {
                         variants={buttonAnimation}
                         whileHover="hover"
                         whileTap="tap"
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 lg:py-3 px-3 lg:px-4 rounded-lg lg:rounded-xl transition-all duration-300 ${loginType === type.id
-                            ? "bg-gradient-to-r from-purple-500 to-pink-400 text-white shadow-lg"
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-300 ${loginType === type.id
+                            ? "bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white shadow-lg"
                             : "text-gray-600 hover:text-gray-800 hover:bg-white/60"
                             }`}
                     >
@@ -1237,352 +1236,649 @@ export default function AdminSignup() {
                 ))}
             </motion.div>
 
-            {/* Signup Form */}
-            <form onSubmit={handleAdminSignup} className="space-y-4 lg:space-y-5">
-                {/* Full Name - Split into First and Last */}
-                <motion.div
-                    variants={fadeInUp}
-                    className="grid grid-cols-2 gap-3 lg:gap-4"
-                >
-                    <div>
+            <form onSubmit={handleAdminSignup} className="space-y-5" autoComplete="off">
+                <style>{`
+                              input:-webkit-autofill,
+                              input:-webkit-autofill:hover,
+                              input:-webkit-autofill:focus,
+                              input:-webkit-autofill:active {
+                                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                                box-shadow: 0 0 0 30px white inset !important;
+                                -webkit-text-fill-color: #000 !important;
+                                transition: background-color 5000s ease-in-out 0s;
+                              }
+                              
+                              input::-webkit-contacts-auto-fill-button,
+                              input::-webkit-credentials-auto-fill-button {
+                                visibility: hidden;
+                                display: none !important;
+                                pointer-events: none;
+                                height: 0;
+                                width: 0;
+                                margin: 0;
+                              }
+                
+                              input {
+                                autocomplete: off;
+                              }
+                
+                              input[type="text"],
+                              input[type="email"],
+                              input[type="password"],
+                              input[type="tel"] {
+                                -webkit-autofill: off;
+                              }
+                
+                              textarea:-webkit-autofill {
+                                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                                box-shadow: 0 0 0 30px white inset !important;
+                                -webkit-text-fill-color: #000 !important;
+                              }
+                
+                              select:-webkit-autofill {
+                                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                                box-shadow: 0 0 0 30px white inset !important;
+                              }
+                
+                              /* Remove autofill styling and black outline */
+                              input:-webkit-autofill,
+                              input:-webkit-autofill:hover,
+                              input:-webkit-autofill:focus,
+                              input:-webkit-autofill:active {
+                                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                                box-shadow: 0 0 0 30px white inset !important;
+                                -webkit-text-fill-color: #000 !important;
+                                caret-color: #000 !important;
+                                outline: none !important;
+                                border: 2px solid #e5e7eb !important;
+                              }
+                
+                              textarea:-webkit-autofill,
+                              textarea:-webkit-autofill:hover,
+                              textarea:-webkit-autofill:focus {
+                                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                                box-shadow: 0 0 0 30px white inset !important;
+                                -webkit-text-fill-color: #000 !important;
+                                outline: none !important;
+                                border: 2px solid #e5e7eb !important;
+                              }
+                            `}</style>
+                        <motion.div
+                          variants={fadeInUp}
+                        >
+                          <input
+                                type="text"
+                                name="prevent_autofill_username"
+                                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                                autoComplete="username"
+                                readOnly
+                              />
+                              <input
+                                type="password"
+                                name="prevent_autofill_password"
+                                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                                autoComplete="current-password"
+                                readOnly
+                              />
+                              <input
+                                type="text"
+                                name="prevent_autofill_name"
+                                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                                autoComplete="name"
+                                readOnly
+                              />
+                              <input
+                                type="email"
+                                name="prevent_autofill_email"
+                                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                                autoComplete="email"
+                                readOnly
+                              />
+                              <input
+                                type="tel"
+                                name="prevent_autofill_tel"
+                                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                                autoComplete="tel"
+                                readOnly
+                              />
+                              <input
+                                type="text"
+                                name="prevent_autofill_address"
+                                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                                autoComplete="street-address"
+                                readOnly
+                              />
+                    <div ref={fieldRefs.adminCode} className="overflow-visible">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            First Name *
+                            &nbsp;Invitation Code <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
                         </label>
                         <motion.div
-                            variants={shakeFields.includes('firstName') ? shakeAnimation : {}}
-                            animate={shakeFields.includes('firstName') ? "shake" : "animate"}
-                            className="relative group"
+                            animate={shakeFields.includes('adminCode') ? "shake" : "initial"}
+                            variants={shakeAnimation}
+                            className="overflow-visible relative group"
                         >
-                            <User className="absolute left-3 lg:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-purple-500 z-10" />
+                            <Key className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-violet-500 z-10" />
+                            <input
+                                type="text"
+                                name="adminCode"
+                                disabled={!inputsReady}
+                                value={formData.adminCode}
+                                onChange={handleChange}
+                                onFocus={handleEnhancedFocus}
+                                onInput={handleInput}
+                                onKeyDown={handleKeyDown}
+                                onPaste={handlePaste}
+                                onMouseDown={handleMouseDown}
+                                maxLength={50}
+                                autoComplete="off"
+                                data-form-type="other"
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                                className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm text-sm font-medium
+                                focus:outline-none focus:ring-4 focus:ring-violet-400/20 focus:border-violet-500 focus:ring-opacity-50
+                                focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
+                                    ${fieldErrors.adminCode
+                                        ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
+                                        : 'border-gray-200'
+                                    }`}
+                                placeholder="Enter your invitation code..."
+                            />
+                            <div className="absolute bottom-2 right-3 text-xs text-gray-500">
+                                {formData.adminCode.length}/50
+                            </div>
+                        </motion.div>
+                        {fieldErrors.adminCode && (
+                            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
+                                <AlertCircle className="w-4 h-4" /> {fieldErrors.adminCode}
+                            </motion.p>
+                        )}
+                    </div>
+                </motion.div>
+
+                <motion.div variants={fadeInUp}>
+                    <div ref={fieldRefs.firstName} className="overflow-visible">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            &nbsp;First Name <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
+                        </label>
+                        <motion.div
+                            animate={shakeFields.includes('firstName') ? "shake" : "initial"}
+                            variants={shakeAnimation}
+                            className="overflow-visible relative group"
+                        >
+                            <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-violet-500 z-10" />
                             <input
                                 type="text"
                                 name="firstName"
+                                disabled={!inputsReady}
                                 value={formData.firstName}
-                                onChange={handleAdminCodeChange}
-                                className={`w-full pl-10 lg:pl-12 pr-4 py-3 lg:py-4 border-2 rounded-xl lg:rounded-2xl transition-all duration-300 bg-white/80 backdrop-blur-sm
-                  focus:outline-none focus:border-purple-400 focus:ring-2 lg:focus:ring-4 focus:ring-purple-100 focus:ring-opacity-50
-                  focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
-                  hover:border-purple-300 hover:bg-white
-                  ${fieldErrors.firstName
-                                        ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200'
+                                onChange={handleChange}
+                                onFocus={handleEnhancedFocus}
+                                onInput={handleInput}
+                                onKeyDown={handleKeyDown}
+                                onPaste={handlePaste}
+                                onMouseDown={handleMouseDown}
+                                maxLength={50}
+                                autoComplete="off"
+                                data-form-type="other"
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                                className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm text-sm font-medium
+                                focus:outline-none focus:ring-4 focus:ring-violet-400/20 focus:border-violet-500 focus:ring-opacity-50
+                                focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
+                                    ${fieldErrors.firstName
+                                        ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
                                         : 'border-gray-200'
                                     }`}
-                                placeholder="First name"
+                                placeholder="Enter your first name..."
                             />
-                            {fieldErrors.firstName && (
-                                <XCircle className="absolute right-3 lg:right-4 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-red-500" />
-                            )}
+                            <div className="absolute bottom-2 right-3 text-xs text-gray-500">
+                                {formData.firstName.length}/50
+                            </div>
                         </motion.div>
                         {fieldErrors.firstName && (
-                            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                                <XCircle className="w-4 h-4" /> {fieldErrors.firstName}
+                            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
+                                <AlertCircle className="w-4 h-4" /> {fieldErrors.firstName}
                             </motion.p>
                         )}
                     </div>
 
-                    <div>
+                    <div ref={fieldRefs.lastName} className="overflow-visible mt-5">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Last Name *
+                            &nbsp;Last Name <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
                         </label>
                         <motion.div
-                            variants={shakeFields.includes('lastName') ? shakeAnimation : {}}
-                            animate={shakeFields.includes('lastName') ? "shake" : "animate"}
-                            className="relative group"
+                            animate={shakeFields.includes('lastName') ? "shake" : "initial"}
+                            variants={shakeAnimation}
+                            className="overflow-visible relative group"
                         >
-                            <User className="absolute left-3 lg:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-purple-500 z-10" />
+                            <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-violet-500 z-10" />
                             <input
                                 type="text"
                                 name="lastName"
+                                disabled={!inputsReady}
                                 value={formData.lastName}
-                                onChange={handleAdminCodeChange}
-                                className={`w-full pl-10 lg:pl-12 pr-4 py-3 lg:py-4 border-2 rounded-xl lg:rounded-2xl transition-all duration-300 bg-white/80 backdrop-blur-sm
-                  focus:outline-none focus:border-purple-400 focus:ring-2 lg:focus:ring-4 focus:ring-purple-100 focus:ring-opacity-50
-                  focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
-                  hover:border-purple-300 hover:bg-white
-                  ${fieldErrors.lastName
-                                        ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200'
+                                onChange={handleChange}
+                                onFocus={handleEnhancedFocus}
+                                onInput={handleInput}
+                                onKeyDown={handleKeyDown}
+                                onPaste={handlePaste}
+                                onMouseDown={handleMouseDown}
+                                maxLength={50}
+                                autoComplete="off"
+                                data-form-type="other"
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                                className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm text-sm font-medium
+                                focus:outline-none focus:ring-4 focus:ring-violet-400/20 focus:border-violet-500 focus:ring-opacity-50
+                                focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
+                                    ${fieldErrors.lastName
+                                        ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
                                         : 'border-gray-200'
                                     }`}
-                                placeholder="Last name"
+                                placeholder="Enter your last name..."
                             />
-                            {fieldErrors.lastName && (
-                                <XCircle className="absolute right-3 lg:right-4 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-red-500" />
-                            )}
+                            <div className="absolute bottom-2 right-3 text-xs text-gray-500">
+                                {formData.lastName.length}/50
+                            </div>
                         </motion.div>
                         {fieldErrors.lastName && (
-                            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                                <XCircle className="w-4 h-4" /> {fieldErrors.lastName}
+                            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
+                                <AlertCircle className="w-4 h-4" /> {fieldErrors.lastName}
                             </motion.p>
                         )}
                     </div>
                 </motion.div>
 
-                {/* Email or Phone */}
-                <motion.div
-                    variants={fadeInUp}
-                >
+                <motion.div variants={fadeInUp}>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {loginType === 'email' ? 'Email Address *' : 'Phone Number *'}
-                    </label>
-                    <motion.div
-                        variants={shakeFields.includes(loginType) ? shakeAnimation : {}}
-                        animate={shakeFields.includes(loginType) ? "shake" : "animate"}
-                        className="relative group"
-                    >
                         {loginType === 'email' ? (
-                            <Mail className="absolute left-3 lg:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-purple-500 z-10" />
+                            <>&nbsp;Email Address <span className="text-rose-600 font-normal normal-case">&nbsp;*</span></>
                         ) : (
-                            <>
-                                <Phone className="absolute left-3 lg:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-purple-500 z-10" />
+                            <>&nbsp;Phone Number <span className="text-rose-600 font-normal normal-case">&nbsp;*</span></>
+                        )}
+                    </label>
 
-                                {/* Phone Code Dropdown */}
-                                <div className="absolute left-10 lg:left-12 h-full flex items-center z-20" ref={dropdownRef}>
-                                    <div className="relative">
-                                        <motion.button
-                                            type="button"
-                                            onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                                            variants={buttonAnimation}
-                                            whileHover="hover"
-                                            whileTap="tap"
-                                            className="flex items-center gap-1 lg:gap-2 text-sm text-gray-700 hover:text-gray-900 focus:outline-none bg-white px-2 lg:px-3 py-1 lg:py-2 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
-                                        >
-                                            <span className="text-base">{selectedCountry?.flag}</span>
-                                            <span className="font-medium text-xs lg:text-sm">{selectedCountry?.code}</span>
-                                            <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform ${showCountryDropdown ? 'rotate-180' : ''}`} />
-                                        </motion.button>
-
-                                        {/* Dropdown Menu */}
-                                        {showCountryDropdown && (
-                                            <div className="absolute top-full left-0 mt-1 w-40 lg:w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-30 max-h-48 lg:max-h-60 overflow-y-auto">
-                                                {countryCodes.map((country) => (
-                                                    <motion.button
-                                                        key={country.code}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setPhoneCode(country.code);
-                                                            setShowCountryDropdown(false);
-                                                        }}
-                                                        variants={linkAnimation}
-                                                        whileHover="hover"
-                                                        whileTap="tap"
-                                                        className={`w-full text-left px-3 lg:px-4 py-2 lg:py-3 hover:bg-purple-50 transition-colors flex items-center gap-2 lg:gap-3 border-b border-gray-100 last:border-b-0 ${phoneCode === country.code ? 'bg-purple-50 text-purple-600' : 'text-gray-700'
-                                                            }`}
-                                                    >
-                                                        <span className="text-base">{country.flag}</span>
-                                                        <span className="flex-1 font-medium text-xs lg:text-sm">{country.country}</span>
-                                                        <span className="text-gray-500 text-xs lg:text-sm">{country.code}</span>
-                                                    </motion.button>
-                                                ))}
+                    {loginType === 'email' ? (
+                        <div ref={fieldRefs.email} className="overflow-visible">
+                            <motion.div
+                                animate={shakeFields.includes('email') ? "shake" : "initial"}
+                                variants={shakeAnimation}
+                                className="overflow-visible relative group"
+                            >
+                                <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-violet-500 z-10" />
+                                <input
+                                    type="text"
+                                    name="email"
+                                    disabled={!inputsReady}
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    onFocus={handleEnhancedFocus}
+                                    onInput={handleInput}
+                                    onKeyDown={handleKeyDown}
+                                    onPaste={handlePaste}
+                                    onMouseDown={handleMouseDown}
+                                    maxLength={100}
+                                    autoComplete="off"
+                                    data-form-type="other"
+                                    data-lpignore="true"
+                                    data-1p-ignore="true"
+                                    className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm text-sm font-medium
+                                focus:outline-none focus:ring-4 focus:ring-violet-400/20 focus:border-violet-500 focus:ring-opacity-50
+                                focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
+                                        ${fieldErrors.email
+                                            ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
+                                            : 'border-gray-200'
+                                        }`}
+                                    placeholder="Enter your email..."
+                                />
+                                <div className="absolute bottom-2 right-3 text-xs text-gray-500">
+                                    {formData.email.length}/100
+                                </div>
+                                {formData.email && validateField('email', formData.email) && (
+                                    <CheckCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 z-10" />
+                                )}
+                            </motion.div>
+                            {fieldErrors.email && (
+                                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
+                                    <AlertCircle className="w-4 h-4" /> {fieldErrors.email}
+                                </motion.p>
+                            )}
+                        </div>
+                    ) : (
+                        <div ref={fieldRefs.phone} className="overflow-visible">
+                            <motion.div
+                                animate={shakeFields.includes('phone') ? "shake" : "initial"}
+                                variants={shakeAnimation}
+                                className="overflow-visible"
+                            >
+                                <div className="flex gap-2">
+                                    <div className="flex-shrink-0">
+                                        <div className={`h-[56px] flex items-center px-4 rounded-2xl border-2 text-sm ${fieldErrors.phone
+                                            ? 'border-rose-500 bg-white/80'
+                                            : 'border-gray-200 bg-white/80'
+                                            }`}>
+                                            <div className={`flex items-center gap-2 ${formData.phone && formData.phone.replace(/\D/g, '').length > 0
+                                                ? 'text-gray-900'
+                                                : 'text-gray-500'
+                                                }`}>
+                                                <span className="text-lg">🇮🇳</span>
+                                                <span className="text-sm">+91</span>
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 relative">
+                                        <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-violet-500 z-10" />
+                                        <input
+                                            type="text"
+                                            name="phone"
+                                            value={formData.phone}
+                                            onChange={handleChange}
+                                            onFocus={handleEnhancedFocus}
+                                            onInput={handleInput}
+                                            onKeyDown={handleKeyDown}
+                                            onPaste={handlePaste}
+                                            onMouseDown={handleMouseDown}
+                                            placeholder="Enter your phone..."
+                                            maxLength={12}
+                                            autoComplete="off"
+                                            data-form-type="other"
+                                            data-lpignore="true"
+                                            data-1p-ignore="true"
+                                            className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm text-sm font-medium
+                                focus:outline-none focus:ring-4 focus:ring-violet-400/20 focus:border-violet-500 focus:ring-opacity-50
+                                focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
+                                                ${fieldErrors.phone
+                                                    ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
+                                                    : 'border-gray-200'
+                                                }`}
+                                        />
+                                        <div className={`absolute bottom-2 right-3 text-xs ${fieldErrors.phone ? 'text-rose-600' : 'text-gray-500'}`}>
+                                            {formData.phone.replace(/\D/g, '').length}/10
+                                        </div>
+                                        {formData.phone && validateField('phone', formData.phone) && (
+                                            <CheckCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 z-10" />
                                         )}
                                     </div>
                                 </div>
-                            </>
-                        )}
-                        <input
-                            type={loginType === 'email' ? 'email' : 'tel'}
-                            name={loginType}
-                            value={formData[loginType]}
-                            onChange={handleAdminCodeChange}
-                            className={`w-full rounded-xl lg:rounded-2xl border-2 transition-all duration-300 bg-white/80 backdrop-blur-sm
-                focus:outline-none focus:border-purple-400 focus:ring-2 lg:focus:ring-4 focus:ring-purple-100 focus:ring-opacity-50
-                focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
-                hover:border-purple-300 hover:bg-white
-                ${loginType === 'phone' ? 'pl-24 lg:pl-[9.5rem]' : 'pl-10 lg:pl-12'}
-                pr-10 lg:pr-12 py-3 lg:py-4
-                ${fieldErrors[loginType]
-                                    ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200'
-                                    : 'border-gray-200'
-                                }`}
-                            placeholder={loginType === 'email' ? 'Enter your email' : 'Enter your phone'}
-                        />
-                        {formData[loginType] && validateField(loginType, formData[loginType]) && (
-                            <CheckCircle className="absolute right-3 lg:right-4 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-green-500 z-10" />
-                        )}
-                        {fieldErrors[loginType] && (
-                            <XCircle className="absolute right-3 lg:right-4 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-red-500 z-10" />
-                        )}
-                    </motion.div>
-                    {fieldErrors[loginType] && (
-                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                            <XCircle className="w-4 h-4" /> {fieldErrors[loginType]}
-                        </motion.p>
+                            </motion.div>
+                            {fieldErrors.phone && (
+                                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
+                                    <AlertCircle className="w-4 h-4" /> {fieldErrors.phone}
+                                </motion.p>
+                            )}
+                        </div>
                     )}
                 </motion.div>
 
-                {/* Password */}
-                <motion.div
-                    variants={fadeInUp}
-                >
+                <motion.div variants={fadeInUp}>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Password *
+                        &nbsp;Password <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
                     </label>
-                    <motion.div
-                        variants={shakeFields.includes('password') ? shakeAnimation : {}}
-                        animate={shakeFields.includes('password') ? "shake" : "animate"}
-                        className="relative group"
-                    >
-                        <Lock className="absolute left-3 lg:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-purple-500 z-10" />
-                        <input
-                            type={showPassword ? "text" : "password"}
-                            name="password"
-                            value={formData.password}
-                            onChange={handleAdminCodeChange}
-                            className={`w-full pl-10 lg:pl-12 pr-10 lg:pr-12 py-3 lg:py-4 border-2 rounded-xl lg:rounded-2xl transition-all duration-300 bg-white/80 backdrop-blur-sm
-                focus:outline-none focus:border-purple-400 focus:ring-2 lg:focus:ring-4 focus:ring-purple-100 focus:ring-opacity-50
-                focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
-                hover:border-purple-300 hover:bg-white
-                ${fieldErrors.password
-                                    ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200'
-                                    : 'border-gray-200'
-                                }`}
-                            placeholder="Create a strong password (min. 8 characters)"
-                        />
+                    <div ref={fieldRefs.password} className="overflow-visible">
+                        <motion.div
+                            key={`password-${shakeKey}`}
+                            animate={shakeFields.includes('password') ? "shake" : "initial"}
+                            variants={shakeAnimation}
+                            className="overflow-visible relative group"
+                        >
+                            <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-violet-500 z-10" />
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                name="password"
+                                value={formData.password}
+                                onChange={handleChange}
+                                maxLength={50}
+                                autoComplete="off"
+                                data-form-type="other"
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                                data-bwignore="true"
+                                data-ignore="true"
+                                readOnly={false}
+                                onFocus={(e) => {
+                                    e.target.removeAttribute('readonly');
+                                    e.target.setAttribute('autocomplete', 'off');
+                                }}
+                                className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm text-sm font-medium
+                                focus:outline-none focus:ring-4 focus:ring-violet-400/20 focus:border-violet-500 focus:ring-opacity-50
+                                focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
+                                    ${fieldErrors.password
+                                        ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
+                                        : 'border-gray-200'
+                                    }`}
+                                placeholder="Enter your password..."
+                            />
 
-                        {/* Eye button */}
-                        <div className="absolute right-3 lg:right-4 top-1/2 transform -translate-y-1/2 z-10">
-                            <motion.button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                variants={eyeButtonAnimation}
-                                whileHover="hover"
-                                whileTap="tap"
-                                className="text-gray-400 hover:text-purple-500 transition-colors duration-300"
-                            >
-                                {showPassword ? <EyeOff className="w-4 h-4 lg:w-5 lg:h-5" /> : <Eye className="w-4 h-4 lg:w-5 lg:h-5" />}
-                            </motion.button>
-                        </div>
-
-                        {fieldErrors.password && (
-                            <XCircle className="absolute right-10 lg:right-12 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-red-500 z-10" />
-                        )}
-                    </motion.div>
+                            <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 flex items-center gap-1">
+                                {formData.password && validatePassword(formData.password) && (
+                                    <CheckCircle className="w-5 h-5 text-emerald-500" />
+                                )}
+                                {fieldErrors.password && (
+                                    <XCircle className="w-5 h-5 text-rose-600" />
+                                )}
+                                <motion.button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    variants={eyeButtonAnimation}
+                                    whileHover="hover"
+                                    whileTap="tap"
+                                    className="text-gray-400 hover:text-violet-500 transition-colors duration-300"
+                                >
+                                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                </motion.button>
+                            </div>
+                        </motion.div>
+                    </div>
                     {fieldErrors.password && (
-                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                            <XCircle className="w-4 h-4" /> {fieldErrors.password}
+                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
+                            <AlertCircle className="w-4 h-4" /> {fieldErrors.password}
                         </motion.p>
                     )}
                 </motion.div>
 
-                {/* Confirm Password */}
-                <motion.div
-                    variants={fadeInUp}
-                >
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Confirm Password *
-                    </label>
+                {formData.password && (
                     <motion.div
-                        variants={shakeFields.includes('confirmPassword') ? shakeAnimation : {}}
-                        animate={shakeFields.includes('confirmPassword') ? "shake" : "animate"}
-                        className="relative group"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-gradient-to-r from-violet-50 to-fuchsia-50 rounded-2xl p-4 border border-violet-200"
                     >
-                        <Lock className="absolute left-3 lg:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-purple-500 z-10" />
-                        <input
-                            type={showConfirmPassword ? "text" : "password"}
-                            name="confirmPassword"
-                            value={formData.confirmPassword}
-                            onChange={handleAdminCodeChange}
-                            className={`w-full pl-10 lg:pl-12 pr-10 lg:pr-12 py-3 lg:py-4 border-2 rounded-xl lg:rounded-2xl transition-all duration-300 bg-white/80 backdrop-blur-sm
-                focus:outline-none focus:border-purple-400 focus:ring-2 lg:focus:ring-4 focus:ring-purple-100 focus:ring-opacity-50
-                focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
-                hover:border-purple-300 hover:bg-white
-                ${fieldErrors.confirmPassword
-                                    ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100 focus:shadow-red-200'
-                                    : 'border-gray-200'
-                                }`}
-                            placeholder="Confirm your password"
-                        />
-
-                        {/* Eye button */}
-                        <div className="absolute right-3 lg:right-4 top-1/2 transform -translate-y-1/2 z-10">
-                            <motion.button
-                                type="button"
-                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                variants={eyeButtonAnimation}
-                                whileHover="hover"
-                                whileTap="tap"
-                                className="text-gray-400 hover:text-purple-500 transition-colors duration-300"
-                            >
-                                {showConfirmPassword ? <EyeOff className="w-4 h-4 lg:w-5 lg:h-5" /> : <Eye className="w-4 h-4 lg:w-5 lg:h-5" />}
-                            </motion.button>
-                        </div>
-
-                        {formData.confirmPassword && formData.password === formData.confirmPassword && (
-                            <CheckCircle className="absolute right-10 lg:right-12 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-green-500 z-10" />
-                        )}
-                        {fieldErrors.confirmPassword && (
-                            <XCircle className="absolute right-10 lg:right-12 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-red-500 z-10" />
-                        )}
+                        <h4 className="font-medium mb-3 flex items-center gap-2 text-gray-700">
+                            <ShieldCheck className="w-4 h-4 text-violet-500" />
+                            Password Requirements:
+                        </h4>
+                        <ul className="text-xs space-y-2">
+                            {[
+                                { check: formData.password.length >= 8, text: "At least 8 characters" },
+                                { check: /[A-Z]/.test(formData.password), text: "One uppercase letter" },
+                                { check: /[a-z]/.test(formData.password), text: "One lowercase letter" },
+                                { check: /\d/.test(formData.password), text: "One number" },
+                                { check: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password), text: "One special character" }
+                            ].map((req, index) => (
+                                <motion.li
+                                    key={index}
+                                    className={`flex items-center gap-2 ${req.check
+                                        ? 'text-emerald-600'
+                                        : 'text-gray-500'
+                                        }`}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                >
+                                    {req.check ? (
+                                        <CheckCircle className="w-3 h-3" />
+                                    ) : (
+                                        <Clock className="w-3 h-3" />
+                                    )}
+                                    {req.text}
+                                </motion.li>
+                            ))}
+                        </ul>
                     </motion.div>
+                )}
+
+                {formData.password && (
+                    <PasswordStrengthIndicator password={formData.password} isDark={false} />
+                )}
+
+                <motion.div variants={fadeInUp}>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        &nbsp;Confirm Password <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
+                    </label>
+                    <div ref={fieldRefs.confirmPassword} className="overflow-visible">
+                        <motion.div
+                            key={`confirmPassword-${shakeKey}`}
+                            animate={shakeFields.includes('confirmPassword') ? "shake" : "initial"}
+                            variants={shakeAnimation}
+                            className="overflow-visible relative group"
+                        >
+                            <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-violet-500 z-10" />
+                            <input
+                                type={showConfirmPassword ? "text" : "password"}
+                                name="confirmPassword"
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                maxLength={50}
+                                autoComplete="off"
+                                data-form-type="other"
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                                data-bwignore="true"
+                                data-ignore="true"
+                                readOnly={false}
+                                onFocus={(e) => {
+                                    e.target.removeAttribute('readonly');
+                                    e.target.setAttribute('autocomplete', 'off');
+                                }}
+                                className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm text-sm font-medium
+                                focus:outline-none focus:ring-4 focus:ring-violet-400/20 focus:border-violet-500 focus:ring-opacity-50
+                                focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
+                                    ${fieldErrors.confirmPassword
+                                        ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
+                                        : 'border-gray-200'
+                                    }`}
+                                placeholder="Confirm your password..."
+                            />
+
+                            <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 flex items-center gap-1">
+                                {passwordsMatch && formData.confirmPassword && (
+                                    <CheckCircle className="w-5 h-5 text-emerald-500" />
+                                )}
+                                {fieldErrors.confirmPassword && (
+                                    <XCircle className="w-5 h-5 text-rose-600" />
+                                )}
+                                <motion.button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    variants={eyeButtonAnimation}
+                                    whileHover="hover"
+                                    whileTap="tap"
+                                    className="text-gray-400 hover:text-violet-500 transition-colors duration-300"
+                                >
+                                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                </motion.button>
+                            </div>
+                        </motion.div>
+                    </div>
                     {fieldErrors.confirmPassword && (
-                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                            <XCircle className="w-4 h-4" /> {fieldErrors.confirmPassword}
+                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
+                            <AlertCircle className="w-4 h-4" /> {fieldErrors.confirmPassword}
                         </motion.p>
                     )}
                 </motion.div>
 
-                {/* Terms Checkbox */}
-                <motion.div
-                    variants={fadeInUp}
-                    className="flex items-start gap-3 p-3 lg:p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl lg:rounded-2xl border-2 border-purple-100 group hover:border-purple-200 transition-all duration-300"
-                >
-                    <input
-                        type="checkbox"
-                        name="agreeTerms"
-                        checked={formData.agreeTerms}
-                        onChange={handleAdminCodeChange}
-                        className="w-4 h-4 lg:w-5 lg:h-5 text-purple-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 focus:border-purple-400 mt-0.5 flex-shrink-0 transition-all duration-300"
-                    />
-                    <label className="text-sm text-gray-700">
-                        I agree to the{" "}
-                        <a
-                            href="#terms"
-                            className="text-purple-600 hover:text-purple-700 font-semibold transition-colors duration-300"
-                        >
-                            Terms of Service
-                        </a>{" "}
-                        and{" "}
-                        <a
-                            href="#privacy"
-                            className="text-purple-600 hover:text-purple-700 font-semibold transition-colors duration-300"
-                        >
-                            Privacy Policy
-                        </a>
-                    </label>
-                </motion.div>
-                {fieldErrors.agreeTerms && (
-                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-sm -mt-2 flex items-center gap-1">
-                        <XCircle className="w-4 h-4" /> {fieldErrors.agreeTerms}
+                {formData.confirmPassword && !passwordsMatch && formData.password && (
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-rose-600 text-sm mt-2 flex items-center gap-1"
+                    >
+                        <Clock className="w-3 h-3" />
+                        Passwords do not match yet
                     </motion.p>
                 )}
 
-                {/* Submit Error */}
+                <motion.div
+                    variants={fadeInUp}
+                    className="flex items-start gap-3 p-4 bg-gradient-to-r from-violet-50 to-fuchsia-50 rounded-2xl border-2 border-violet-100 group hover:border-violet-200 transition-all duration-300"
+                >
+                    <div ref={fieldRefs.agreeTerms} className="overflow-visible w-full">
+                        <motion.div
+                            animate={shakeFields.includes('agreeTerms') ? "shake" : "initial"}
+                            variants={shakeAnimation}
+                            className="overflow-visible flex items-start gap-3 w-full"
+                        >
+                            <input
+                                type="checkbox"
+                                name="agreeTerms"
+                                checked={formData.agreeTerms}
+                                onChange={handleChange}
+                                autoComplete="off"
+                                className="w-5 h-5 text-violet-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-violet-500 focus:ring-opacity-50 focus:border-violet-400 mt-0.5 flex-shrink-0 transition-all duration-300"
+                            />
+                            <label className="text-sm text-gray-700">
+                                I agree to the{" "}
+                                <motion.a
+                                    href="#terms"
+                                    variants={linkAnimation}
+                                    whileHover="hover"
+                                    whileTap="tap"
+                                    className="text-violet-600 hover:text-violet-700 font-semibold transition-colors duration-300 inline-flex items-center gap-1 group/terms relative overflow-hidden"
+                                >
+                                    Terms of Service
+                                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-violet-600 transition-all duration-300 group-hover/terms:w-full" />
+                                </motion.a>{" "}
+                                and{" "}
+                                <motion.a
+                                    href="#privacy"
+                                    variants={linkAnimation}
+                                    whileHover="hover"
+                                    whileTap="tap"
+                                    className="text-violet-600 hover:text-violet-700 font-semibold transition-colors duration-300 inline-flex items-center gap-1 group/privacy relative overflow-hidden"
+                                >
+                                    Privacy Policy
+                                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-violet-600 transition-all duration-300 group-hover/privacy:w-full" />
+                                </motion.a>
+                            </label>
+                        </motion.div>
+                    </div>
+                </motion.div>
+                {fieldErrors.agreeTerms && (
+                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm -mt-3 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" /> {fieldErrors.agreeTerms}
+                    </motion.p>
+                )}
+
                 {fieldErrors.submit && (
                     <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-red-50 border border-red-200 rounded-xl lg:rounded-2xl p-3 lg:p-4"
+                        className="bg-red-50 border border-rose-500 rounded-2xl p-4"
                     >
-                        <div className="flex items-center gap-2 text-red-700">
+                        <div className="flex items-center gap-2 text-rose-700">
                             <Shield className="w-4 h-4" />
                             <span className="text-sm font-medium">{fieldErrors.submit}</span>
                         </div>
                     </motion.div>
                 )}
 
-                {/* Submit Button */}
                 <motion.button
                     variants={fadeInUp}
                     type="submit"
                     disabled={isLoading}
                     whileHover="hover"
                     whileTap="tap"
-                    className="w-full py-4 lg:py-5 px-6 bg-gradient-to-r from-purple-600 to-pink-500 
-                   text-white font-bold text-base lg:text-lg rounded-xl lg:rounded-2xl shadow-xl lg:shadow-2xl hover:shadow-2xl lg:hover:shadow-3xl
-                   transform transition-all duration-300
-                   disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
+                    className="w-full py-5 px-6 bg-gradient-to-r from-violet-600 to-fuchsia-500 
+                             text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
+                             transform transition-all duration-300
+                             disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
                 >
-                    {/* Shine Effect */}
+                    <motion.div
+                        className="absolute inset-0 rounded-2xl border-2 border-violet-400"
+                        variants={pulseAnimation}
+                        whileHover="hover"
+                    />
+
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
 
                     <span className="relative z-10 flex items-center gap-3">
@@ -1591,7 +1887,7 @@ export default function AdminSignup() {
                                 <motion.div
                                     animate={{ rotate: 360 }}
                                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                    className="w-5 h-5 lg:w-6 lg:h-6 border-2 border-white border-t-transparent rounded-full"
+                                    className="w-6 h-6 border-2 border-white border-t-transparent rounded-full"
                                 />
                                 Creating Admin Account...
                             </>
@@ -1602,7 +1898,7 @@ export default function AdminSignup() {
                                     animate={{ x: [0, 5, 0] }}
                                     transition={{ duration: 1.5, repeat: Infinity }}
                                 >
-                                    <ArrowRight className="w-4 h-4 lg:w-5 lg:h-5" />
+                                    <ArrowRight className="w-5 h-5" />
                                 </motion.div>
                             </>
                         )}
@@ -1610,16 +1906,18 @@ export default function AdminSignup() {
                 </motion.button>
             </form>
 
-            {/* Login Link */}
             <motion.div
                 variants={fadeInUp}
-                className="text-center mt-4 lg:mt-6 pt-4 lg:pt-6 border-t border-gray-200"
+                className="text-center mt-6 pt-6 border-t border-gray-200"
             >
-                <p className="text-gray-600 text-sm lg:text-base">
-                    Already have an admin account?{" "}
-                    <Link
-                        to="/login"
-                        className="text-purple-600 font-semibold hover:text-purple-700 transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden"
+                <p className="text-gray-600">
+                    Already have an account?{" "}
+                    <motion.a
+                        href="/login"
+                        variants={linkAnimation}
+                        whileHover="hover"
+                        whileTap="tap"
+                        className="text-violet-600 font-semibold hover:text-violet-700 transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden"
                     >
                         Sign in
                         <motion.span
@@ -1629,8 +1927,8 @@ export default function AdminSignup() {
                         >
                             →
                         </motion.span>
-                        <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-purple-600 transition-all duration-300 group-hover:w-full" />
-                    </Link>
+                        <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-violet-600 transition-all duration-300 group-hover:w-full" />
+                    </motion.a>
                 </p>
             </motion.div>
         </>
@@ -1641,20 +1939,18 @@ export default function AdminSignup() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6 }}
-            className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-pink-50/30 flex items-center justify-center p-4 lg:p-8"
+            className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-fuchsia-50/30 flex items-center justify-center p-4 lg:p-8"
         >
-            <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 items-center">
+            <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
 
-                {/* Left Side - Admin Features & Benefits (Desktop Only) */}
                 <motion.div
                     initial="initial"
                     animate="animate"
                     variants={staggerContainer}
                     className="hidden lg:block relative"
                 >
-                    {/* Floating background elements */}
                     <motion.div
-                        className="absolute top-10 left-10 w-32 h-32 bg-purple-200 rounded-full opacity-20 blur-xl"
+                        className="absolute top-10 left-10 w-32 h-32 bg-violet-200 rounded-full opacity-20 blur-xl"
                         animate={{ y: [0, -20, 0], rotate: [0, 180, 360] }}
                         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
                     />
@@ -1665,7 +1961,6 @@ export default function AdminSignup() {
                     />
 
                     <div className="space-y-8 relative z-10">
-                        {/* Brand Section */}
                         <motion.div
                             variants={fadeInUp}
                             className="space-y-6"
@@ -1675,31 +1970,30 @@ export default function AdminSignup() {
                                 variants={scaleIn}
                             >
                                 <motion.div
-                                    className="w-20 h-20 bg-gradient-to-br from-purple-600 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl"
+                                    className="w-20 h-20 bg-gradient-to-br from-violet-600 to-fuchsia-500 rounded-3xl flex items-center justify-center shadow-2xl"
                                     whileHover={{ scale: 1.1, rotate: 5 }}
                                     transition={{ type: "spring", stiffness: 300 }}
                                 >
                                     <Shield className="w-10 h-10 text-white" />
                                 </motion.div>
                                 <div>
-                                    <h1 className="text-5xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-pink-700 bg-clip-text text-transparent">
-                                        Admin Portal
+                                    <h1 className="text-5xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-fuchsia-700 bg-clip-text text-transparent">
+                                        Join Us
                                     </h1>
                                     <p className="text-xl text-gray-600 mt-2">
-                                        Secure administrative access
+                                        Become part of something bigger
                                     </p>
                                 </div>
                             </motion.div>
 
                             <motion.p
                                 variants={fadeInUp}
-                                className="text-2xl text-gray-700 leading-relaxed font-light"
+                                className="text-2xl text-gray-700 leading-relaxed font-light text-justify"
                             >
-                                Manage the donation platform with comprehensive administrative controls and advanced security features.
+                                Manage the complete donation platform with comprehensive administrative controls.
                             </motion.p>
                         </motion.div>
 
-                        {/* Admin Roles Information */}
                         <motion.div
                             variants={fadeInUp}
                             className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 border border-white/20 shadow-2xl"
@@ -1722,17 +2016,29 @@ export default function AdminSignup() {
                             </div>
                         </motion.div>
 
-                        {/* Benefits Grid */}
                         <motion.div
-                            variants={staggerContainer}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
                             className="grid grid-cols-2 gap-4"
                         >
                             {adminBenefits.map((benefit, index) => (
                                 <motion.div
                                     key={index}
-                                    variants={fadeInUp}
-                                    whileHover={{ y: -5, scale: 1.02 }}
-                                    className="bg-white/80 backdrop-blur-sm rounded-2xl p-5 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300"
+                                    initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    transition={{
+                                        delay: index * 0.05,
+                                        duration: 0.5,
+                                        type: "spring",
+                                        default: { duration: 0.2 }
+                                    }}
+                                    whileHover={{
+                                        y: -5,
+                                        scale: 1.02,
+                                        transition: { duration: 0.1 }
+                                    }}
+                                    className="bg-white/80 backdrop-blur-sm rounded-2xl p-5 border border-white/20 shadow-lg hover:shadow-xl"
                                 >
                                     <motion.div
                                         className={`w-14 h-14 bg-gradient-to-br ${benefit.color} rounded-2xl flex items-center justify-center mb-4 shadow-lg`}
@@ -1746,60 +2052,45 @@ export default function AdminSignup() {
                                 </motion.div>
                             ))}
                         </motion.div>
-
-                        {/* Security Notice */}
-                        <motion.div
-                            variants={fadeInUp}
-                            className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-4 border border-purple-200"
-                        >
-                            <div className="flex items-center gap-3">
-                                <ShieldCheck className="w-6 h-6 text-purple-600" />
-                                <div>
-                                    <h4 className="font-bold text-purple-800 text-sm">Enterprise Security</h4>
-                                    <p className="text-purple-600 text-xs">Multi-factor authentication and role-based access control</p>
-                                </div>
-                            </div>
-                        </motion.div>
                     </div>
                 </motion.div>
 
-                {/* Right Side - Dynamic Form Content */}
                 <motion.div
                     initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
-                    className="w-full max-w-lg lg:max-w-full mx-auto"
+                    className="w-full"
                 >
                     <motion.div
                         variants={fadeInUp}
                         initial="initial"
                         animate="animate"
-                        className="bg-white rounded-2xl lg:rounded-3xl shadow-xl lg:shadow-2xl p-5 lg:p-8 border border-white/20 backdrop-blur-sm relative overflow-hidden"
+                        className="bg-white rounded-3xl shadow-2xl p-6 lg:p-8 border border-white/20 backdrop-blur-sm relative overflow-hidden"
                     >
-                        {/* Animated border */}
                         <motion.div
-                            className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-400"
+                            className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-500 to-fuchsia-400"
                             initial={{ scaleX: 0 }}
                             animate={{ scaleX: 1 }}
                             transition={{ duration: 1, delay: 0.3 }}
                         />
 
-                        {/* Security Badge */}
                         <motion.div
                             initial={{ opacity: 0, scale: 0 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: 0.5 }}
-                            className="absolute top-3 lg:top-4 right-3 lg:right-4 flex items-center gap-2 bg-green-50 text-green-700 px-2 lg:px-3 py-1 rounded-full text-xs lg:text-sm font-medium border border-green-200"
+                            className="relative mb-4 flex items-center justify-end gap-1 bg-green-50 text-green-700 px-2 lg:px-3 py-1 rounded-full text-xs lg:text-sm font-medium border border-green-200 w-fit ml-auto"
                         >
                             <ShieldCheck className="w-3 h-3 lg:w-4 lg:h-4" />
                             Secure
                         </motion.div>
 
-                        {/* Render current step */}
                         {renderStep()}
                     </motion.div>
                 </motion.div>
             </div>
+            <style>
+                {autofillStyles}
+            </style>
         </motion.div>
     );
 }

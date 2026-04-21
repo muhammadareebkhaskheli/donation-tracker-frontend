@@ -69,14 +69,7 @@ function App() {
         <Route path="/ForgotPassword" element={<ForgotPassword />} />
         <Route path="/AdminSignup" element={<AdminSignup />} />
 
-        <Route
-          path="/AdminDashboard"
-          element={
-            <ProtectedRoute allowedUserTypes={['admin']}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/AdminDashboard" element={<AdminDashboard />} />
         <Route
           path="/RecipientDashboard"
           element={

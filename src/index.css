@@ -172,3 +172,13 @@ input::-webkit-contacts-auto-fill-button {
   font-size: 24px;
   font-weight: bold;
 }
+
+/* Hide scrollbars while keeping scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}

@@ -1,71 +1,15 @@
-import React, { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo, useRef
+} from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  User,
-  Phone,
-  Shield,
-  ShieldCheck,
-  Key,
-  Lock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  BadgeCheck,
-  BadgeAlert,
-  BadgeX,
-  Edit,
-  Save,
-  Download,
-  Upload,
-  Trash2,
-  X,
-  Plus,
-  Check,
-  ExternalLink,
-  ChevronDown,
-  ChevronUp,
-  ChevronLeft,
-  Smartphone,
-  Laptop,
-  Tablet,
-  Monitor,
-  Clock,
-  Award,
-  Medal,
-  Star,
-  Activity,
-  TrendingUp,
-  TrendingDown,
-  Monitor as MonitorIcon,
-  Github,
-  Twitter,
-  Linkedin,
-  Instagram,
-  Facebook,
-  Youtube,
-  Twitch,
-  Globe,
-  FileText,
-  Eye,
-  EyeOff,
-  Camera,
-  MapPin as MapPinIcon,
-  MessageSquare,
-  RefreshCw,
-  Eye as ViewIcon,
-  Send,
-  Briefcase,
-  Music,
-  Ghost,
-  Image,
-  MessageCircle,
-  BookOpen,
-  Code,
-  Hash,
-  Code2,
-  Rocket,
-  Palette,
-  PenTool
+  User, Phone, Shield, ShieldCheck, Key, Lock, CheckCircle, XCircle, AlertCircle,
+  BadgeCheck, BadgeAlert, BadgeX, Edit, Save, Download, Upload, Trash2, X, Plus,
+  Check, ExternalLink, ChevronDown, ChevronUp, ChevronLeft, Smartphone, Laptop,
+  Tablet, Monitor, Clock, Award, Medal, Star, Activity, TrendingUp, TrendingDown,
+  Monitor as MonitorIcon, Github, Twitter, Linkedin, Instagram, Facebook, Youtube,
+  Twitch, Globe, FileText, Eye, EyeOff, Camera, MapPin as MapPinIcon, MessageSquare,
+  RefreshCw, Eye as ViewIcon, Send, Briefcase, Music, Ghost, Image, MessageCircle,
+  BookOpen, Code, Hash, Code2, Rocket, Palette, PenTool, Calendar
 } from 'lucide-react';
 
 // Add formatValue function from recipients management
@@ -158,6 +102,15 @@ const getFullFormattedNumber = (num, isCurrency = false) => {
   }
 
   return `${prefix}${currencyPrefix}${Math.abs(parsedNum).toLocaleString('en-IN')}`;
+};
+
+// Shake animation preset
+const shakeAnimation = {
+  initial: { x: 0 },
+  shake: {
+    x: [0, -10, 10, -10, 10, 0],
+    transition: { duration: 0.6, ease: "easeInOut" }
+  }
 };
 
 // Success Dialog Component
@@ -324,6 +277,288 @@ const ConfirmationDialog = memo(({ isDark, title, message, onConfirm, onCancel, 
         </div>
       </motion.div>
     </motion.div>
+  );
+});
+
+// Generic Custom Select Dropdown Component (from admins management)
+const CustomSelectDropdown = memo(({
+  value,
+  onChange,
+  isDark,
+  fieldError,
+  shakeFields,
+  fieldName = 'field',
+  options = [],
+  placeholder = 'Select an option...'
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [hoveredOption, setHoveredOption] = useState(null);
+  const [isActive, setIsActive] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const selectOptions = [
+    { value: '', label: placeholder },
+    ...options
+  ];
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+        setHoveredOption(null);
+        setIsActive(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedOption = selectOptions.find(opt => opt.value === value);
+
+  const shakeAnimation = {
+    initial: { x: 0 },
+    shake: {
+      x: [0, -10, 10, -10, 10, 0],
+      transition: { duration: 0.6, ease: "easeInOut" }
+    }
+  };
+
+  return (
+    <div ref={dropdownRef} className="relative w-full" style={{ overflow: 'visible', position: 'relative' }}>
+      <motion.div
+        animate={shakeFields?.includes(fieldName) ? "shake" : "initial"}
+        variants={shakeAnimation}
+        style={{ overflow: 'visible', zIndex: isOpen ? 10000 : 'auto' }}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            setIsOpen(!isOpen);
+            setIsActive(true);
+          }}
+          style={{ position: 'relative', zIndex: 10001 }}
+          className={`w-full p-2 sm:p-3 rounded-2xl border-2 text-sm font-medium transition-colors flex items-center justify-between focus:outline-none ${isActive ? 'ring-4 ring-violet-500/30 border-violet-500' : 'focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500'
+            } ${isDark
+              ? 'bg-gray-800 border-gray-600'
+              : 'bg-white border-gray-200'
+            } ${fieldError ? 'border-rose-500' : ''}`}
+        >
+          <span className={selectedOption && value !== ''
+            ? (isDark ? 'text-white' : 'text-gray-900')
+            : (isDark ? 'text-gray-400' : 'text-gray-500')
+          }>
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
+
+          <motion.div
+            animate={{ rotate: isOpen ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              color: value !== ''
+                ? (isDark ? '#FFFFFF' : '#231827')
+                : (isDark ? '#9CA3AF' : '#6B7280')
+            }}
+          >
+            <ChevronDown size={18} />
+          </motion.div>
+        </button>
+      </motion.div>
+
+      <motion.div
+        initial={{ height: 0, opacity: 0 }}
+        animate={isOpen ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
+        transition={{ duration: 0.2, ease: "easeInOut" }}
+        className={`absolute top-8 left-0 right-0 shadow-lg border-x border-b ${isDark
+          ? 'bg-gray-800 border-gray-700'
+          : 'bg-white border-gray-200'
+          }`}
+        style={{
+          borderTop: 'none',
+          borderBottomLeftRadius: '1rem',
+          borderBottomRightRadius: '1rem',
+          borderTopLeftRadius: 0,
+          borderTopRightRadius: 0,
+          zIndex: 9999,
+          position: 'absolute',
+          pointerEvents: isOpen ? 'auto' : 'none',
+          overflow: 'visible',
+        }}
+      >
+        {selectOptions.map((option, index) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => {
+              onChange({ target: { name: fieldName, value: option.value } });
+              setIsOpen(false);
+              setHoveredOption(null);
+            }}
+            onMouseEnter={() => setHoveredOption(option.value)}
+            onMouseLeave={() => setHoveredOption(null)}
+            className={`w-full px-4 text-left text-sm font-medium transition-colors ${option.value === ''
+              ? (isDark ? 'text-[#9CA3AF]' : 'text-[#6B7280]')
+              : (isDark ? 'text-white' : 'text-gray-900')
+              } ${hoveredOption === option.value
+                ? (isDark ? 'bg-blue-600/20' : 'bg-blue-100')
+                : (value === option.value && hoveredOption === null)
+                  ? (isDark ? 'bg-blue-600/20' : 'bg-blue-100')
+                  : ''
+              }`}
+            style={{
+              margin: 0,
+              marginTop: index === 0 ? '1rem' : '0',
+              marginBottom: 0,
+              marginLeft: 0,
+              marginRight: 0,
+              paddingTop: '0.625rem',
+              paddingBottom: '0.625rem',
+              paddingLeft: '1rem',
+              paddingRight: '1rem'
+            }}
+          >
+            {option.label}
+          </button>
+        ))}
+      </motion.div>
+
+      {/* Error Message */}
+      {fieldError && (
+        <motion.p
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+          style={{ marginTop: '0.5rem' }}
+        >
+          <XCircle size={12} />
+          {fieldError}
+        </motion.p>
+      )}
+    </div>
+  );
+});
+
+// Gender Dropdown
+const CustomGenderDropdown = memo(({
+  value,
+  onChange,
+  isDark,
+  fieldError,
+  shakeFields,
+  fieldName = 'gender'
+}) => {
+  const genderOptions = [
+    { value: 'Male', label: 'Male' },
+    { value: 'Female', label: 'Female' },
+    { value: 'Other', label: 'Other' }
+  ];
+
+  return (
+    <CustomSelectDropdown
+      value={value}
+      onChange={onChange}
+      isDark={isDark}
+      fieldError={fieldError}
+      shakeFields={shakeFields}
+      fieldName={fieldName}
+      options={genderOptions}
+      placeholder="Select Gender..."
+    />
+  );
+});
+
+// Marital Status Dropdown
+const CustomMaritalStatusDropdown = memo(({
+  value,
+  onChange,
+  isDark,
+  fieldError,
+  shakeFields,
+  fieldName = 'maritalStatus'
+}) => {
+  const maritalStatusOptions = [
+    { value: 'Single', label: 'Single' },
+    { value: 'Married', label: 'Married' },
+    { value: 'Divorced', label: 'Divorced' },
+    { value: 'Widowed', label: 'Widowed' }
+  ];
+
+  return (
+    <CustomSelectDropdown
+      value={value}
+      onChange={onChange}
+      isDark={isDark}
+      fieldError={fieldError}
+      shakeFields={shakeFields}
+      fieldName={fieldName}
+      options={maritalStatusOptions}
+      placeholder="Select Marital Status..."
+    />
+  );
+});
+
+// Department Dropdown
+const CustomDepartmentDropdown = memo(({
+  value,
+  onChange,
+  isDark,
+  fieldError,
+  shakeFields,
+  fieldName = 'department'
+}) => {
+  const departmentOptions = [
+    { value: 'Management', label: 'Management' },
+    { value: 'Verification', label: 'Verification' },
+    { value: 'Support', label: 'Support' },
+    { value: 'Customer Support', label: 'Customer Support' },
+    { value: 'Finance', label: 'Finance' },
+    { value: 'IT', label: 'IT' },
+    { value: 'Information Technology', label: 'Information Technology' }
+  ];
+
+  return (
+    <CustomSelectDropdown
+      value={value}
+      onChange={onChange}
+      isDark={isDark}
+      fieldError={fieldError}
+      shakeFields={shakeFields}
+      fieldName={fieldName}
+      options={departmentOptions}
+      placeholder="Select Department..."
+    />
+  );
+});
+
+// Designation Dropdown
+const CustomDesignationDropdown = memo(({
+  value,
+  onChange,
+  isDark,
+  fieldError,
+  shakeFields,
+  fieldName = 'designation'
+}) => {
+  const designationOptions = [
+    { value: 'Super Admin', label: 'Super Admin' },
+    { value: 'Approver', label: 'Approver' },
+    { value: 'Co-Approver', label: 'Co-Approver' },
+    { value: 'Support Admin', label: 'Support Admin' },
+    { value: 'Verification Officer', label: 'Verification Officer' },
+    { value: 'Senior System Administrator', label: 'Senior System Administrator' }
+  ];
+
+  return (
+    <CustomSelectDropdown
+      value={value}
+      onChange={onChange}
+      isDark={isDark}
+      fieldError={fieldError}
+      shakeFields={shakeFields}
+      fieldName={fieldName}
+      options={designationOptions}
+      placeholder="Select Designation..."
+    />
   );
 });
 
@@ -562,13 +797,22 @@ const EnhancedInput = memo(({
     setCharCount(e.target.value.length);
   };
 
-  // Shake animation
-  const shakeAnimation = {
-    initial: { x: 0 },
-    shake: {
-      x: [0, -10, 10, -10, 10, 0],
-      transition: { duration: 0.6, ease: "easeInOut" }
-    }
+  // Autofill prevention handlers
+  const handleEnhancedFocus = (e) => {
+    const input = e.target;
+    input.setAttribute('readonly', 'readonly');
+    setTimeout(() => {
+      input.removeAttribute('readonly');
+    }, 5);
+    input.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
+  };
+
+  const handleMouseDown = (e) => {
+    const input = e.target;
+    input.setAttribute('readonly', 'readonly');
+    setTimeout(() => {
+      input.removeAttribute('readonly');
+    }, 5);
   };
 
   return (
@@ -625,11 +869,17 @@ const EnhancedInput = memo(({
               type={type}
               value={value || ''}
               onChange={handleChange}
-              onFocus={() => setIsFocused(true)}
+              onFocus={handleEnhancedFocus}
               onBlur={() => setIsFocused(false)}
+              onMouseDown={handleMouseDown}
               placeholder={placeholder}
               disabled={disabled}
               maxLength={maxLength}
+              autoComplete="off"
+              spellCheck="false"
+              data-lpignore="true"
+              data-1p-ignore="true"
+              data-form-type="other"
               className={`w-full p-3 rounded-2xl bg-transparent focus:outline-none ${Icon ? 'pl-10' : 'pl-3'
                 } ${disabled ? 'opacity-50 cursor-not-allowed' : ''
                 } ${isDark ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'
@@ -681,12 +931,22 @@ const EnhancedTextarea = memo(({
     setCharCount(e.target.value.length);
   };
 
-  const shakeAnimation = {
-    initial: { x: 0 },
-    shake: {
-      x: [0, -10, 10, -10, 10, 0],
-      transition: { duration: 0.6, ease: "easeInOut" }
-    }
+  // Autofill prevention handlers
+  const handleEnhancedFocus = (e) => {
+    const input = e.target;
+    input.setAttribute('readonly', 'readonly');
+    setTimeout(() => {
+      input.removeAttribute('readonly');
+    }, 5);
+    input.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
+  };
+
+  const handleMouseDown = (e) => {
+    const input = e.target;
+    input.setAttribute('readonly', 'readonly');
+    setTimeout(() => {
+      input.removeAttribute('readonly');
+    }, 5);
   };
 
   return (
@@ -726,11 +986,17 @@ const EnhancedTextarea = memo(({
             <textarea
               value={value || ''}
               onChange={handleChange}
-              onFocus={() => setIsFocused(true)}
+              onFocus={handleEnhancedFocus}
               onBlur={() => setIsFocused(false)}
+              onMouseDown={handleMouseDown}
               placeholder={placeholder}
               rows={rows}
               maxLength={maxLength}
+              autoComplete="off"
+              spellCheck="false"
+              data-lpignore="true"
+              data-1p-ignore="true"
+              data-form-type="other"
               className={`w-full p-3 rounded-2xl bg-transparent focus:outline-none resize-none ${isDark ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'
                 }`}
             />
@@ -767,14 +1033,11 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
   // Effect to scroll when shaking starts
   useEffect(() => {
     if (shakeFields?.includes(fieldName) && containerRef.current) {
-      // Scroll the container into view
       containerRef.current.scrollIntoView({
         behavior: 'smooth',
         block: 'center',
         inline: 'nearest'
       });
-
-      // Focus the container for better UX
       containerRef.current.focus();
     }
   }, [shakeFields, fieldName]);
@@ -805,11 +1068,9 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
   };
 
   const processFile = (file) => {
-    console.log('Processing file:', file.name);
     setIsLoading(true);
     setValidationError('');
 
-    // Clear any previous errors
     if (onFieldError) {
       onFieldError(fieldName, '');
     }
@@ -821,18 +1082,14 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
       setPreviewUrl(result);
 
       if (onAvatarChange) {
-        console.log('Calling onAvatarChange with data URL length:', result.length);
         onAvatarChange(result);
-      } else {
-        console.error('onAvatarChange is not defined');
       }
 
       setValidationError('');
       setIsLoading(false);
     };
 
-    reader.onerror = (error) => {
-      console.error('FileReader error:', error);
+    reader.onerror = () => {
       const errorMsg = 'Error reading file';
       setValidationError(errorMsg);
       if (onFieldError) {
@@ -841,34 +1098,21 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
       setIsLoading(false);
     };
 
-    reader.onprogress = (data) => {
-      if (data.lengthComputable) {
-        const progress = (data.loaded / data.total) * 100;
-        console.log('Reading progress:', progress.toFixed(0) + '%');
-      }
-    };
-
     try {
       reader.readAsDataURL(file);
-      console.log('Started reading file as data URL');
     } catch (error) {
-      console.error('Error starting file read:', error);
       setValidationError('Failed to read file');
       setIsLoading(false);
     }
   };
 
   const handleFileChange = (event) => {
-    console.log('File input change event triggered');
     const file = event.target.files?.[0];
     if (file) {
-      console.log('File selected:', file.name, 'Size:', file.size, 'Type:', file.type);
       if (!validateAndProcessFile(file)) {
         return;
       }
       processFile(file);
-    } else {
-      console.log('No file selected');
     }
   };
 
@@ -884,10 +1128,8 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-    console.log('File dropped');
     const file = e.dataTransfer.files[0];
     if (file) {
-      console.log('Dropped file:', file.name, 'Size:', file.size, 'Type:', file.type);
       if (!file.type.startsWith('image/')) {
         const error = 'Please drop an image file';
         setValidationError(error);
@@ -901,14 +1143,6 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
         return;
       }
       processFile(file);
-    }
-  };
-
-  const shakeAnimation = {
-    initial: { x: 0 },
-    shake: {
-      x: [0, -10, 10, -10, 10, 0],
-      transition: { duration: 0.6, ease: "easeInOut" }
     }
   };
 
@@ -929,7 +1163,6 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
         onHoverEnd={() => setIsHovered(false)}
         className="relative"
       >
-        {/* Animated Rings */}
         <motion.div
           className="absolute inset-0 rounded-full"
           animate={{
@@ -944,7 +1177,6 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
           transition={{ duration: 1, repeat: Infinity }}
         />
 
-        {/* Wrap only the avatar container with shake animation */}
         <motion.div
           animate={shouldShake ? "shake" : "initial"}
           variants={shakeAnimation}
@@ -974,7 +1206,6 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
                 alt="Profile"
                 className="w-full h-full rounded-full object-cover"
                 onError={() => {
-                  console.error('Image failed to load');
                   setPreviewUrl(null);
                   const errorMsg = 'Failed to load image';
                   setValidationError(errorMsg);
@@ -1008,7 +1239,6 @@ const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, 
         </motion.div>
       </motion.div>
 
-      {/* Error message display */}
       {(fieldErrors?.[fieldName] || validationError) && (
         <motion.p
           initial={{ opacity: 0, y: -10 }}
@@ -1122,7 +1352,6 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
     const platform = popularPlatforms.find(p => p.id === platformId);
     if (platform) return platform;
 
-    // For custom platforms
     return {
       id: platformId,
       name: platformId.charAt(0).toUpperCase() + platformId.slice(1),
@@ -1152,7 +1381,6 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
   const handleSaveEdit = () => {
     if (!editPlatform || !editValue) return;
 
-    // Store pending edit and show confirmation
     setPendingEditLink({
       id: editingId,
       platform: editPlatform,
@@ -1170,7 +1398,6 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
     const platform = showCustomInput ? customPlatform : newPlatform;
     if (!platform || !newUrl) return;
 
-    // Store the form data that will be used for the new link
     const formData = {
       platform: platform.toLowerCase().replace(/\s+/g, ''),
       url: newUrl,
@@ -1186,9 +1413,8 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
       isNew: false
     };
 
-    // Store both the link data and the form data
     setPendingAddLink(newLink);
-    setPendingFormData(formData); // Store the form data
+    setPendingFormData(formData);
     setShowAddConfirmation(true);
   };
 
@@ -1211,15 +1437,14 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
     }
 
     setPendingAddLink(null);
-    setPendingFormData(null); // Clear pending form data
-    setShowAddForm(false); // Close the add form
+    setPendingFormData(null);
+    setShowAddForm(false);
     setNewPlatform('');
     setNewUrl('');
     setCustomPlatform('');
     setShowCustomInput(false);
   };
 
-  // Update confirmEdit:
   const confirmEdit = () => {
     if (!pendingEditLink) return;
 
@@ -1249,7 +1474,6 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
     setShowCustomInput(false);
   };
 
-  // Update confirmDelete:
   const confirmDelete = () => {
     if (linkToDelete) {
       const updatedLinks = links.filter(l => l.id !== linkToDelete.id);
@@ -1275,21 +1499,20 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
     setShowAddConfirmation(false);
     setPendingAddLink(null);
 
-    // Restore the form data from pendingFormData
     if (pendingFormData) {
       if (pendingFormData.isCustom) {
         setShowCustomInput(true);
         setCustomPlatform(pendingFormData.customPlatformValue);
-        setNewPlatform(''); // Clear popular platform selection
+        setNewPlatform('');
       } else {
         setShowCustomInput(false);
         setNewPlatform(pendingFormData.displayPlatform);
-        setCustomPlatform(''); // Clear custom platform
+        setCustomPlatform('');
       }
       setNewUrl(pendingFormData.url);
     }
 
-    setPendingFormData(null); // Clear pending form data
+    setPendingFormData(null);
   };
 
   const handleCancelAddForm = () => {
@@ -1298,12 +1521,10 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
     setNewUrl('');
     setCustomPlatform('');
     setShowCustomInput(false);
-    setPendingFormData(null); // Clear any pending form data
+    setPendingFormData(null);
   };
 
-  // Updated delete handlers
   const handleDeleteClick = (link) => {
-    // Show confirmation dialog within the component
     setLinkToDelete(link);
     setShowDeleteConfirmation(true);
   };
@@ -1357,7 +1578,6 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
             </h3>
 
             <div className="space-y-4">
-              {/* Platform Selection */}
               <div>
                 <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   Select Platform
@@ -1431,7 +1651,6 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
                 )}
               </div>
 
-              {/* URL Input */}
               {(newPlatform || customPlatform) && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -1456,7 +1675,6 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
                 </motion.div>
               )}
 
-              {/* Action Buttons */}
               <div className="flex gap-2 pt-4">
                 <motion.button
                   type="button"
@@ -1515,7 +1733,6 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
                 </h4>
 
                 <div className="space-y-4">
-                  {/* Platform Selection */}
                   <div>
                     <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                       Platform
@@ -1587,7 +1804,6 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
                     )}
                   </div>
 
-                  {/* URL Input */}
                   <div>
                     <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                       Profile URL
@@ -1607,7 +1823,6 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
                   <div className="flex gap-2">
                     <motion.button
                       type="button"
@@ -1659,7 +1874,6 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
                 : `bg-gradient-to-br from-white to-gray-50 border-gray-200 hover:border-${platform.color.replace('text-', '')}/30`
                 }`}
             >
-              {/* Background Icon */}
               <div className="absolute right-4 top-1/2 transform -translate-y-1/2 opacity-5 group-hover:opacity-10 transition-opacity">
                 <Icon size={48} />
               </div>
@@ -1811,23 +2025,23 @@ const SocialLinksManager = memo(({ socialLinks = [], onUpdate, isDark, onDeleteR
 // Mock user data with authentic Indian persona
 const userData = {
   id: 'USR-001',
-  name: 'Rajesh Kumar Sharma',
-  email: 'rajesh.sharma@donationtracker.com',
-  phone: '+91-98765-43210',
-  address: 'Green Park Extension, New Delhi - 110016',
-  bio: 'Senior system administrator with 12+ years of experience in IT infrastructure management. Passionate about digital transformation and NGO impact tracking.',
+  name: "",
+  email: "",
+  phone: "",
+  address: "",
+  bio: "",
   avatar: null,
   role: 'Super Admin',
   joinDate: '2023-01-15',
   lastLogin: '2025-11-05T10:30:00Z',
   department: 'Information Technology',
   designation: 'Senior System Administrator',
-  reportingTo: 'Priya Desai (CTO)',
-  emergencyContact: '+91-98100-12345',
-  dateOfBirth: '1985-08-22',
-  gender: 'Male',
-  maritalStatus: 'Married',
-  nationality: 'Indian',
+  reportingTo: "",
+  emergencyContact: "",
+  dateOfBirth: "",
+  gender: "",
+  maritalStatus: "",
+  nationality: "",
   experience: 12,
   education: [
     { degree: 'B.Tech in Computer Science', institution: 'Indian Institute of Technology (IIT) Delhi', year: 2008 },
@@ -1917,7 +2131,14 @@ const userData = {
       push: true
     },
     timezone: 'Asia/Kolkata'
-  }
+  },
+  statusHistory: [
+    {
+      status: 'pending',
+      timestamp: '2025-01-15T10:30:00Z',
+      changedBy: 'System'
+    }
+  ]
 };
 
 // Calculate profile completion percentage
@@ -1926,11 +2147,22 @@ const calculateProfileCompletion = (formData) => {
   let completedFields = 0;
 
   const personalInfoFields = [
-    'name', 'email', 'phone', 'address', 'bio', 'dateOfBirth', 'gender',
-    'maritalStatus', 'nationality', 'department', 'designation', 'emergencyContact'
+    'name', 'email', 'phone', 'address', 'dateOfBirth', 'gender',
+    'maritalStatus', 'nationality', 'emergencyContact'
+  ];
+
+  const workInfoFields = [
+    'department', 'designation', 'bio'
   ];
 
   personalInfoFields.forEach(field => {
+    totalFields++;
+    if (formData[field] && formData[field].toString().trim() !== '') {
+      completedFields++;
+    }
+  });
+
+  workInfoFields.forEach(field => {
     totalFields++;
     if (formData[field] && formData[field].toString().trim() !== '') {
       completedFields++;
@@ -1948,7 +2180,6 @@ const calculateProfileCompletion = (formData) => {
     }
   });
 
-  // Documents count
   totalFields++;
   if (formData.documents && formData.documents.length > 0) {
     completedFields++;
@@ -1960,16 +2191,19 @@ const calculateProfileCompletion = (formData) => {
 // Get completion checklist
 const getCompletionChecklist = (formData) => {
   return {
-    personalInfo: ['name', 'email', 'phone', 'address', 'bio', 'dateOfBirth', 'gender',
-      'maritalStatus', 'nationality', 'department', 'designation', 'emergencyContact'].every(
+    personalInfo: ['name', 'email', 'phone', 'address', 'dateOfBirth', 'gender',
+      'maritalStatus', 'nationality', 'emergencyContact'].every(
         field => formData[field] && formData[field].toString().trim() !== ''
       ),
+    workInfo: ['department', 'designation', 'bio'].every(
+      field => formData[field] && formData[field].toString().trim() !== ''
+    ),
     profilePhoto: formData.avatar && formData.avatar.toString().trim() !== '',
     documents: formData.documents && formData.documents.length > 0
   };
 };
 
-// Document Upload Component (matching recipients management)
+// Document Upload Component
 const DocumentUpload = React.memo(({ documents, onDocumentsChange, isDark, fieldErrors, onFieldError, shakeFields }) => {
   const [dragActive, setDragActive] = useState(false);
 
@@ -2083,14 +2317,6 @@ const DocumentUpload = React.memo(({ documents, onDocumentsChange, isDark, field
     }
   }, [documents, onDocumentsChange, onFieldError]);
 
-  const shakeAnimation = {
-    initial: { x: 0 },
-    shake: {
-      x: [0, -10, 10, -10, 10, 0],
-      transition: { duration: 0.6, ease: "easeInOut" }
-    }
-  };
-
   return (
     <div className="space-y-4">
       <div className="overflow-visible">
@@ -2104,9 +2330,8 @@ const DocumentUpload = React.memo(({ documents, onDocumentsChange, isDark, field
             className={`relative border-2 border-dashed rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-center transition-all cursor-pointer ${dragActive
               ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20 scale-105'
               : isDark
-                ? 'border-gray-600 bg-gray-800 hover:border-violet-400'
-                : 'border-gray-300 bg-gray-50 hover:border-violet-400'
-              } ${fieldErrors?.documents ? 'border-rose-500 bg-rose-50 dark:bg-rose-900/20' : ''
+                ? `bg-gray-800 border-gray-600 hover:border-violet-400 ${fieldErrors?.documents ? 'border-rose-500' : ''}`
+                : `bg-white border-gray-300 hover:border-violet-400 ${fieldErrors?.documents ? 'border-rose-500' : ''}`
               }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
@@ -2134,7 +2359,7 @@ const DocumentUpload = React.memo(({ documents, onDocumentsChange, isDark, field
                     y: { duration: 2, repeat: Infinity },
                     rotate: { duration: 0.3 }
                   }}
-                  className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700' : 'bg-white'
+                  className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700' : 'bg-gray-100'
                     }`}
                 >
                   <Upload size={32} className={dragActive ? 'text-violet-500' : isDark ? 'text-gray-400' : 'text-gray-500'} />
@@ -2147,10 +2372,6 @@ const DocumentUpload = React.memo(({ documents, onDocumentsChange, isDark, field
                 </p>
                 <p className={`text-xs sm:text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'
                   }`}>
-                  Aadhaar card, educational certificates, and recent address proof (utility bill or bank statement)
-                </p>
-                <p className={`text-xs sm:text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'
-                  }`}>
                   PDF, DOC, JPG, PNG • Max 10MB each
                 </p>
               </div>
@@ -2159,11 +2380,12 @@ const DocumentUpload = React.memo(({ documents, onDocumentsChange, isDark, field
         </motion.div>
       </div>
 
+      {/* Error message - only changes the text color to rose, background stays normal */}
       {fieldErrors?.documents && (
         <motion.p
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-1 text-rose-600 text-xs font-medium"
+          className={`flex items-center gap-1 text-xs font-medium ${isDark ? 'text-rose-400' : 'text-rose-600'}`}
         >
           <XCircle size={12} />
           {fieldErrors.documents}
@@ -2223,7 +2445,7 @@ const DocumentUpload = React.memo(({ documents, onDocumentsChange, isDark, field
   );
 });
 
-// Password Change Component - Fixed to shake every time
+// Password Change Component
 const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, shakeFields, user }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -2234,9 +2456,8 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
   const [passwordErrors, setPasswordErrors] = useState({});
   const [localShakeFields, setLocalShakeFields] = useState([]);
   const [validationAttempted, setValidationAttempted] = useState(false);
-  const [shakeKey, setShakeKey] = useState(0); // Add a key to force re-render
+  const [shakeKey, setShakeKey] = useState(0);
 
-  // Create refs for input fields
   const newPasswordRef = useRef(null);
   const confirmPasswordRef = useRef(null);
 
@@ -2250,15 +2471,6 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
     }).replace(',', ' at');
   };
 
-  const shakeAnimation = {
-    initial: { x: 0 },
-    shake: {
-      x: [0, -10, 10, -10, 10, 0],
-      transition: { duration: 0.6, ease: "easeInOut" }
-    }
-  };
-
-  // Password validation function
   const validatePassword = (password) => {
     const hasMinLength = password.length >= 8;
     const hasUpperCase = /[A-Z]/.test(password);
@@ -2268,14 +2480,10 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
     return hasMinLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar;
   };
 
-  // Check if passwords match
   const passwordsMatch = newPassword && confirmPassword && newPassword === confirmPassword;
 
   const triggerShake = (fieldNames) => {
-    // Don't clear first - set the new shake fields directly
     setLocalShakeFields(fieldNames);
-
-    // Increment key to force re-render with new animation
     setShakeKey(prev => prev + 1);
 
     if (fieldNames.includes('newPassword')) {
@@ -2288,13 +2496,11 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
       }, 100);
     }
 
-    // Clear shake after animation completes
     setTimeout(() => {
       setLocalShakeFields([]);
     }, 600);
   };
 
-  // Reset ALL states when hiding the section
   useEffect(() => {
     if (!showPasswordSection) {
       setPasswordErrors({});
@@ -2303,7 +2509,6 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
       setNewPassword('');
       setConfirmPassword('');
       setShakeKey(0);
-      // Reset both eye icon states when section is closed
       setShowPassword(false);
       setShowConfirmPassword(false);
     }
@@ -2311,10 +2516,7 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
 
   const handlePasswordChange = async () => {
     setValidationAttempted(true);
-
-    // Clear previous errors but DON'T clear shake fields here
     setPasswordErrors({});
-
     setIsLoading(true);
 
     try {
@@ -2334,10 +2536,7 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
 
       if (Object.keys(errors).length > 0) {
         setPasswordErrors(errors);
-
-        // Trigger shake for invalid fields
         triggerShake(Object.keys(errors));
-
         setIsLoading(false);
         return;
       }
@@ -2354,12 +2553,10 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
       setConfirmPassword('');
       setShowPasswordSection(false);
       setValidationAttempted(false);
-      // Reset eye icons after successful password change too
       setShowPassword(false);
       setShowConfirmPassword(false);
 
     } catch (error) {
-      console.error("Password change error:", error);
       setPasswordErrors({ submit: error.message || "Password change failed. Please try again." });
     } finally {
       setIsLoading(false);
@@ -2377,7 +2574,6 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
   const PasswordIcon = getPasswordIcon();
   const passwordStyle = getPasswordColor();
 
-  // Determine if fields should shake - use localShakeFields
   const shouldShakeNewPassword = localShakeFields.includes('newPassword');
   const shouldShakeConfirmPassword = localShakeFields.includes('confirmPassword');
 
@@ -2389,7 +2585,6 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
       </h3>
 
       <div className="space-y-3">
-        {/* Password Security Item - Matching Edit Modal style */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -2399,7 +2594,6 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
             : 'bg-gradient-to-br from-white to-gray-50 border-gray-200 hover:border-violet-500/30'
             }`}
         >
-          {/* Background Icon */}
           <div className="absolute right-4 top-1/2 transform -translate-y-1/2 opacity-5 group-hover:opacity-10 transition-opacity">
             <Key size={48} />
           </div>
@@ -2432,7 +2626,6 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => {
-                // Reset eye icons when toggling section visibility
                 if (showPasswordSection) {
                   setShowPassword(false);
                   setShowConfirmPassword(false);
@@ -2464,16 +2657,14 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
               className="overflow-hidden"
             >
               <div className="pt-4 space-y-4">
-                {/* Password Fields - Two columns side by side */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* New Password Field */}
                   <div className="space-y-2" style={{ marginLeft: '16px' }}>
                     <label className={`block text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                       &nbsp;New Password <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
                     </label>
                     <div className="overflow-visible">
                       <motion.div
-                        key={`newPassword-${shakeKey}`} // Use key to force re-render
+                        key={`newPassword-${shakeKey}`}
                         animate={shouldShakeNewPassword ? "shake" : "initial"}
                         variants={shakeAnimation}
                         className="overflow-visible relative"
@@ -2490,6 +2681,11 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
                             }
                           }}
                           placeholder="Enter new password"
+                          autoComplete="off"
+                          spellCheck="false"
+                          data-lpignore="true"
+                          data-1p-ignore="true"
+                          data-form-type="other"
                           className={`w-full pl-10 pr-12 py-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium
                             ${isDark
                               ? passwordErrors.newPassword
@@ -2532,14 +2728,13 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
                     )}
                   </div>
 
-                  {/* Confirm Password Field */}
                   <div className="space-y-2" style={{ marginRight: '16px' }}>
                     <label className={`block text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                       &nbsp;Confirm New Password <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
                     </label>
                     <div className="overflow-visible">
                       <motion.div
-                        key={`confirmPassword-${shakeKey}`} // Use key to force re-render
+                        key={`confirmPassword-${shakeKey}`}
                         animate={shouldShakeConfirmPassword ? "shake" : "initial"}
                         variants={shakeAnimation}
                         className="overflow-visible relative"
@@ -2556,6 +2751,11 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
                             }
                           }}
                           placeholder="Confirm new password"
+                          autoComplete="off"
+                          spellCheck="false"
+                          data-lpignore="true"
+                          data-1p-ignore="true"
+                          data-form-type="other"
                           className={`w-full pl-10 pr-12 py-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium
                             ${isDark
                               ? passwordErrors.confirmPassword
@@ -2599,7 +2799,6 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
                   </div>
                 </div>
 
-                {/* Password Requirements - Matching Edit Modal style */}
                 {(newPassword || confirmPassword) && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -2661,7 +2860,6 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
                   &nbsp;Leave empty if you don't want to change your password
                 </p>
 
-                {/* Save button for password change - Matching Edit Modal exactly */}
                 <div className="flex justify-end" style={{ marginRight: '16px' }}>
                   <motion.button
                     type="button"
@@ -2698,7 +2896,7 @@ const PasswordChangeSection = memo(({ isDark, onPasswordChange, fieldErrors, sha
       </div>
     </div>
   );
-})
+});
 
 const EditProfileModal = memo(({
   isDark,
@@ -2706,7 +2904,10 @@ const EditProfileModal = memo(({
   onClose,
   onUpdate
 }) => {
-  const [formData, setFormData] = useState(user);
+  const [formData, setFormData] = useState(() => ({
+    ...user,
+    status: user.status || 'Unknown'
+  }));
   const [originalData] = useState(user);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
@@ -2716,21 +2917,48 @@ const EditProfileModal = memo(({
   const [completionChecklist, setCompletionChecklist] = useState({
     personalInfo: false,
     profilePhoto: false,
+    workInfo: false,
     documents: false
   });
+  const [formInstanceId] = useState(() => `form-${Date.now()}-${Math.random()}`);
 
   useEffect(() => {
     console.log('Form data avatar updated:', formData.avatar ? 'Has avatar data' : 'No avatar');
   }, [formData.avatar]);
 
+  // Update status based on completion percentage - exactly like AdminsManagement
+  useEffect(() => {
+    const isEmpty = !formData.name && !formData.email && !formData.phone && !formData.address &&
+      !formData.dateOfBirth && !formData.gender && !formData.maritalStatus && !formData.nationality &&
+      !formData.department && !formData.designation && !formData.bio && !formData.emergencyContact &&
+      formData.documents.length === 0 && !formData.avatar;
+
+    if (isEmpty) {
+      setFormData(prev => ({ ...prev, status: 'Unknown' }));
+    } else {
+      const checklist = getCompletionChecklist(formData);
+      const isAllFieldsComplete = checklist.personalInfo && checklist.profilePhoto &&
+        checklist.workInfo && checklist.documents;
+
+      if (isAllFieldsComplete) {
+        setFormData(prev => ({ ...prev, status: 'Pending' }));
+      } else {
+        setFormData(prev => ({ ...prev, status: 'Incomplete' }));
+      }
+    }
+  }, [
+    formData.name, formData.email, formData.phone, formData.address, formData.dateOfBirth,
+    formData.gender, formData.maritalStatus, formData.nationality, formData.department,
+    formData.designation, formData.bio, formData.emergencyContact, formData.avatar,
+    formData.documents, formData.profilePhoto
+  ]);
+
   const handleAvatarChange = (avatarData) => {
-    console.log('handleAvatarChange called with data length:', avatarData?.length);
     setFormData(prev => {
       const newFormData = {
         ...prev,
         avatar: avatarData
       };
-      console.log('Updated form data with avatar');
       return newFormData;
     });
 
@@ -2771,9 +2999,9 @@ const EditProfileModal = memo(({
   const scrollToFirstInvalidField = (invalidFields) => {
     if (invalidFields.length > 0) {
       const fieldOrder = [
-        'name', 'email', 'phone', 'address', 'bio', 'dateOfBirth', 'gender',
-        'maritalStatus', 'nationality', 'department', 'designation',
-        'emergencyContact', 'avatar', 'documents'
+        'name', 'email', 'phone', 'address', 'dateOfBirth', 'gender',
+        'maritalStatus', 'nationality', 'emergencyContact', 'department', 'designation', 'bio',
+        'avatar', 'documents'
       ];
 
       const firstInvalidField = fieldOrder.find(field =>
@@ -2843,9 +3071,9 @@ const EditProfileModal = memo(({
     setShakeFields([]);
 
     if (!formData.avatar) {
-  errors.avatar = 'Profile photo is required';
-  invalidFields.push('avatar');
-}
+      errors.avatar = 'Profile photo is required';
+      invalidFields.push('avatar');
+    }
     
     const isValidName = (name) => {
       return /^[A-Za-z\s]+$/.test(name.trim());
@@ -2930,6 +3158,16 @@ const EditProfileModal = memo(({
       return ['Single', 'Married', 'Divorced', 'Widowed'].includes(status);
     };
 
+    const isValidDepartment = (department) => {
+      const validDepartments = ['Management', 'Verification', 'Support', 'Customer Support', 'Finance', 'IT', 'Information Technology'];
+      return validDepartments.includes(department);
+    };
+
+    const isValidDesignation = (designation) => {
+      const validDesignations = ['Super Admin', 'Approver', 'Co-Approver', 'Support Admin', 'Verification Officer', 'Senior System Administrator'];
+      return validDesignations.includes(designation);
+    };
+
     if (!formData.avatar) {
       errors.avatar = 'Profile photo is required';
       invalidFields.push('avatar');
@@ -3002,19 +3240,19 @@ const EditProfileModal = memo(({
       invalidFields.push('nationality');
     }
 
-    if (!formData.department.trim()) {
+    if (!formData.department) {
       errors.department = 'Department is required';
       invalidFields.push('department');
-    } else if (!isValidTextOnly(formData.department)) {
-      errors.department = 'Department can only contain alphabets and spaces';
+    } else if (!isValidDepartment(formData.department)) {
+      errors.department = 'Please select a valid department';
       invalidFields.push('department');
     }
 
-    if (!formData.designation.trim()) {
+    if (!formData.designation) {
       errors.designation = 'Designation is required';
       invalidFields.push('designation');
-    } else if (!isValidTextOnly(formData.designation)) {
-      errors.designation = 'Designation can only contain alphabets and spaces';
+    } else if (!isValidDesignation(formData.designation)) {
+      errors.designation = 'Please select a valid designation';
       invalidFields.push('designation');
     }
 
@@ -3075,6 +3313,24 @@ const EditProfileModal = memo(({
     return digitsOnly;
   };
 
+  // Autofill prevention handlers
+  const handleEnhancedFocus = (e) => {
+    const input = e.target;
+    input.setAttribute('readonly', 'readonly');
+    setTimeout(() => {
+      input.removeAttribute('readonly');
+    }, 5);
+    input.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
+  };
+
+  const handleMouseDown = (e) => {
+    const input = e.target;
+    input.setAttribute('readonly', 'readonly');
+    setTimeout(() => {
+      input.removeAttribute('readonly');
+    }, 5);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -3123,7 +3379,7 @@ const EditProfileModal = memo(({
 
     let newValue = value;
 
-    if (name === 'name' || name === 'nationality' || name === 'department' || name === 'designation') {
+    if (name === 'name' || name === 'nationality') {
       newValue = value.replace(/[^a-zA-Z\s]/g, '');
     } else if (name === 'phone' || name === 'emergencyContact') {
       let processedValue = value;
@@ -3161,14 +3417,6 @@ const EditProfileModal = memo(({
     }
   };
 
-  const handleArrayChange = (name, value) => {
-    const arrayValue = value.split(',').map(item => item.trim()).filter(item => item);
-    setFormData(prev => ({
-      ...prev,
-      [name]: arrayValue
-    }));
-  };
-
   const handleDocumentsChange = (documents) => {
     setFormData(prev => ({
       ...prev,
@@ -3193,14 +3441,6 @@ const EditProfileModal = memo(({
         delete newErrors[field];
         return newErrors;
       });
-    }
-  };
-
-  const shakeAnimation = {
-    initial: { x: 0 },
-    shake: {
-      x: [0, -10, 10, -10, 10, 0],
-      transition: { duration: 0.6, ease: "easeInOut" }
     }
   };
 
@@ -3253,7 +3493,89 @@ const EditProfileModal = memo(({
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+            <style>{`
+              input:-webkit-autofill,
+              input:-webkit-autofill:hover,
+              input:-webkit-autofill:focus,
+              input:-webkit-autofill:active {
+                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                box-shadow: 0 0 0 30px white inset !important;
+                -webkit-text-fill-color: #000 !important;
+                transition: background-color 5000s ease-in-out 0s;
+              }
+              
+              input::-webkit-contacts-auto-fill-button,
+              input::-webkit-credentials-auto-fill-button {
+                visibility: hidden;
+                display: none !important;
+                pointer-events: none;
+                height: 0;
+                width: 0;
+                margin: 0;
+              }
+
+              input {
+                autocomplete: off;
+              }
+
+              textarea:-webkit-autofill {
+                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                box-shadow: 0 0 0 30px white inset !important;
+                -webkit-text-fill-color: #000 !important;
+              }
+            `}</style>
+            <form
+              onSubmit={handleSubmit}
+              className="p-4 sm:p-6 space-y-4 sm:space-y-6"
+              name={formInstanceId}
+              id={formInstanceId}
+              autoComplete="off"
+              spellCheck="false"
+            >
+              {/* Hidden dummy fields to prevent autofill */}
+              <input
+                type="text"
+                name="prevent_autofill_username"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="username"
+                readOnly
+              />
+              <input
+                type="password"
+                name="prevent_autofill_password"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="current-password"
+                readOnly
+              />
+              <input
+                type="text"
+                name="prevent_autofill_name"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="name"
+                readOnly
+              />
+              <input
+                type="email"
+                name="prevent_autofill_email"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="email"
+                readOnly
+              />
+              <input
+                type="tel"
+                name="prevent_autofill_tel"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="tel"
+                readOnly
+              />
+              <input
+                type="text"
+                name="prevent_autofill_address"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="street-address"
+                readOnly
+              />
+
               {/* Profile Photo Section */}
               <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                 <h3 className={`text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -3281,7 +3603,6 @@ const EditProfileModal = memo(({
                 </h3>
 
                 <div className="space-y-4 sm:space-y-5">
-                  {/* All the input fields remain exactly the same as before */}
                   {/* Row 1: Name and Email */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div ref={fieldRefs.name} className="overflow-visible">
@@ -3298,12 +3619,18 @@ const EditProfileModal = memo(({
                           name="name"
                           value={formData.name}
                           onChange={handleChange}
+                          onFocus={handleEnhancedFocus}
+                          onMouseDown={handleMouseDown}
                           placeholder="John Doe"
                           maxLength={50}
                           autoComplete="off"
-                          className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                            ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
-                            : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                          spellCheck="false"
+                          data-lpignore="true"
+                          data-1p-ignore="true"
+                          data-form-type="other"
+                          className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:outline-none focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:ring-opacity-50 focus:shadow-purple-200 text-sm font-medium ${isDark
+                          ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                          : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
                             } ${fieldErrors.name ? 'border-rose-500' : ''}`}
                         />
                         <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -3336,9 +3663,15 @@ const EditProfileModal = memo(({
                           name="email"
                           value={formData.email}
                           onChange={handleChange}
+                          onFocus={handleEnhancedFocus}
+                          onMouseDown={handleMouseDown}
                           placeholder="john@example.com"
                           maxLength={100}
                           autoComplete="off"
+                          spellCheck="false"
+                          data-lpignore="true"
+                          data-1p-ignore="true"
+                          data-form-type="other"
                           className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
                             ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
                             : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
@@ -3394,9 +3727,15 @@ const EditProfileModal = memo(({
                               name="phone"
                               value={formData.phone}
                               onChange={handleChange}
+                              onFocus={handleEnhancedFocus}
+                              onMouseDown={handleMouseDown}
                               placeholder="300-1234567"
                               maxLength={15}
                               autoComplete="off"
+                              spellCheck="false"
+                              data-lpignore="true"
+                              data-1p-ignore="true"
+                              data-form-type="other"
                               className={`w-full h-[48px] p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
                                 ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
                                 : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
@@ -3429,30 +3768,47 @@ const EditProfileModal = memo(({
                         variants={shakeAnimation}
                         className="overflow-visible"
                       >
-                        <input
-                          type="date"
-                          name="dateOfBirth"
-                          value={formData.dateOfBirth}
-                          onChange={handleChange}
-                          autoComplete="off"
-                          className={`date-field w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                            ? 'bg-gray-800 border-gray-600 text-white'
-                            : 'bg-white border-gray-200 text-gray-900'
-                            } ${fieldErrors.dateOfBirth ? 'border-rose-500' : ''} 
-                          ${formData.dateOfBirth ? (isDark ? 'text-white' : 'text-gray-900') : (isDark ? 'text-gray-400' : 'text-gray-500')
-                            }`}
-                          style={{
-                            color: formData.dateOfBirth ? '' : (isDark ? '#9CA3AF' : '#6B7280')
-                          }}
-                        />
-                        <style jsx>{`
-                          .date-field::-webkit-calendar-picker-indicator {
-                            ${isDark
-                            ? 'filter: invert(39%) sepia(6%) saturate(1199%) hue-rotate(182deg) brightness(94%) contrast(87%);'
-                            : 'filter: invert(39%) sepia(6%) saturate(1199%) hue-rotate(182deg) brightness(94%) contrast(87%);'
-                          }
-                          }
-                        `}</style>
+                        <div className="date-input-modal relative">
+                          <input
+                            type="date"
+                            name="dateOfBirth"
+                            value={formData.dateOfBirth}
+                            onChange={handleChange}
+                            onFocus={handleEnhancedFocus}
+                            onMouseDown={handleMouseDown}
+                            autoComplete="off"
+                            className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium pr-10 transition-all ${isDark
+                              ? 'bg-gray-800 border-gray-600 text-white'
+                              : 'bg-white border-gray-200 text-gray-900'
+                              } ${fieldErrors.dateOfBirth ? 'border-rose-500' : ''}`}
+                            style={{
+                              color: formData.dateOfBirth ? '' : (isDark ? '#9CA3AF' : '#6B7280'),
+                            }}
+                          />
+                          <Calendar
+                            size={18}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer transition-all duration-200 hover:scale-110"
+                            onClick={() => {
+                              const input = document.querySelector('.date-input-modal input[type="date"]');
+                              if (input) {
+                                if (input.showPicker) {
+                                  input.showPicker();
+                                } else {
+                                  input.focus();
+                                  input.click();
+                                }
+                              }
+                            }}
+                            style={{
+                              zIndex: 10,
+                              color: formData.dateOfBirth
+                                ? (isDark ? '#FFFFFF' : '#1F2937')
+                                : (isDark ? '#9CA3AF' : '#6B7280'),
+                              filter: 'none',
+                              pointerEvents: 'auto'
+                            }}
+                          />
+                        </div>
                       </motion.div>
                       {fieldErrors.dateOfBirth && (
                         <motion.p
@@ -3483,8 +3839,8 @@ const EditProfileModal = memo(({
                             <div className={`h-[48px] flex items-center px-3 rounded-2xl border-2 text-sm font-medium ${isDark
                               ? 'bg-gray-800 border-gray-600'
                               : 'bg-white border-gray-200'
-                              } ${fieldErrors.phone ? 'border-rose-500' : ''}`}>
-                              <div className={`flex items-center gap-2 ${formData.phone && formData.phone.replace(/\D/g, '').length > 0
+                              } ${fieldErrors.emergencyContact ? 'border-rose-500' : ''}`}>
+                              <div className={`flex items-center gap-2 ${formData.emergencyContact && formData.emergencyContact.replace(/\D/g, '').length > 0
                                 ? (isDark ? 'text-white' : 'text-gray-900')
                                 : (isDark ? 'text-gray-400' : 'text-gray-500')
                                 }`}>
@@ -3500,9 +3856,15 @@ const EditProfileModal = memo(({
                               name="emergencyContact"
                               value={formData.emergencyContact}
                               onChange={handleChange}
+                              onFocus={handleEnhancedFocus}
+                              onMouseDown={handleMouseDown}
                               placeholder="300-9999999"
                               maxLength={15}
                               autoComplete="off"
+                              spellCheck="false"
+                              data-lpignore="true"
+                              data-1p-ignore="true"
+                              data-form-type="other"
                               className={`w-full h-[48px] p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
                                 ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
                                 : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
@@ -3526,124 +3888,35 @@ const EditProfileModal = memo(({
                       )}
                     </div>
 
-                    <div ref={fieldRefs.gender} className="overflow-visible">
+                    <div ref={fieldRefs.gender} className="overflow-visible" style={{ zIndex: 70, position: 'relative' }}>
                       <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                         &nbsp;Gender <span className="text-rose-500 font-normal normal-case">*</span>
                       </label>
-                      <div className="relative">
-                        <motion.div
-                          animate={shakeFields.includes('gender') ? "shake" : "initial"}
-                          variants={shakeAnimation}
-                          className="overflow-visible"
-                        >
-                          <select
-                            name="gender"
-                            value={formData.gender}
-                            onChange={handleChange}
-                            autoComplete="off"
-                            onFocus={(e) => e.target.removeAttribute('readonly')}
-                            className={`w-full p-2 sm:p-3 rounded-2xl text-sm font-medium transition-all appearance-none ${isDark
-                              ? 'bg-gray-800 border-gray-600'
-                              : 'bg-white border-gray-200'
-                              } border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none ${formData.gender === ""
-                                ? (isDark ? 'text-[#9CA3AF]' : 'text-[#6B7280]')
-                                : (isDark ? 'text-white' : 'text-gray-900')
-                              } ${fieldErrors.gender ? 'border-rose-500' : ''}`}
-                            style={{
-                              paddingRight: '2.5rem'
-                            }}
-                          >
-                            <option value="" className={`${isDark ? 'text-gray-400 bg-gray-800' : 'text-gray-500 bg-white'} font-medium`}>
-                              Select Gender...
-                            </option>
-                            <option value="Male" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'} font-medium`}>
-                              Male
-                            </option>
-                            <option value="Female" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'} font-medium`}>
-                              Female
-                            </option>
-                            <option value="Other" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'} font-medium`}>
-                              Other
-                            </option>
-                          </select>
-                        </motion.div>
-                        <div className={`absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          <ChevronDown size={16} />
-                        </div>
-                      </div>
-                      {fieldErrors.gender && (
-                        <motion.p
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                        >
-                          <XCircle size={12} />
-                          {fieldErrors.gender}
-                        </motion.p>
-                      )}
+                      <CustomGenderDropdown
+                        value={formData.gender}
+                        onChange={handleChange}
+                        isDark={isDark}
+                        fieldError={fieldErrors.gender}
+                        shakeFields={shakeFields}
+                        fieldName="gender"
+                      />
                     </div>
                   </div>
 
                   {/* Row 5: Marital Status and Nationality */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div ref={fieldRefs.maritalStatus} className="overflow-visible">
+                    <div ref={fieldRefs.maritalStatus} className="overflow-visible" style={{ zIndex: 60, position: 'relative' }}>
                       <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                         &nbsp;Marital Status <span className="text-rose-500 font-normal normal-case">*</span>
                       </label>
-                      <div className="relative">
-                        <motion.div
-                          animate={shakeFields.includes('maritalStatus') ? "shake" : "initial"}
-                          variants={shakeAnimation}
-                          className="overflow-visible"
-                        >
-                          <select
-                            name="maritalStatus"
-                            value={formData.maritalStatus}
-                            onChange={handleChange}
-                            autoComplete="off"
-                            onFocus={(e) => e.target.removeAttribute('readonly')}
-                            className={`w-full p-2 sm:p-3 rounded-2xl text-sm font-medium transition-all appearance-none ${isDark
-                              ? 'bg-gray-800 border-gray-600'
-                              : 'bg-white border-gray-200'
-                              } border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none ${formData.maritalStatus === ""
-                                ? (isDark ? 'text-[#9CA3AF]' : 'text-[#6B7280]')
-                                : (isDark ? 'text-white' : 'text-gray-900')
-                              } ${fieldErrors.maritalStatus ? 'border-rose-500' : ''}`}
-                            style={{
-                              paddingRight: '2.5rem'
-                            }}
-                          >
-                            <option value="" className={`${isDark ? 'text-gray-400 bg-gray-800' : 'text-gray-500 bg-white'} font-medium`}>
-                              Select Marital Status...
-                            </option>
-                            <option value="Single" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'} font-medium`}>
-                              Single
-                            </option>
-                            <option value="Married" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'} font-medium`}>
-                              Married
-                            </option>
-                            <option value="Divorced" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'} font-medium`}>
-                              Divorced
-                            </option>
-                            <option value="Widowed" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'} font-medium`}>
-                              Widowed
-                            </option>
-                          </select>
-                        </motion.div>
-                        <div className={`absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          <ChevronDown size={16} />
-                        </div>
-                      </div>
-                      {fieldErrors.maritalStatus && (
-                        <motion.p
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                        >
-                          <XCircle size={12} />
-                          {fieldErrors.maritalStatus}
-                        </motion.p>
-                      )}
+                      <CustomMaritalStatusDropdown
+                        value={formData.maritalStatus}
+                        onChange={handleChange}
+                        isDark={isDark}
+                        fieldError={fieldErrors.maritalStatus}
+                        shakeFields={shakeFields}
+                        fieldName="maritalStatus"
+                      />
                     </div>
 
                     <div ref={fieldRefs.nationality} className="overflow-visible">
@@ -3660,9 +3933,15 @@ const EditProfileModal = memo(({
                           name="nationality"
                           value={formData.nationality}
                           onChange={handleChange}
+                          onFocus={handleEnhancedFocus}
+                          onMouseDown={handleMouseDown}
                           placeholder="Pakistani"
                           maxLength={50}
                           autoComplete="off"
+                          spellCheck="false"
+                          data-lpignore="true"
+                          data-1p-ignore="true"
+                          data-form-type="other"
                           className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
                             ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
                             : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
@@ -3685,85 +3964,6 @@ const EditProfileModal = memo(({
                     </div>
                   </div>
 
-                  {/* Row 6: Department and Designation */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div ref={fieldRefs.department} className="overflow-visible">
-                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                        &nbsp;Department <span className="text-rose-500 font-normal normal-case">*</span>
-                      </label>
-                      <motion.div
-                        animate={shakeFields.includes('department') ? "shake" : "initial"}
-                        variants={shakeAnimation}
-                        className="overflow-visible relative"
-                      >
-                        <input
-                          type="text"
-                          name="department"
-                          value={formData.department}
-                          onChange={handleChange}
-                          placeholder="Information Technology, Human Resources, etc"
-                          maxLength={50}
-                          autoComplete="off"
-                          className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                            ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
-                            : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
-                            } ${fieldErrors.department ? 'border-rose-500' : ''}`}
-                        />
-                        <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {formData.department.length}/50
-                        </div>
-                      </motion.div>
-                      {fieldErrors.department && (
-                        <motion.p
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                        >
-                          <XCircle size={12} />
-                          {fieldErrors.department}
-                        </motion.p>
-                      )}
-                    </div>
-
-                    <div ref={fieldRefs.designation} className="overflow-visible">
-                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                        &nbsp;Designation <span className="text-rose-500 font-normal normal-case">*</span>
-                      </label>
-                      <motion.div
-                        animate={shakeFields.includes('designation') ? "shake" : "initial"}
-                        variants={shakeAnimation}
-                        className="overflow-visible relative"
-                      >
-                        <input
-                          type="text"
-                          name="designation"
-                          value={formData.designation}
-                          onChange={handleChange}
-                          placeholder="Senior System Administrator"
-                          maxLength={50}
-                          autoComplete="off"
-                          className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                            ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
-                            : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
-                            } ${fieldErrors.designation ? 'border-rose-500' : ''}`}
-                        />
-                        <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {formData.designation.length}/50
-                        </div>
-                      </motion.div>
-                      {fieldErrors.designation && (
-                        <motion.p
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                        >
-                          <XCircle size={12} />
-                          {fieldErrors.designation}
-                        </motion.p>
-                      )}
-                    </div>
-                  </div>
-
                   {/* Row 3: Address */}
                   <div ref={fieldRefs.address} className="overflow-visible">
                     <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -3779,9 +3979,15 @@ const EditProfileModal = memo(({
                         name="address"
                         value={formData.address}
                         onChange={handleChange}
+                        onFocus={handleEnhancedFocus}
+                        onMouseDown={handleMouseDown}
                         placeholder="Lahore, Pakistan"
                         maxLength={100}
                         autoComplete="off"
+                        spellCheck="false"
+                        data-lpignore="true"
+                        data-1p-ignore="true"
+                        data-form-type="other"
                         className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
                           ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
                           : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
@@ -3803,47 +4009,101 @@ const EditProfileModal = memo(({
                     )}
                   </div>
 
-                  {/* Row 4: Bio */}
-                  <div ref={fieldRefs.bio} className="overflow-visible">
+                </div>
+              </div>
+
+              {/* Work Information Section */}
+              <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+                <h3 className={`text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  <Briefcase size={16} className="text-violet-500" />
+                  Work Information <span className="text-rose-500 font-normal normal-case">*</span>
+                </h3>
+
+                <div className="space-y-4 sm:space-y-5">
+                  {/* Row 1: Department and Designation */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div ref={fieldRefs.department} className="overflow-visible" style={{ zIndex: 70, position: 'relative' }}>
+                        <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          &nbsp;Department <span className="text-rose-500 font-normal normal-case">*</span>
+                        </label>
+                        <CustomDepartmentDropdown 
+                          value={formData.department} 
+                          onChange={handleChange} 
+                          isDark={isDark} 
+                          fieldError={fieldErrors.department} 
+                          shakeFields={shakeFields} 
+                          fieldName="department" 
+                        />
+                      </div>
+
+                      <div ref={fieldRefs.designation} className="overflow-visible" style={{ zIndex: 60, position: 'relative' }}>
+                        <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          &nbsp;Designation <span className="text-rose-500 font-normal normal-case">*</span>
+                        </label>
+                        <CustomDesignationDropdown 
+                          value={formData.designation} 
+                          onChange={handleChange} 
+                          isDark={isDark} 
+                          fieldError={fieldErrors.designation} 
+                          shakeFields={shakeFields} 
+                          fieldName="designation" 
+                        />
+                      </div>
+                    </div>
+  
+                    {/* Row 2: Bio - Full width */}
+                    <div ref={fieldRefs.bio} className="overflow-visible">
                     <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      &nbsp;Bio  <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+                      &nbsp;Bio  <span className="text-rose-500 font-normal normal-case">*</span>
                     </label>
                     <motion.div
+                      animate={shakeFields?.includes('bio') ? "shake" : "initial"}
+                      variants={shakeAnimation}
                       className="overflow-visible relative"
-                      animate={shakeFields?.includes('bio') ? {
-                        x: [-10, 10, -10, 10, 0],
-                        transition: { duration: 0.4 }
-                      } : {}}
                     >
-                      <textarea
-                        name="bio"
-                        value={formData.bio}
-                        onChange={handleChange}
-                        rows="3"
-                        placeholder="Tell us about yourself..."
-                        maxLength={300}
-                        autoComplete="off"
-                        onFocus={(e) => e.target.removeAttribute('readonly')}
-                        className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium resize-none ${fieldErrors.bio
-                          ? 'border-red-500 focus:ring-red-500/30 focus:border-red-500'
-                          : isDark
+                      <div className="relative">
+                        <textarea
+                          name="bio"
+                          value={formData.bio}
+                          onChange={handleChange}
+                          placeholder="Enter your bio..."
+                          maxLength={300}
+                          rows={3}
+                          autoComplete="off"
+                          spellCheck="false"
+                          readOnly
+                          onFocus={(e) => e.target.removeAttribute('readonly')}
+                          onMouseDown={handleMouseDown}
+                          data-lpignore="true"
+                          data-1p-ignore="true"
+                          data-form-type="other"
+                          aria-label="Bio"
+                          aria-autocomplete="none"
+                          className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium resize-none ${isDark
                             ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
                             : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
-                          }`}
-                      />
-                      <div className={`absolute right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'
-                          }`}
+                            } ${fieldErrors.bio ? 'border-rose-500 focus:ring-red-500/30 focus:border-red-500' : ''}`}
+                        />
+                        <div className={`absolute right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
                           style={{
-                            bottom: '0.8rem',
+                            bottom: '0.5rem',
                             pointerEvents: 'none'
                           }}
                         >
                           {formData.bio.length}/300
                         </div>
-                      {fieldErrors.bio && (
-                        <p className="text-red-500 text-xs mt-1">{fieldErrors.bio}</p>
-                      )}
+                      </div>
                     </motion.div>
+                    {fieldErrors.bio && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+                      >
+                        <XCircle size={12} />
+                        {fieldErrors.bio}
+                      </motion.p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -3881,8 +4141,28 @@ const EditProfileModal = memo(({
                       isDark={isDark}
                     />
                     <p className={`text-xs font-medium mt-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {completionPercentage === 100 ? 'Profile complete!' : 'Complete all fields to complete profile'}
+                      {formData.status === 'Pending' ? 'Ready to submit!' : 'Complete all fields to complete profile'}
                     </p>
+
+                    {/* Status Overview */}
+                    <div className="mt-4 w-full max-w-xs">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Status
+                        </span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          formData.status === 'Pending'
+                            ? isDark ? 'bg-amber-500/30 text-amber-400' : 'bg-amber-500/20 text-amber-600'
+                            : formData.status === 'Incomplete'
+                              ? isDark ? 'bg-slate-500/30 text-slate-300' : 'bg-slate-500/20 text-slate-600'
+                              : formData.status === 'Unknown'
+                                ? isDark ? 'bg-slate-500/30 text-slate-300' : 'bg-slate-500/20 text-slate-600'
+                                : isDark ? 'bg-gray-500/30 text-gray-300' : 'bg-gray-500/20 text-gray-600'
+                        }`}>
+                          {formData.status}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
                   <div>
@@ -3891,9 +4171,10 @@ const EditProfileModal = memo(({
                     </h4>
                     <div className="space-y-3">
                       {[
-                        { label: 'Profile Photo', completed: completionChecklist.profilePhoto },
-                        { label: 'Personal Information', completed: completionChecklist.personalInfo },
-                        { label: 'Documents', completed: completionChecklist.documents }
+                        { label: 'Profile Photo', completed: formData.avatar && formData.avatar.toString().trim() !== '' },
+                        { label: 'Personal Information', completed: ['name', 'email', 'phone', 'address', 'dateOfBirth', 'gender', 'maritalStatus', 'nationality', 'emergencyContact'].every(field => formData[field] && formData[field].toString().trim() !== '') },
+                        { label: 'Work Information', completed: ['department', 'designation', 'bio'].every(field => formData[field] && formData[field].toString().trim() !== '') },
+                        { label: 'Documents', completed: formData.documents && formData.documents.length > 0 }
                       ].map((item, index) => (
                         <div key={index} className="flex items-center gap-3">
                           <div className={`w-4 h-4 rounded-full flex items-center justify-center ${item.completed
@@ -4444,18 +4725,6 @@ const ProfileManagement = ({ isDark }) => {
                     </label>
                     <p className={`text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{user.maritalStatus || 'N/A'}</p>
                   </div>
-                  <div>
-                    <label className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Department
-                    </label>
-                    <p className={`text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{user.department}</p>
-                  </div>
-                  <div>
-                    <label className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Bio
-                    </label>
-                    <p className={`text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{user.bio}</p>
-                  </div>
                 </div>
 
                 <div className="space-y-4">
@@ -4486,17 +4755,48 @@ const ProfileManagement = ({ isDark }) => {
                     </label>
                     <p className={`text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{user.nationality || 'N/A'}</p>
                   </div>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <div>
+                  <label className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Address
+                  </label>
+                  <p className={`text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{user.address}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Work Information Card */}
+            <div className={`p-6 rounded-2xl ${isDark ? 'bg-gray-800/50' : 'bg-gray-100'}`}>
+              <h3 className={`text-lg font-bold mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <Briefcase size={18} className="text-violet-500" />
+                Work Information
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Department
+                    </label>
+                    <p className={`text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{user.department}</p>
+                  </div>
                   <div>
                     <label className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                       Designation
                     </label>
                     <p className={`text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{user.designation}</p>
                   </div>
+                </div>
+
+                <div className="space-y-4">
                   <div>
                     <label className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Address
+                      Bio
                     </label>
-                    <p className={`text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{user.address}</p>
+                    <p className={`text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{user.bio}</p>
                   </div>
                 </div>
               </div>
@@ -4803,7 +5103,7 @@ const ProfileManagement = ({ isDark }) => {
                           </div>
                         </div>
 
-                        {/* Delete button only - exactly like social links */}
+                        {/* Delete button only */}
                         <motion.button
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
@@ -4920,7 +5220,7 @@ const ProfileManagement = ({ isDark }) => {
         {renderTabContent()}
       </motion.div>
 
-      {/* Edit Profile Modal - Now without verification section */}
+      {/* Edit Profile Modal */}
       <AnimatePresence>
         {showEditModal && (
           <EditProfileModal
@@ -4968,3 +5268,4 @@ const ProfileManagement = ({ isDark }) => {
 };
 
 export default ProfileManagement;
+

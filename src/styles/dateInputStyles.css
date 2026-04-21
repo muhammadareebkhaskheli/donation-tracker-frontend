@@ -1,0 +1,145 @@
+.date-input-modal input[type="date"] {
+  position: relative !important;
+}
+
+.date-input-modal input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0 !important;
+  display: none !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.date-input-modal input[type="date"]::-webkit-datetime-edit {
+  position: relative !important;
+  padding-right: 2px !important;
+}
+
+.date-input-modal input[type="date"]:invalid::-webkit-datetime-edit {
+  color: #9CA3AF !important;
+}
+
+.date-input-modal input[type="date"] {
+  padding: 10px 8px !important;
+  font-family: inherit !important;
+}
+
+.date-input-filter input[type="date"] {
+  position: relative !important;
+}
+
+.date-input-filter input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0 !important;
+  display: none !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.date-input-filter input[type="date"]::-webkit-datetime-edit {
+  position: relative !important;
+  padding-right: 2px !important;
+}
+
+.date-input-filter input[type="date"]:invalid::-webkit-datetime-edit {
+  color: #9CA3AF !important;
+}
+
+.date-input-display input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none !important;
+  opacity: 0 !important;
+}
+
+.date-input-display input[type="date"] {
+  cursor: default !important;
+  pointer-events: none !important;
+}
+
+.date-input-generic input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 1 !important;
+  display: block !important;
+  cursor: pointer !important;
+  background: transparent !important;
+}
+
+.date-input-modal input[type="date"],
+.date-input-filter input[type="date"] {
+  color-scheme: light !important;
+}
+
+.date-input-modal input[type="date"]::placeholder,
+.date-input-modal input[type="date"]::-webkit-input-placeholder,
+.date-input-modal input[type="date"]::-webkit-datetime-edit-text,
+.date-input-filter input[type="date"]::placeholder,
+.date-input-filter input[type="date"]::-webkit-input-placeholder,
+.date-input-filter input[type="date"]::-webkit-datetime-edit-text {
+  color: #6b7280 !important;
+  opacity: 1 !important;
+}
+
+.date-input-modal input[type="date"]:focus {
+  outline: none !important;
+}
+
+.date-input-filter input[type="date"]:focus {
+  outline: none !important;
+}
+
+.date-input-display input[type="date"]:focus {
+  outline: none !important;
+}
+
+.dark .date-input-modal input[type="date"],
+.dark .date-input-filter input[type="date"] {
+  background-color: #1f2937 !important;
+  color-scheme: dark !important;
+}
+
+.dark .date-input-modal input[type="date"]:not([value]),
+.dark .date-input-modal input[type="date"][value=""],
+.dark .date-input-filter input[type="date"]:not([value]),
+.dark .date-input-filter input[type="date"][value=""] {
+  color: #9ca3af !important;
+}
+
+.dark .date-input-modal input[type="date"]:not([value])::-webkit-datetime-edit,
+.dark .date-input-modal input[type="date"][value=""]::-webkit-datetime-edit,
+.dark .date-input-filter input[type="date"]:not([value])::-webkit-datetime-edit,
+.dark .date-input-filter input[type="date"][value=""]::-webkit-datetime-edit {
+  color: #9ca3af !important;
+}
+
+.dark .date-input-modal input[type="date"]:not([value])::-webkit-datetime-edit-year-field,
+.dark .date-input-modal input[type="date"]:not([value])::-webkit-datetime-edit-month-field,
+.dark .date-input-modal input[type="date"]:not([value])::-webkit-datetime-edit-day-field,
+.dark .date-input-modal input[type="date"]:not([value])::-webkit-datetime-edit-text,
+.dark .date-input-modal input[type="date"][value=""]::-webkit-datetime-edit-year-field,
+.dark .date-input-modal input[type="date"][value=""]::-webkit-datetime-edit-month-field,
+.dark .date-input-modal input[type="date"][value=""]::-webkit-datetime-edit-day-field,
+.dark .date-input-modal input[type="date"][value=""]::-webkit-datetime-edit-text,
+.dark .date-input-filter input[type="date"]:not([value])::-webkit-datetime-edit-year-field,
+.dark .date-input-filter input[type="date"]:not([value])::-webkit-datetime-edit-month-field,
+.dark .date-input-filter input[type="date"]:not([value])::-webkit-datetime-edit-day-field,
+.dark .date-input-filter input[type="date"]:not([value])::-webkit-datetime-edit-text,
+.dark .date-input-filter input[type="date"][value=""]::-webkit-datetime-edit-year-field,
+.dark .date-input-filter input[type="date"][value=""]::-webkit-datetime-edit-month-field,
+.dark .date-input-filter input[type="date"][value=""]::-webkit-datetime-edit-day-field,
+.dark .date-input-filter input[type="date"][value=""]::-webkit-datetime-edit-text {
+  color: #9ca3af !important;
+}
+
+.dark .date-input-modal input[type="date"][value]:not([value=""]),
+.dark .date-input-filter input[type="date"][value]:not([value=""]) {
+  color: #ffffff !important;
+}
+
+.dark .date-input-modal input[type="date"][value]:not([value=""])::-webkit-datetime-edit-year-field,
+.dark .date-input-modal input[type="date"][value]:not([value=""])::-webkit-datetime-edit-month-field,
+.dark .date-input-modal input[type="date"][value]:not([value=""])::-webkit-datetime-edit-day-field,
+.dark .date-input-modal input[type="date"][value]:not([value=""])::-webkit-datetime-edit-text,
+.dark .date-input-filter input[type="date"][value]:not([value=""])::-webkit-datetime-edit-year-field,
+.dark .date-input-filter input[type="date"][value]:not([value=""])::-webkit-datetime-edit-month-field,
+.dark .date-input-filter input[type="date"][value]:not([value=""])::-webkit-datetime-edit-day-field,
+.dark .date-input-filter input[type="date"][value]:not([value=""])::-webkit-datetime-edit-text {
+  color: #ffffff !important;
+}

@@ -179,7 +179,7 @@ export default function Signup() {
     const input = e.target;
     const fieldName = input.name;
 
-    if (['firstName', 'lastName', 'phone', 'email'].includes(fieldName)) {
+    if (['firstName', 'lastName', 'phone', 'email', 'password', 'confirmPassword'].includes(fieldName)) {
       input.setAttribute('readonly', 'readonly');
       setTimeout(() => {
         input.removeAttribute('readonly');
@@ -192,7 +192,7 @@ export default function Signup() {
     const input = e.target;
     const fieldName = input.name;
 
-    if (['firstName', 'lastName', 'phone', 'email'].includes(fieldName)) {
+    if (['firstName', 'lastName', 'phone', 'email', 'password', 'confirmPassword'].includes(fieldName)) {
       input.setAttribute('data-autofill-prevent', Math.random().toString(36).substring(7));
       input.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
       setTimeout(() => {
@@ -205,7 +205,7 @@ export default function Signup() {
     const input = e.target;
     const fieldName = input.name;
 
-    if (['firstName', 'lastName', 'phone', 'email'].includes(fieldName)) {
+    if (['firstName', 'lastName', 'phone', 'email', 'password', 'confirmPassword'].includes(fieldName)) {
       input.setAttribute('data-typing', 'true');
     }
   };
@@ -223,11 +223,27 @@ export default function Signup() {
     const input = e.target;
     const fieldName = input.name;
 
-    if (['firstName', 'lastName', 'phone', 'email'].includes(fieldName)) {
+    if (['firstName', 'lastName', 'phone', 'email', 'password', 'confirmPassword'].includes(fieldName)) {
       input.setAttribute('readonly', 'readonly');
       setTimeout(() => {
         input.removeAttribute('readonly');
       }, 5);
+    }
+  };
+
+  // Critical handlers from AdminsManagement that prevent autofill
+  const handleAutofillPrevention = (e) => {
+    const input = e.target;
+    // Remove readonly on actual user interaction
+    if (input.hasAttribute('readonly')) {
+      input.removeAttribute('readonly');
+    }
+  };
+
+  const makeReadonly = (e) => {
+    const input = e.target;
+    if (input.value === '') {
+      input.setAttribute('readonly', 'readonly');
     }
   };
 
@@ -236,40 +252,41 @@ export default function Signup() {
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus,
   input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 30px white inset !important;
-    box-shadow: 0 0 0 30px white inset !important;
-    -webkit-text-fill-color: #000 !important;
-    transition: background-color 5000s ease-in-out 0s;
-    background-color: white !important;
+    -webkit-box-shadow: 0 0 0 30px white inset !important !important;
+    box-shadow: 0 0 0 30px white inset !important !important;
+    -webkit-text-fill-color: #000 !important !important;
+    transition: background-color 5000s ease-in-out 0s !important;
+    background-color: white !important !important;
   }
   
   input[type="password"]:-webkit-autofill,
   input[type="password"]:-webkit-autofill:hover,
   input[type="password"]:-webkit-autofill:focus,
   input[type="password"]:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 30px white inset !important;
-    box-shadow: 0 0 0 30px white inset !important;
-    -webkit-text-fill-color: #000 !important;
-    transition: background-color 5000s ease-in-out 0s;
-    background-color: white !important;
+    -webkit-box-shadow: 0 0 0 30px white inset !important !important;
+    box-shadow: 0 0 0 30px white inset !important !important;
+    -webkit-text-fill-color: #000 !important !important;
+    transition: background-color 5000s ease-in-out 0s !important;
+    background-color: white !important !important;
   }
   
   input::-webkit-contacts-auto-fill-button,
   input::-webkit-credentials-auto-fill-button {
-    visibility: hidden;
+    visibility: hidden !important;
     display: none !important;
-    pointer-events: none;
-    height: 0;
-    width: 0;
-    margin: 0;
+    pointer-events: none !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
   }
 
   input {
     autocomplete: off !important;
+    -webkit-autocomplete: off !important;
   }
   
   input:-internal-autofill-selected {
-    background-color: white !important;
+    background-color: white !important !important;
   }
 `;
 
@@ -486,36 +503,36 @@ export default function Signup() {
   };
 
   const isValidEmail = (email) => {
-  email = email.trim().toLowerCase();
+    email = email.trim().toLowerCase();
 
-  if (!email) return false;
-  
-  if (!email.endsWith('@gmail.com')) return false;
-  
-  const username = email.slice(0, -10);
-  
-  if (username.length === 0) return false;
-  if (username.length > 64) return false;
-  
-  const usernameRegex = /^[a-z0-9._]+$/;
-  if (!usernameRegex.test(username)) return false;
-  
-  if (username.includes('..')) return false;
-  
-  if (username.startsWith('.') || username.endsWith('.')) return false;
-  
-  if (username.startsWith('_')) return false;
-  
-  if (email.split('@gmail.com').length !== 2) return false;
-  
-  const parts = email.split('@');
-  if (parts.length !== 2) return false;
-  
-  const domain = parts[1];
-  if (domain !== 'gmail.com') return false;
-  
-  return true;
-};
+    if (!email) return false;
+
+    if (!email.endsWith('@gmail.com')) return false;
+
+    const username = email.slice(0, -10);
+
+    if (username.length === 0) return false;
+    if (username.length > 64) return false;
+
+    const usernameRegex = /^[a-z0-9._]+$/;
+    if (!usernameRegex.test(username)) return false;
+
+    if (username.includes('..')) return false;
+
+    if (username.startsWith('.') || username.endsWith('.')) return false;
+
+    if (username.startsWith('_')) return false;
+
+    if (email.split('@gmail.com').length !== 2) return false;
+
+    const parts = email.split('@');
+    if (parts.length !== 2) return false;
+
+    const domain = parts[1];
+    if (domain !== 'gmail.com') return false;
+
+    return true;
+  };
 
   const isValidPhone = (phone) => {
     const digitsOnly = phone.replace(/\D/g, '');
@@ -689,7 +706,7 @@ export default function Signup() {
       errors.password = "Password is required";
       invalidFields.push('password');
     } else if (!validatePassword(formData.password)) {
-      errors.password = "Password must be at least 8 characters with uppercase, lowercase, number, and special character";
+      errors.password = "Password is not matching the requirements";
       invalidFields.push('password');
     }
 
@@ -809,40 +826,40 @@ export default function Signup() {
   };
 
   const handleResendVerification = async () => {
-  if (isTimerActive && timer > 0) {
-    setFieldErrors({ verification: `Please wait ${timer} seconds before resending` });
-    return;
-  }
-  
-  setIsResending(true);
-  setFieldErrors({});
-
-  try {
-    await authAPI.resendVerification(formData.email);
-    
-    setTimer(60);
-    setIsTimerActive(true);
-    
-  } catch (error) {
-    console.error('Resend error:', error);
-
-    if (error.type === 'VALIDATION') {
-      if (error.message.includes('already verified')) {
-        setFieldErrors({ verification: 'This email is already verified. Please login.' });
-      } else {
-        setFieldErrors({ verification: error.message || 'Failed to resend code' });
-      }
-    } else if (error.type === 'NETWORK') {
-      setFieldErrors({ verification: 'Network error. Please check your connection.' });
-    } else {
-      setFieldErrors({ verification: 'Failed to resend code. Please try again.' });
+    if (isTimerActive && timer > 0) {
+      setFieldErrors({ verification: `Please wait ${timer} seconds before resending` });
+      return;
     }
 
-    triggerShake(['verification']);
-  } finally {
-    setIsResending(false);
-  }
-};
+    setIsResending(true);
+    setFieldErrors({});
+
+    try {
+      await authAPI.resendVerification(formData.email);
+
+      setTimer(60);
+      setIsTimerActive(true);
+
+    } catch (error) {
+      console.error('Resend error:', error);
+
+      if (error.type === 'VALIDATION') {
+        if (error.message.includes('already verified')) {
+          setFieldErrors({ verification: 'This email is already verified. Please login.' });
+        } else {
+          setFieldErrors({ verification: error.message || 'Failed to resend code' });
+        }
+      } else if (error.type === 'NETWORK') {
+        setFieldErrors({ verification: 'Network error. Please check your connection.' });
+      } else {
+        setFieldErrors({ verification: 'Failed to resend code. Please try again.' });
+      }
+
+      triggerShake(['verification']);
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const getMaskedEmail = (email) => {
     if (!email) return "";
@@ -878,125 +895,222 @@ export default function Signup() {
   };
 
   const renderVerificationStep = () => (
-  <>
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="text-center mb-8"
-    >
+    <>
       <motion.div
-        variants={iconAnimation}
-        initial="initial"
-        animate="animate"
-        whileHover="hover"
-        className="w-20 h-20 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl cursor-pointer"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center mb-8"
       >
-        <Mail className="w-10 h-10 text-white" />
-      </motion.div>
+        <motion.div
+          variants={iconAnimation}
+          initial="initial"
+          animate="animate"
+          whileHover="hover"
+          className="w-20 h-20 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl cursor-pointer"
+        >
+          <Mail className="w-10 h-10 text-white" />
+        </motion.div>
 
-      <motion.h2
-        className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent mb-3"
-      >
-        Verify Your Account
-      </motion.h2>
-      <motion.p
-        className="text-gray-600 text-lg mb-6"
-      >
-        We sent a 6-digit code to your {verificationMethod}
-      </motion.p>
+        <motion.h2
+          className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent mb-3"
+        >
+          Verify Your Account
+        </motion.h2>
+        <motion.p
+          className="text-gray-600 text-lg mb-6"
+        >
+          We sent a 6-digit code to your {verificationMethod}
+        </motion.p>
 
-      <div className="bg-blue-50 rounded-2xl p-4 border border-blue-200">
-        <div className="flex items-center gap-3">
-          <ShieldCheck className="w-5 h-5 text-blue-600" />
-          <div className="text-left">
-            <p className="text-blue-800 text-sm font-medium">Account Verification</p>
-            <p className="text-blue-600 text-xs">Enter the code sent to {getMaskedEmail(currentUserIdentifier)}</p>
+        <div className="bg-blue-50 rounded-2xl p-4 border border-blue-200">
+          <div className="flex items-center gap-3">
+            <ShieldCheck className="w-5 h-5 text-blue-600" />
+            <div className="text-left">
+              <p className="text-blue-800 text-sm font-medium">Account Verification</p>
+              <p className="text-blue-600 text-xs">Enter the code sent to {getMaskedEmail(currentUserIdentifier)}</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {verificationMessage && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-4 text-green-600 text-sm"
-        >
-          {verificationMessage}
-        </motion.div>
-      )}
-
-    </motion.div>
-
-    <form onSubmit={handleVerificationSubmit} className="space-y-5">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-      >
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          &nbsp;Verification Code <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
-        </label>
-        <motion.div
-          key={`verification-${shakeKey}`}
-          animate={shakeFields.includes('verification') ? "shake" : "initial"}
-          variants={shakeAnimation}
-          className="overflow-visible"
-        >
-          <input
-            type="text"
-            value={verificationCode}
-            onChange={(e) => {
-              setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6));
-              if (fieldErrors.verification) {
-                setFieldErrors(prev => ({ ...prev, verification: null }));
-              }
-            }}
-            autoComplete="off"
-            className={`w-full px-4 py-4 border-2 rounded-2xl text-center text-xl font-mono tracking-widest focus:outline-none focus:ring-4 transition-all
-            ${fieldErrors.verification
-                ? 'border-rose-500 bg-white-50 focus:border-rose-500 focus:ring-rose-100'
-                : 'border-gray-200 focus:border-blue-400 focus:ring-blue-100'
-              }`}
-            placeholder="------"
-            maxLength={6}
-            autoFocus
-          />
-        </motion.div>
-        {fieldErrors.verification && (
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
-            <XCircle className="w-4 h-4" /> {fieldErrors.verification}
-          </motion.p>
+        {verificationMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4 text-green-600 text-sm"
+          >
+            {verificationMessage}
+          </motion.div>
         )}
+
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="text-center"
-      >
-        <motion.button
-          type="button"
-          onClick={handleResendVerification}
-          disabled={isTimerActive && timer > 0 || isResending || isVerifying}
-          variants={linkAnimation}
-          whileHover="hover"
-          whileTap="tap"
-          className={`font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden ${
-            isTimerActive && timer > 0 || isResending || isVerifying
+      <form onSubmit={handleVerificationSubmit} className="space-y-5">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            &nbsp;Verification Code <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
+          </label>
+          <motion.div
+            key={`verification-${shakeKey}`}
+            animate={shakeFields.includes('verification') ? "shake" : "initial"}
+            variants={shakeAnimation}
+            className="overflow-visible"
+          >
+            <input
+              type="text"
+              value={verificationCode}
+              onChange={(e) => {
+                setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                if (fieldErrors.verification) {
+                  setFieldErrors(prev => ({ ...prev, verification: null }));
+                }
+              }}
+              autoComplete="off"
+              className={`w-full px-4 py-4 border-2 rounded-2xl text-center text-xl font-mono tracking-widest focus:outline-none focus:ring-4 transition-all
+            ${fieldErrors.verification
+                  ? 'border-rose-500 bg-white-50 focus:border-rose-500 focus:ring-rose-100'
+                  : 'border-gray-200 focus:border-blue-400 focus:ring-blue-100'
+                }`}
+              placeholder="------"
+              maxLength={6}
+              autoFocus
+            />
+          </motion.div>
+          {fieldErrors.verification && (
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-rose-600 text-sm mt-2 flex items-center gap-1">
+              <XCircle className="w-4 h-4" /> {fieldErrors.verification}
+            </motion.p>
+          )}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="text-center"
+        >
+          <motion.button
+            type="button"
+            onClick={handleResendVerification}
+            disabled={isTimerActive && timer > 0 || isResending || isVerifying}
+            variants={linkAnimation}
+            whileHover="hover"
+            whileTap="tap"
+            className={`font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden ${isTimerActive && timer > 0 || isResending || isVerifying
               ? "text-gray-400 cursor-not-allowed"
               : "text-blue-600 hover:text-blue-700"
-          }`}
+              }`}
+          >
+            {isResending ? (
+              "Sending..."
+            ) : isVerifying ? (
+              "Sending..."
+            ) : isTimerActive && timer > 0 ? (
+              `Resend available in ${timer}s`
+            ) : (
+              <>
+                Didn't receive code? Resend
+                <motion.span
+                  animate={{ x: [0, 3, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  className="group-hover:translate-x-1 transition-transform duration-300"
+                >
+                  →
+                </motion.span>
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
+              </>
+            )}
+          </motion.button>
+        </motion.div>
+
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          type="submit"
+          disabled={isVerifying || verificationCode.length !== 6}
+          whileHover="hover"
+          whileTap="tap"
+          className="w-full py-5 px-6 bg-gradient-to-r from-blue-600 to-cyan-500 
+                 text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
+                 transform transition-all duration-300
+                 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
         >
-          {isResending ? (
-            "Sending..."
-          ) : isVerifying ? (
-            "Sending..."
-          ) : isTimerActive && timer > 0 ? (
-            `Resend available in ${timer}s`
-          ) : (
-            <>
-              Didn't receive code? Resend
+          <motion.div
+            className="absolute inset-0 rounded-2xl border-2 border-blue-400"
+            variants={pulseAnimation}
+            whileHover="hover"
+          />
+
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+
+          <span className="relative z-10 flex items-center gap-3">
+            {isVerifying ? (
+              <>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="w-6 h-6 border-2 border-white border-t-transparent rounded-full"
+                />
+                Verifying...
+              </>
+            ) : (
+              <>
+                Complete Verification
+                <motion.div
+                  animate={{ x: [0, 5, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  <ArrowRight className="w-5 h-5" />
+                </motion.div>
+              </>
+            )}
+          </span>
+        </motion.button>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-center"
+        >
+          <motion.button
+            type="button"
+            onClick={handleBackToSignup}
+            variants={backLinkAnimation}
+            whileHover="hover"
+            whileTap="tap"
+            className="text-blue-600 hover:text-blue-700 font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden"
+          >
+            <motion.span
+              animate={{ x: [0, -3, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="group-hover:-translate-x-1 transition-transform duration-300"
+            >
+              ←
+            </motion.span>
+            Back to signup
+            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
+          </motion.button>
+        </motion.div>
+
+        <motion.div
+          variants={fadeInUp}
+          className="text-center mt-6 pt-6 border-t border-gray-200"
+        >
+          <p className="text-gray-600">
+            Already have an account?{" "}
+            <motion.a
+              href="/login"
+              variants={linkAnimation}
+              whileHover="hover"
+              whileTap="tap"
+              className="text-blue-600 font-semibold hover:text-blue-700 transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden"
+            >
+              Sign In account
               <motion.span
                 animate={{ x: [0, 3, 0] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
@@ -1005,110 +1119,12 @@ export default function Signup() {
                 →
               </motion.span>
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
-            </>
-          )}
-        </motion.button>
-      </motion.div>
-
-      <motion.button
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        type="submit"
-        disabled={isVerifying || verificationCode.length !== 6}
-        whileHover="hover"
-        whileTap="tap"
-        className="w-full py-5 px-6 bg-gradient-to-r from-blue-600 to-cyan-500 
-                 text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl
-                 transform transition-all duration-300
-                 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
-      >
-        <motion.div
-          className="absolute inset-0 rounded-2xl border-2 border-blue-400"
-          variants={pulseAnimation}
-          whileHover="hover"
-        />
-
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-
-        <span className="relative z-10 flex items-center gap-3">
-          {isVerifying ? (
-            <>
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                className="w-6 h-6 border-2 border-white border-t-transparent rounded-full"
-              />
-              Verifying...
-            </>
-          ) : (
-            <>
-              Complete Verification
-              <motion.div
-                animate={{ x: [0, 5, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              >
-                <ArrowRight className="w-5 h-5" />
-              </motion.div>
-            </>
-          )}
-        </span>
-      </motion.button>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="text-center"
-      >
-        <motion.button
-          type="button"
-          onClick={handleBackToSignup}
-          variants={backLinkAnimation}
-          whileHover="hover"
-          whileTap="tap"
-          className="text-blue-600 hover:text-blue-700 font-semibold transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden"
-        >
-          <motion.span
-            animate={{ x: [0, -3, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="group-hover:-translate-x-1 transition-transform duration-300"
-          >
-            ←
-          </motion.span>
-          Back to signup
-          <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
-        </motion.button>
-      </motion.div>
-
-      <motion.div
-        variants={fadeInUp}
-        className="text-center mt-6 pt-6 border-t border-gray-200"
-      >
-        <p className="text-gray-600">
-          Already have an account?{" "}
-          <motion.a
-            href="/login"
-            variants={linkAnimation}
-            whileHover="hover"
-            whileTap="tap"
-            className="text-blue-600 font-semibold hover:text-blue-700 transition-colors duration-300 inline-flex items-center gap-1 group relative overflow-hidden"
-          >
-            Sign In account
-            <motion.span
-              animate={{ x: [0, 3, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-              className="group-hover:translate-x-1 transition-transform duration-300"
-            >
-              →
-            </motion.span>
-            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
-          </motion.a>
-        </p>
-      </motion.div>
-    </form>
-  </>
-);
+            </motion.a>
+          </p>
+        </motion.div>
+      </form>
+    </>
+  );
 
   const renderCompletionStep = () => (
     <motion.div
@@ -1296,9 +1312,117 @@ export default function Signup() {
       </motion.div>
 
       <form onSubmit={handleSignup} className="space-y-5" autoComplete="off">
+        <style>{`
+              input:-webkit-autofill,
+              input:-webkit-autofill:hover,
+              input:-webkit-autofill:focus,
+              input:-webkit-autofill:active {
+                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                box-shadow: 0 0 0 30px white inset !important;
+                -webkit-text-fill-color: #000 !important;
+                transition: background-color 5000s ease-in-out 0s;
+              }
+              
+              input::-webkit-contacts-auto-fill-button,
+              input::-webkit-credentials-auto-fill-button {
+                visibility: hidden;
+                display: none !important;
+                pointer-events: none;
+                height: 0;
+                width: 0;
+                margin: 0;
+              }
+
+              input {
+                autocomplete: off;
+              }
+
+              input[type="text"],
+              input[type="email"],
+              input[type="password"],
+              input[type="tel"] {
+                -webkit-autofill: off;
+              }
+
+              textarea:-webkit-autofill {
+                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                box-shadow: 0 0 0 30px white inset !important;
+                -webkit-text-fill-color: #000 !important;
+              }
+
+              select:-webkit-autofill {
+                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                box-shadow: 0 0 0 30px white inset !important;
+              }
+
+              /* Remove autofill styling and black outline */
+              input:-webkit-autofill,
+              input:-webkit-autofill:hover,
+              input:-webkit-autofill:focus,
+              input:-webkit-autofill:active {
+                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                box-shadow: 0 0 0 30px white inset !important;
+                -webkit-text-fill-color: #000 !important;
+                caret-color: #000 !important;
+                outline: none !important;
+                border: 2px solid #e5e7eb !important;
+              }
+
+              textarea:-webkit-autofill,
+              textarea:-webkit-autofill:hover,
+              textarea:-webkit-autofill:focus {
+                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                box-shadow: 0 0 0 30px white inset !important;
+                -webkit-text-fill-color: #000 !important;
+                outline: none !important;
+                border: 2px solid #e5e7eb !important;
+              }
+            `}</style>
         <motion.div
           variants={fadeInUp}
         >
+          <input
+                type="text"
+                name="prevent_autofill_username"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="username"
+                readOnly
+              />
+              <input
+                type="password"
+                name="prevent_autofill_password"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="current-password"
+                readOnly
+              />
+              <input
+                type="text"
+                name="prevent_autofill_name"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="name"
+                readOnly
+              />
+              <input
+                type="email"
+                name="prevent_autofill_email"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="email"
+                readOnly
+              />
+              <input
+                type="tel"
+                name="prevent_autofill_tel"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="tel"
+                readOnly
+              />
+              <input
+                type="text"
+                name="prevent_autofill_address"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="street-address"
+                readOnly
+              />
           <div ref={fieldRefs.firstName} className="overflow-visible">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               &nbsp;First Name <span className="text-rose-600 font-normal normal-case">&nbsp;*</span>
@@ -1316,24 +1440,35 @@ export default function Signup() {
                 value={formData.firstName}
                 onChange={handleChange}
                 onFocus={handleEnhancedFocus}
-                onInput={handleInput}
+                onInput={(e) => {
+                  handleInput(e);
+                  handleAutofillPrevention(e);
+                }}
+                onBlur={makeReadonly}
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
                 onMouseDown={handleMouseDown}
                 maxLength={50}
                 autoComplete="off"
+                spellCheck="false"
                 data-form-type="other"
                 data-lpignore="true"
                 data-1p-ignore="true"
-                className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm
-                focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
-                focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-                hover:bg-white outline-none
+                aria-label="First Name"
+                aria-autocomplete="none"
+                required={false}
+                onAutoComplete={(e) => {
+                  e.preventDefault();
+                  e.target.value = '';
+                }}
+                className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm text-sm font-medium
+                focus:outline-none focus:ring-4 focus:ring-blue-400/20 focus:border-blue-500 focus:ring-opacity-50
+                focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
                 ${fieldErrors.firstName
                     ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
                     : 'border-gray-200'
                   }`}
-                placeholder="Enter your first name"
+                placeholder="Enter your first name..."
               />
               <div className="absolute bottom-2 right-3 text-xs text-gray-500">
                 {formData.firstName.length}/50
@@ -1362,24 +1497,35 @@ export default function Signup() {
                 value={formData.lastName}
                 onChange={handleChange}
                 onFocus={handleEnhancedFocus}
-                onInput={handleInput}
+                onInput={(e) => {
+                  handleInput(e);
+                  handleAutofillPrevention(e);
+                }}
+                onBlur={makeReadonly}
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
                 onMouseDown={handleMouseDown}
                 maxLength={50}
                 autoComplete="off"
+                spellCheck="false"
                 data-form-type="other"
                 data-lpignore="true"
                 data-1p-ignore="true"
-                className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm
-                focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
-                focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-                outline-none
+                aria-label="Last Name"
+                aria-autocomplete="none"
+                required={false}
+                onAutoComplete={(e) => {
+                  e.preventDefault();
+                  e.target.value = '';
+                }}
+                className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm text-sm font-medium
+                focus:outline-none focus:ring-4 focus:ring-blue-400/20 focus:border-blue-500 focus:ring-opacity-50
+                focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
                 ${fieldErrors.lastName
                     ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
                     : 'border-gray-200'
                   }`}
-                placeholder="Enter your last name"
+                placeholder="Enter your last name..."
               />
               <div className="absolute bottom-2 right-3 text-xs text-gray-500">
                 {formData.lastName.length}/50
@@ -1419,30 +1565,44 @@ export default function Signup() {
                   value={formData.email}
                   onChange={handleChange}
                   onFocus={handleEnhancedFocus}
-                  onInput={handleInput}
+                  onInput={(e) => {
+                    handleInput(e);
+                    handleAutofillPrevention(e);
+                  }}
+                  onBlur={makeReadonly}
                   onKeyDown={handleKeyDown}
                   onPaste={handlePaste}
                   onMouseDown={handleMouseDown}
                   maxLength={100}
                   autoComplete="off"
+                  spellCheck="false"
                   data-form-type="other"
                   data-lpignore="true"
                   data-1p-ignore="true"
-                  className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm
-                  focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
-                  focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-                  outline-none no-underline
+                  aria-label="Email Address"
+                  aria-autocomplete="none"
+                  required={false}
+                  onAutoComplete={(e) => {
+                    e.preventDefault();
+                    e.target.value = '';
+                  }}
+                  className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm text-sm font-medium
+                focus:outline-none focus:ring-4 focus:ring-blue-400/20 focus:border-blue-500 focus:ring-opacity-50
+                focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
                   ${fieldErrors.email
                       ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
                       : 'border-gray-200'
                     }`}
-                  placeholder="Enter your email"
+                  placeholder="Enter your email..."
                 />
                 <div className="absolute bottom-2 right-3 text-xs text-gray-500">
                   {formData.email.length}/100
                 </div>
+                {/* Fixed: Centered CheckCircle icon */}
                 {formData.email && validateField('email', formData.email) && (
-                  <CheckCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 z-10" />
+                  <div className="absolute right-12 top-0 bottom-0 flex items-center">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  </div>
                 )}
               </motion.div>
               {fieldErrors.email && (
@@ -1482,20 +1642,31 @@ export default function Signup() {
                       value={formData.phone}
                       onChange={handleChange}
                       onFocus={handleEnhancedFocus}
-                      onInput={handleInput}
+                      onInput={(e) => {
+                        handleInput(e);
+                        handleAutofillPrevention(e);
+                      }}
+                      onBlur={makeReadonly}
                       onKeyDown={handleKeyDown}
                       onPaste={handlePaste}
                       onMouseDown={handleMouseDown}
-                      placeholder="Enter your phone"
+                      placeholder="Enter your phone..."
                       maxLength={12}
                       autoComplete="off"
+                      spellCheck="false"
                       data-form-type="other"
                       data-lpignore="true"
                       data-1p-ignore="true"
-                      className={`w-full pl-12 pr-12 h-[56px] border-2 rounded-2xl bg-white/80 backdrop-blur-sm
-                      focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
-                      focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-                      outline-none no-underline
+                      aria-label="Phone Number"
+                      aria-autocomplete="none"
+                      required={false}
+                      onAutoComplete={(e) => {
+                        e.preventDefault();
+                        e.target.value = '';
+                      }}
+                      className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm text-sm font-medium
+                focus:outline-none focus:ring-4 focus:ring-blue-400/20 focus:border-blue-500 focus:ring-opacity-50
+                focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
                       ${fieldErrors.phone
                           ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
                           : 'border-gray-200'
@@ -1504,8 +1675,11 @@ export default function Signup() {
                     <div className={`absolute bottom-2 right-3 text-xs ${fieldErrors.phone ? 'text-rose-600' : 'text-gray-500'}`}>
                       {formData.phone.replace(/\D/g, '').length}/10
                     </div>
+                    {/* Fixed: Centered CheckCircle icon */}
                     {formData.phone && validateField('phone', formData.phone) && (
-                      <CheckCircle className="absolute right-12 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500 z-10" />
+                      <div className="absolute right-12 top-0 bottom-0 flex items-center">
+                        <CheckCircle className="w-5 h-5 text-green-500" />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1536,27 +1710,36 @@ export default function Signup() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
+                onFocus={handleEnhancedFocus}
+                onInput={(e) => {
+                  handleInput(e);
+                  handleAutofillPrevention(e);
+                }}
+                onBlur={makeReadonly}
+                onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
+                onMouseDown={handleMouseDown}
                 maxLength={50}
                 autoComplete="off"
+                spellCheck="false"
                 data-form-type="other"
                 data-lpignore="true"
                 data-1p-ignore="true"
-                data-bwignore="true"
-                data-ignore="true"
-                readOnly={false}
-                onFocus={(e) => {
-                  e.target.removeAttribute('readonly');
-                  e.target.setAttribute('autocomplete', 'off');
+                aria-label="Password"
+                aria-autocomplete="none"
+                required={false}
+                onAutoComplete={(e) => {
+                  e.preventDefault();
+                  e.target.value = '';
                 }}
-                className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm
-        focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
-        focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-        outline-none no-underline
-        ${fieldErrors.password
+                className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm text-sm font-medium
+                focus:outline-none focus:ring-4 focus:ring-blue-400/20 focus:border-blue-500 focus:ring-opacity-50
+                focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
+                ${fieldErrors.password
                     ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
                     : 'border-gray-200'
                   }`}
-                placeholder="Create a strong password"
+                placeholder="Enter your password..."
               />
 
               <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 flex items-center gap-1">
@@ -1647,27 +1830,36 @@ export default function Signup() {
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
+                onFocus={handleEnhancedFocus}
+                onInput={(e) => {
+                  handleInput(e);
+                  handleAutofillPrevention(e);
+                }}
+                onBlur={makeReadonly}
+                onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
+                onMouseDown={handleMouseDown}
                 maxLength={50}
                 autoComplete="off"
+                spellCheck="false"
                 data-form-type="other"
                 data-lpignore="true"
                 data-1p-ignore="true"
-                data-bwignore="true"
-                data-ignore="true"
-                readOnly={false}
-                onFocus={(e) => {
-                  e.target.removeAttribute('readonly');
-                  e.target.setAttribute('autocomplete', 'off');
+                aria-label="Confirm Password"
+                aria-autocomplete="none"
+                required={false}
+                onAutoComplete={(e) => {
+                  e.preventDefault();
+                  e.target.value = '';
                 }}
-                className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm
-        focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 focus:ring-opacity-50
-        focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] focus:shadow-blue-200
-        outline-none no-underline
-        ${fieldErrors.confirmPassword
+                className={`w-full pl-12 pr-12 py-4 border-2 rounded-2xl bg-white/80 backdrop-blur-sm text-sm font-medium
+                focus:outline-none focus:ring-4 focus:ring-blue-400/20 focus:border-blue-500 focus:ring-opacity-50
+                focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] focus:shadow-purple-200
+                ${fieldErrors.confirmPassword
                     ? 'border-rose-500 bg-red-50/50 focus:border-rose-500 focus:ring-rose-100 focus:shadow-rose-200'
                     : 'border-gray-200'
                   }`}
-                placeholder="Confirm your password"
+                placeholder="Confirm your password..."
               />
 
               <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 flex items-center gap-1">
@@ -1917,8 +2109,8 @@ export default function Signup() {
                     whileHover="hover"
                     whileTap="tap"
                     className={`p-6 rounded-2xl text-center transition-all duration-300 ${userType === type.id
-                        ? "bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-lg"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-white/50 border border-transparent hover:border-white/30"
+                      ? "bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-lg"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-white/50 border border-transparent hover:border-white/30"
                       }`}
                   >
                     <motion.div
@@ -1999,9 +2191,9 @@ export default function Signup() {
               initial={{ opacity: 0, scale: 0 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.5 }}
-              className="absolute top-4 right-4 flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm font-medium border border-green-200"
+              className="relative mb-4 flex items-center justify-end gap-1 bg-green-50 text-green-700 px-2 lg:px-3 py-1 rounded-full text-xs lg:text-sm font-medium border border-green-200 w-fit ml-auto"
             >
-              <ShieldCheck className="w-4 h-4" />
+              <ShieldCheck className="w-3 h-3 lg:w-4 lg:h-4" />
               Secure
             </motion.div>
 

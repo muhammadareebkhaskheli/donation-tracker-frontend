@@ -4,11 +4,14 @@ import {
   Search,
   Filter,
   Edit,
+  Clipboard,
   Trash2,
   UserPlus,
   Mail,
   Phone,
   MapPin,
+  Check,
+  ClipboardCopy,
   Calendar,
   CheckCircle2,
   AlertTriangle,
@@ -40,24 +43,29 @@ import {
   Globe2,
   Building2,
   BadgeCheck,
-  UserCog
+  UserCog,
+  Copy,
+  Key,
+  Smartphone,
+  AtSign,
+  ArrowRight,
+  Edit as EditIcon
 } from 'lucide-react';
+import '../../styles/dateInputStyles.css';
 
-// Add this function after calculateProfileCompletion and before getStatusColor
 const getCompletionChecklistForAdmin = (adminData) => {
   return {
     profilePhoto: adminData.profilePhoto && adminData.profilePhoto.toString().trim() !== '',
-    personalInfo: ['fullName', 'email', 'phone', 'dateOfBirth', 'whatsappNumber', 'gender', 'maritalStatus', 'nationality'].every(
+    personalInfo: ['fullName', 'email', 'phone', 'dateOfBirth', 'whatsappNumber', 'gender', 'maritalStatus', 'nationality', 'address'].every(
       field => adminData[field] && adminData[field].toString().trim() !== ''
     ),
-    workInfo: ['department', 'designation', 'address', 'bio'].every(
+    workInfo: ['department', 'designation', 'bio'].every(
       field => adminData[field] && adminData[field].toString().trim() !== ''
     ),
-    requiredDocuments: adminData.documents && adminData.documents.length >= 5 // Now requires 5 documents
+    requiredDocuments: adminData.documents && adminData.documents.length >= 5
   };
 };
 
-// Reuse the same utility functions from recipients management
 const getFullFormattedNumber = (num, isCurrency = false) => {
   if (num === null || num === undefined) {
     return isCurrency ? '₹0' : '0';
@@ -109,6 +117,8 @@ const formatValue = (val, isCurrency = false) => {
     const trimmedDecimal = decimalPart.replace(/0+$/, '');
     return trimmedDecimal ? `${whole}.${trimmedDecimal}` : whole;
   };
+
+  let displayValue, suffix;
 
   if (absNum >= 1e24) {
     displayValue = formatWithTwoDecimals(absNum / 1e24);
@@ -539,15 +549,15 @@ const ProfileProgressCircle = memo(({ percentage, size = 100, isDark }) => {
 
 const EnhancedAvatarUpload = memo(({ user, onAvatarChange, isDark, fieldErrors, onFieldError, shakeFields, fieldName = 'profilePhoto' }) => {
   const [isDragging, setIsDragging] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState(user?.avatar || null);
+  const [previewUrl, setPreviewUrl] = useState(user?.profilePhoto || user?.avatar || null);
   const [isHovered, setIsHovered] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const containerRef = useRef(null);
 
   useEffect(() => {
-    setPreviewUrl(user?.avatar || null);
-  }, [user?.avatar]);
+    setPreviewUrl(user?.profilePhoto || user?.avatar || null);
+  }, [user?.profilePhoto, user?.avatar]);
 
   // Effect to scroll when shaking starts
   useEffect(() => {
@@ -940,9 +950,8 @@ const DocumentUpload = React.memo(({ documents, onDocumentsChange, isDark, field
             className={`relative border-2 border-dashed rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-center transition-all cursor-pointer ${dragActive
               ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20 scale-105'
               : isDark
-                ? 'border-gray-600 bg-gray-800 hover:border-violet-400'
-                : 'border-gray-300 bg-gray-50 hover:border-violet-400'
-              } ${fieldErrors?.documents ? 'border-rose-500 bg-rose-50 dark:bg-rose-900/20' : ''
+                ? `bg-gray-800 border-gray-600 hover:border-violet-400 ${fieldErrors?.documents ? 'border-rose-500' : ''}`
+                : `bg-white border-gray-300 hover:border-violet-400 ${fieldErrors?.documents ? 'border-rose-500' : ''}`
               }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
@@ -970,7 +979,7 @@ const DocumentUpload = React.memo(({ documents, onDocumentsChange, isDark, field
                     y: { duration: 2, repeat: Infinity },
                     rotate: { duration: 0.3 }
                   }}
-                  className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700' : 'bg-white'
+                  className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700' : 'bg-gray-100'
                     }`}
                 >
                   <Upload size={32} className={dragActive ? 'text-violet-500' : isDark ? 'text-gray-400' : 'text-gray-500'} />
@@ -991,11 +1000,12 @@ const DocumentUpload = React.memo(({ documents, onDocumentsChange, isDark, field
         </motion.div>
       </div>
 
+      {/* Error message - only changes the text color to rose, background stays normal */}
       {fieldErrors?.documents && (
         <motion.p
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-1 text-rose-600 text-xs font-medium"
+          className={`flex items-center gap-1 text-xs font-medium ${isDark ? 'text-rose-400' : 'text-rose-600'}`}
         >
           <XCircle size={12} />
           {fieldErrors.documents}
@@ -1055,7 +1065,6 @@ const DocumentUpload = React.memo(({ documents, onDocumentsChange, isDark, field
   );
 });
 
-// Shake animation variants
 const shakeAnimation = {
   initial: {
     x: 0
@@ -1086,6 +1095,7 @@ const adminsData = [
     designation: 'Super Admin',
     address: 'Mumbai, Maharashtra',
     bio: 'Experienced administrator with over 10 years in system management and team leadership.',
+    setStatus: 'Approved',
     documents: [
       { name: 'id_proof.pdf', size: '2.1 MB', type: 'application/pdf' },
       { name: 'resume.pdf', size: '1.5 MB', type: 'application/pdf' },
@@ -1097,26 +1107,13 @@ const adminsData = [
     createdBy: 'System',
     createdAt: '2024-01-01',
     lastActive: '2024-11-20T10:30:00Z',
-    forwardingHistory: [
+    statusHistory: [
       {
-        fromAdmin: 'admin2',
-        toAdmin: 'admin1',
-        reason: 'Task reassignment',
-        timestamp: '2024-11-15T14:30:00Z'
-      }
-    ],
-    validationHistory: [
-      {
-        validatedBy: 'System',
-        timestamp: '2024-01-01T00:00:00Z',
-        comment: 'Initial validation'
-      }
-    ],
-    approvalHistory: [
-      {
-        approvedBy: 'System',
-        timestamp: '2024-01-01T00:00:00Z',
-        comment: 'Initial approval'
+        fromStatus: 'Pending',
+        toStatus: 'Approved',
+        changedBy: 'Super Admin',
+        timestamp: '2024-01-01T09:13:00Z',
+        reason: 'Admin approved'
       }
     ]
   },
@@ -1146,20 +1143,9 @@ const adminsData = [
     createdAt: '2024-02-20',
     lastActive: '2024-11-19T15:45:00Z',
     forwardingHistory: [],
-    validationHistory: [
-      {
-        validatedBy: 'Super Admin',
-        timestamp: '2024-02-21T10:00:00Z',
-        comment: 'Validated'
-      }
-    ],
-    approvalHistory: [
-      {
-        approvedBy: 'Super Admin',
-        timestamp: '2024-02-21T11:00:00Z',
-        comment: 'Approved'
-      }
-    ]
+    validationHistory: [],
+    approvalHistory: [],
+    statusHistory: []
   },
   {
     id: 'ADM-003',
@@ -1181,7 +1167,7 @@ const adminsData = [
       { name: 'resume.pdf', size: '1.0 MB', type: 'application/pdf' }
     ],
     profileCompletion: 75,
-    status: 'Pending-Validation',
+    status: 'Pending',
     role: 'co_approver',
     createdBy: 'Super Admin',
     createdAt: '2024-03-10',
@@ -1194,14 +1180,9 @@ const adminsData = [
         timestamp: '2024-03-15T09:15:00Z'
       }
     ],
-    validationHistory: [
-      {
-        validatedBy: 'Super Admin',
-        timestamp: '2024-03-11T14:00:00Z',
-        comment: 'Pending-Validation'
-      }
-    ],
-    approvalHistory: []
+    validationHistory: [],
+    approvalHistory: [],
+    statusHistory: []
   },
   {
     id: 'ADM-004',
@@ -1224,26 +1205,15 @@ const adminsData = [
       { name: 'certificate.pdf', size: '1.3 MB', type: 'application/pdf' }
     ],
     profileCompletion: 100,
-    status: 'Draft',
+    status: 'Approved',
     role: 'support',
     createdBy: 'Super Admin',
     createdAt: '2024-04-05',
     lastActive: '2024-10-15T11:20:00Z',
     forwardingHistory: [],
-    validationHistory: [
-      {
-        validatedBy: 'Super Admin',
-        timestamp: '2024-04-06T09:00:00Z',
-        comment: 'Validated'
-      }
-    ],
-    approvalHistory: [
-      {
-        approvedBy: 'Super Admin',
-        timestamp: '2024-04-06T10:00:00Z',
-        comment: 'Approved'
-      }
-    ]
+    validationHistory: [],
+    approvalHistory: [],
+    statusHistory: []
   },
   {
     id: 'ADM-005',
@@ -1265,7 +1235,7 @@ const adminsData = [
       { name: 'resume.pdf', size: '1.2 MB', type: 'application/pdf' }
     ],
     profileCompletion: 80,
-    status: 'Pending-Validation',
+    status: 'Pending',
     role: 'super_admin',
     createdBy: 'System',
     createdAt: '2024-05-12',
@@ -1278,14 +1248,9 @@ const adminsData = [
         timestamp: '2024-05-18T16:45:00Z'
       }
     ],
-    validationHistory: [
-      {
-        validatedBy: 'System',
-        timestamp: '2024-05-13T00:00:00Z',
-        comment: 'Pending-Validation'
-      }
-    ],
-    approvalHistory: []
+    validationHistory: [],
+    approvalHistory: [],
+    statusHistory: []
   },
   {
     id: 'ADM-006',
@@ -1313,20 +1278,9 @@ const adminsData = [
     createdAt: '2024-06-08',
     lastActive: '2024-11-20T09:45:00Z',
     forwardingHistory: [],
-    validationHistory: [
-      {
-        validatedBy: 'Super Admin',
-        timestamp: '2024-06-09T11:00:00Z',
-        comment: 'Validated'
-      }
-    ],
-    approvalHistory: [
-      {
-        approvedBy: 'Super Admin',
-        timestamp: '2024-06-09T14:00:00Z',
-        comment: 'Approved'
-      }
-    ]
+    validationHistory: [],
+    approvalHistory: [],
+    statusHistory: []
   },
   {
     id: 'ADM-007',
@@ -1368,7 +1322,8 @@ const adminsData = [
         comment: 'Rejected due to incomplete documentation'
       }
     ],
-    approvalHistory: []
+    approvalHistory: [],
+    statusHistory: []
   }
 ];
 
@@ -1401,7 +1356,7 @@ const calculateProfileCompletion = (formData) => {
     }
   });
 
-  // Documents count check - now requires 5 documents
+  // Documents count check - requires all 5 documents
   totalFields++;
   if (formData.documents && formData.documents.length >= 5) {
     completedFields++;
@@ -1413,28 +1368,23 @@ const calculateProfileCompletion = (formData) => {
 const getCompletionChecklist = (formData) => {
   return {
     profilePhoto: formData.profilePhoto && formData.profilePhoto.toString().trim() !== '',
-    personalInfo: ['fullName', 'email', 'phone', 'dateOfBirth', 'whatsappNumber', 'gender', 'maritalStatus', 'nationality'].every(
+    personalInfo: ['fullName', 'email', 'phone', 'dateOfBirth', 'whatsappNumber', 'gender', 'maritalStatus', 'nationality', 'address'].every(
       field => formData[field] && formData[field].toString().trim() !== ''
     ),
-    workInfo: ['department', 'designation', 'address', 'bio'].every(
+    workInfo: ['department', 'designation', 'bio'].every(
       field => formData[field] && formData[field].toString().trim() !== ''
     ),
-    requiredDocuments: formData.documents && formData.documents.length > 0
+    requiredDocuments: formData.documents && formData.documents.length >= 5
   };
 };
 
 const getStatusColor = (status) => {
   const statusMap = {
-    'Unknown': { gradient: 'from-gray-500 to-gray-600', icon: AlertCircle, color: '#6b7280' },
-    'Incomplete': { gradient: 'from-amber-500 to-orange-500', icon: AlertTriangle, color: '#f59e0b' },
-    'Draft': { gradient: 'from-slate-500 to-slate-600', icon: FileText, color: '#64748b' },
-    'Pending-Validation': { gradient: 'from-amber-500 to-orange-500', icon: Clock, color: '#f59e0b' },
-    'Validated': { gradient: 'from-blue-500 to-cyan-500', icon: FileCheck, color: '#3b82f6' },
+    'Unknown': { gradient: 'from-slate-500 to-slate-600', icon: AlertCircle, color: '#64748b' },
+    'Incomplete': { gradient: 'from-slate-500 to-slate-600', icon: AlertCircle, color: '#64748b' },
+    'Pending': { gradient: 'from-amber-500 to-orange-500', icon: Clock, color: '#f59e0b' },
     'Approved': { gradient: 'from-emerald-500 to-green-500', icon: CheckCircle, color: '#10b981' },
-    'Reject': { gradient: 'from-rose-500 to-red-500', icon: XCircle, color: '#ef4444' },
-    'Rejected': { gradient: 'from-rose-500 to-red-500', icon: XCircle, color: '#ef4444' },
-    'Closed': { gradient: 'from-gray-500 to-gray-600', icon: CheckCircle2, color: '#6b7280' },
-    'In-Progress': { gradient: 'from-violet-500 to-purple-500', icon: TrendingUp, color: '#8b5cf6' }
+    'Rejected': { gradient: 'from-rose-500 to-red-500', icon: XCircle, color: '#ef4444' }
   };
   return statusMap[status] || { gradient: 'from-gray-500 to-gray-600', icon: AlertCircle, color: '#6b7280' };
 };
@@ -1449,316 +1399,37 @@ const getRoleColor = (role) => {
   return roleMap[role] || { gradient: 'from-gray-500 to-gray-600', icon: User, text: role, color: '#6b7280' };
 };
 
-const AdminValidationModal = ({ isDark, admin, onClose, onValidate }) => {
-  const [formData, setFormData] = useState({
-    validationType: '',
-    reason: '',
-    comment: ''
-  });
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [shakeFields, setShakeFields] = useState([]);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+// Email validation function - only accepts @gmail.com
+const isValidGmail = (email) => {
+  email = email.trim().toLowerCase();
 
-  const validateForm = () => {
-    const errors = {};
-    const shake = [];
+  if (!email) return false;
 
-    if (!formData.validationType) {
-      errors.validationType = 'Please select validation type';
-      shake.push('validationType');
-    }
+  if (!email.endsWith('@gmail.com')) return false;
 
-    if (formData.validationType === 'reject' && !formData.reason.trim()) {
-      errors.reason = 'Please provide a reason for rejection';
-      shake.push('reason');
-    }
+  const username = email.slice(0, -10);
 
-    setFieldErrors(errors);
-    setShakeFields(shake);
+  if (username.length === 0) return false;
+  if (username.length > 64) return false;
 
-    setTimeout(() => {
-      setShakeFields([]);
-    }, 600);
+  const usernameRegex = /^[a-z0-9._]+$/;
+  if (!usernameRegex.test(username)) return false;
 
-    return Object.keys(errors).length === 0;
-  };
+  if (username.includes('..')) return false;
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (validateForm()) {
-      setShowConfirmDialog(true);
-    }
-  };
+  if (username.startsWith('.') || username.endsWith('.')) return false;
 
-  const confirmValidation = () => {
-    onValidate(admin.id, formData);
-    setShowConfirmDialog(false);
-  };
+  if (username.startsWith('_')) return false;
 
-  const handleFieldChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  if (email.split('@gmail.com').length !== 2) return false;
 
-    if (fieldErrors[field]) {
-      setFieldErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
+  const parts = email.split('@');
+  if (parts.length !== 2) return false;
 
-  return (
-    <>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0, pointerEvents: 'none' }}
-        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        style={{ margin: 0, padding: 0 }}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 30 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, pointerEvents: 'none' }}
-          transition={{ type: "spring", damping: 25 }}
-          className={`rounded-3xl w-full max-w-md mx-auto ${isDark
-            ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
-            : 'bg-gradient-to-br from-white via-white to-gray-50'
-            }`}
-          style={{
-            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
-            maxHeight: 'calc(100vh - 2rem)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column'
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="relative p-4 sm:p-6 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-t-3xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg sm:text-xl font-bold text-white mb-1">
-                  Validate Admin
-                </h2>
-                <p className="text-violet-100 text-xs sm:text-sm font-medium">
-                  Validate or reject this admin
-                </p>
-              </div>
-              <motion.button
-                whileHover={{ scale: 1.1, rotate: 90 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={onClose}
-                className="p-1.5 sm:p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
-              >
-                <X size={18} className="text-white" />
-              </motion.button>
-            </div>
-          </div>
+  const domain = parts[1];
+  if (domain !== 'gmail.com') return false;
 
-          <div className="flex-1 overflow-y-auto">
-            <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
-              {/* Admin Details */}
-              <div>
-                <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                  Admin Details
-                </label>
-                <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'
-                  }`}>
-                  <p className={`text-sm sm:text-base font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'
-                    }`}>
-                    {admin.fullName}
-                  </p>
-                  <p className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'
-                    }`}>
-                    {admin.id} • {admin.designation} • {admin.department}
-                  </p>
-                </div>
-              </div>
-
-              {/* Validation Type */}
-              <div>
-                <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                  Validation Type <span className="text-rose-500 font-normal normal-case">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <motion.div
-                    animate={shakeFields.includes('validationType') ? "shake" : "initial"}
-                    variants={shakeAnimation}
-                    className="overflow-visible"
-                  >
-                    <input
-                      type="radio"
-                      id="validate"
-                      name="validationType"
-                      value="validate"
-                      checked={formData.validationType === 'validate'}
-                      onChange={(e) => handleFieldChange('validationType', e.target.value)}
-                      className="hidden"
-                    />
-                    <label
-                      htmlFor="validate"
-                      className={`flex items-center justify-center gap-2 p-3 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all ${formData.validationType === 'validate'
-                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600'
-                        : isDark
-                          ? 'border-gray-600 bg-gray-700 text-gray-400 hover:border-emerald-500'
-                          : 'border-gray-200 bg-gray-100 text-gray-600 hover:border-emerald-500'
-                        }`}
-                    >
-                      <CheckCircle size={16} />
-                      Validate
-                    </label>
-                  </motion.div>
-
-                  <motion.div
-                    animate={shakeFields.includes('validationType') ? "shake" : "initial"}
-                    variants={shakeAnimation}
-                    className="overflow-visible"
-                  >
-                    <input
-                      type="radio"
-                      id="reject"
-                      name="validationType"
-                      value="reject"
-                      checked={formData.validationType === 'reject'}
-                      onChange={(e) => handleFieldChange('validationType', e.target.value)}
-                      className="hidden"
-                    />
-                    <label
-                      htmlFor="reject"
-                      className={`flex items-center justify-center gap-2 p-3 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all ${formData.validationType === 'reject'
-                        ? 'border-rose-500 bg-rose-500/10 text-rose-600'
-                        : isDark
-                          ? 'border-gray-600 bg-gray-700 text-gray-400 hover:border-rose-500'
-                          : 'border-gray-200 bg-gray-100 text-gray-600 hover:border-rose-500'
-                        }`}
-                    >
-                      <XCircle size={16} />
-                      Reject
-                    </label>
-                  </motion.div>
-                </div>
-                {fieldErrors.validationType && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-2 text-rose-600 text-xs font-medium mt-1"
-                  >
-                    <AlertCircle size={12} />
-                    {fieldErrors.validationType}
-                  </motion.div>
-                )}
-              </div>
-
-              {/* Reason/Comment Field */}
-              <div>
-                <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                  Comments
-                  <span className={`font-normal normal-case ${formData.validationType === 'reject' ? 'text-rose-500' : 'text-gray-400'
-                    }`}>
-                    {formData.validationType === 'reject' ? ' *' : ' (Optional)'}
-                  </span>
-                </label>
-                <div className="overflow-visible">
-                  <motion.div
-                    animate={shakeFields.includes('reason') ? "shake" : "initial"}
-                    variants={shakeAnimation}
-                    className="overflow-visible"
-                  >
-                    <textarea
-                      value={formData.reason}
-                      onChange={(e) => handleFieldChange('reason', e.target.value)}
-                      rows="3"
-                      placeholder={formData.validationType === 'reject'
-                        ? "Please provide a reason for rejection..."
-                        : "Add an optional comment for validation..."}
-                      className={`w-full p-3 sm:p-4 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none resize-none transition-all text-sm font-medium ${isDark
-                        ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
-                        : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
-                        } ${fieldErrors.reason ? 'border-rose-500' : ''}`}
-                    />
-                  </motion.div>
-                </div>
-                {fieldErrors.reason && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-2 text-rose-600 text-xs font-medium mt-1"
-                  >
-                    <AlertCircle size={12} />
-                    {fieldErrors.reason}
-                  </motion.div>
-                )}
-              </div>
-
-              {/* Quick rejection reasons */}
-              {formData.validationType === 'reject' && (
-                <div className="mt-2">
-                  <p className={`text-xs font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
-                    Quick reasons:
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {['Incomplete Documentation', 'Identity Verification Failed', 'Invalid Information', 'Duplicate Entry', 'Role Mismatch'].map((quickReason) => (
-                      <button
-                        key={quickReason}
-                        type="button"
-                        onClick={() => handleFieldChange('reason', quickReason)}
-                        className={`text-xs px-3 py-1.5 rounded-full transition-all ${isDark
-                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                      >
-                        {quickReason}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 sm:gap-3 pt-4 flex-nowrap">
-                <motion.button
-                  type="button"
-                  onClick={onClose}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`flex-1 min-w-[100px] px-3 py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${isDark
-                    ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                    }`}
-                >
-                  Cancel
-                </motion.button>
-                <motion.button
-                  type="submit"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex-1 min-w-[100px] px-3 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 shadow-xl"
-                >
-                  <FileCheck size={16} />
-                  Submit
-                </motion.button>
-              </div>
-            </form>
-          </div>
-        </motion.div>
-      </motion.div>
-
-      {/* Confirmation Dialog */}
-      <AnimatePresence>
-        {showConfirmDialog && (
-          <ConfirmationDialog
-            isDark={isDark}
-            title={`Confirm ${formData.validationType === 'validate' ? 'Validation' : 'Rejection'}`}
-            message={`Are you sure you want to ${formData.validationType === 'validate' ? 'validate' : 'reject'} this admin?`}
-            onConfirm={confirmValidation}
-            onCancel={() => setShowConfirmDialog(false)}
-            confirmText={formData.validationType === 'validate' ? 'Validate' : 'Reject'}
-            cancelText="Cancel"
-          />
-        )}
-      </AnimatePresence>
-    </>
-  );
+  return true;
 };
 
 const AdminApprovalModal = ({ isDark, admin, onClose, onApprove, onReject }) => {
@@ -1892,7 +1563,7 @@ const AdminApprovalModal = ({ isDark, admin, onClose, onApprove, onReject }) => 
               <div>
                 <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
                   }`}>
-                  Approval Type <span className="text-rose-500 font-normal normal-case">*</span>
+                  Approval Type <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <motion.div
@@ -2078,227 +1749,7 @@ const AdminApprovalModal = ({ isDark, admin, onClose, onApprove, onReject }) => 
 };
 
 // Forward Modal Component
-const ForwardModal = ({ isDark, admin, onClose, onForward, currentAdmin = 'admin1' }) => {
-  const [selectedAdmin, setSelectedAdmin] = useState('');
-  const [reason, setReason] = useState('');
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [shakeFields, setShakeFields] = useState([]);
-
-  const validateForm = () => {
-    const errors = {};
-    const shake = [];
-
-    if (!selectedAdmin) {
-      errors.selectedAdmin = 'Please select an admin to forward to';
-      shake.push('selectedAdmin');
-    }
-    if (!reason.trim()) {
-      errors.reason = 'Please provide a reason for forwarding';
-      shake.push('reason');
-    }
-
-    setFieldErrors(errors);
-    setShakeFields(shake);
-
-    setTimeout(() => {
-      setShakeFields([]);
-    }, 600);
-
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (validateForm()) {
-      onForward(admin.id, selectedAdmin, reason.trim());
-    }
-  };
-
-  const handleFieldChange = (field, value) => {
-    if (field === 'selectedAdmin') setSelectedAdmin(value);
-    if (field === 'reason') setReason(value);
-
-    if (fieldErrors[field]) {
-      setFieldErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      style={{ margin: 0, padding: 0 }}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 30 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, pointerEvents: 'none' }}
-        transition={{ type: "spring", damping: 25 }}
-        className={`rounded-3xl w-full max-w-md mx-4 ${isDark
-          ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
-          : 'bg-gradient-to-br from-white via-white to-gray-50'
-          }`}
-        style={{
-          boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
-          maxHeight: 'calc(100vh - 2rem)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="relative p-4 sm:p-6 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-t-3xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg sm:text-xl font-bold text-white mb-1">
-                Forward Admin
-              </h2>
-              <p className="text-violet-100 text-xs sm:text-sm font-medium">
-                Transfer admin to another department
-              </p>
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.1, rotate: 90 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={onClose}
-              className="p-1.5 sm:p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
-            >
-              <X size={18} className="text-white" />
-            </motion.button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
-            <div>
-              <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                Admin Details
-              </label>
-              <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'
-                }`}>
-                <p className={`text-sm sm:text-base font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'
-                  }`}>
-                  {admin.fullName}
-                </p>
-                <p className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'
-                  }`}>
-                  {admin.id} • {admin.designation} • {admin.department}
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                Forward To <span className="text-rose-500 font-normal normal-case">*</span>
-              </label>
-              <div className="overflow-visible">
-                <motion.div
-                  animate={shakeFields.includes('selectedAdmin') ? "shake" : "initial"}
-                  variants={shakeAnimation}
-                  className="overflow-visible"
-                >
-                  <select
-                    value={selectedAdmin}
-                    onChange={(e) => handleFieldChange('selectedAdmin', e.target.value)}
-                    className={`w-full p-3 sm:p-4 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-200 text-gray-900'
-                      } ${fieldErrors.selectedAdmin ? 'border-rose-500' : ''}`}
-                  >
-                    <option value="">Select an admin...</option>
-                    {availableAdmins
-                      .filter(a => a.id !== currentAdmin)
-                      .map(admin => (
-                        <option key={admin.id} value={admin.id}>
-                          {admin.name} ({admin.department} - {admin.role})
-                        </option>
-                      ))
-                    }
-                  </select>
-                </motion.div>
-              </div>
-              {fieldErrors.selectedAdmin && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2 text-rose-600 text-xs font-medium mt-1"
-                >
-                  <AlertCircle size={12} />
-                  {fieldErrors.selectedAdmin}
-                </motion.div>
-              )}
-            </div>
-
-            <div>
-              <label className={`block text-xs font-semibold uppercase tracking-wide mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                Reason for Forwarding <span className="text-rose-500 font-normal normal-case">*</span>
-              </label>
-              <div className="overflow-visible">
-                <motion.div
-                  animate={shakeFields.includes('reason') ? "shake" : "initial"}
-                  variants={shakeAnimation}
-                  className="overflow-visible"
-                >
-                  <textarea
-                    value={reason}
-                    onChange={(e) => handleFieldChange('reason', e.target.value)}
-                    rows="3"
-                    placeholder="Explain why you're forwarding this admin..."
-                    className={`w-full p-3 sm:p-4 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none resize-none transition-all text-sm font-medium ${isDark
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
-                      : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
-                      } ${fieldErrors.reason ? 'border-rose-500' : ''}`}
-                  />
-                </motion.div>
-              </div>
-              {fieldErrors.reason && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2 text-rose-600 text-xs font-medium mt-1"
-                >
-                  <AlertCircle size={12} />
-                  {fieldErrors.reason}
-                </motion.div>
-              )}
-            </div>
-
-            <div className="flex gap-2 sm:gap-3 pt-4 flex-nowrap">
-              <motion.button
-                type="button"
-                onClick={onClose}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className={`flex-1 min-w-[100px] px-3 py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${isDark
-                  ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
-                  : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
-              >
-                Cancel
-              </motion.button>
-              <motion.button
-                type="submit"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex-1 min-w-[100px] px-3 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 shadow-xl"
-              >
-                <Send size={16} />
-                Forward
-              </motion.button>
-            </div>
-          </form>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-};
-
-const AdminCard = memo(({ admin, isDark, onView, onEdit, onDelete, onForward, onValidate, onApprove, onSubmitForValidation, onApproveAdmin, index }) => {
+const AdminCard = memo(({ admin, isDark, onView, onEdit, onDelete, onApproveAdmin, onInvite, index }) => {
   const [showActions, setShowActions] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const hoverRef = useRef(false);
@@ -2345,14 +1796,14 @@ const AdminCard = memo(({ admin, isDark, onView, onEdit, onDelete, onForward, on
     setIsHovered(false);
   };
 
-  const canSubmitForValidation = admin.status === 'Draft' && admin.profileCompletion === 100;
-  const canValidate = admin.status === 'Pending-Validation';
-  const canApprove = admin.status === 'Validated';
+  const canSubmitForValidation = admin.status === 'Pending';
+  const canValidate = false;
+  const canApprove = false;
   const allAdminsApproved = false;
 
   useEffect(() => {
     if (admin.status === 'Approved' && allAdminsApproved) {
-      console.log('All admins approved - status should be Closed');
+      console.log('All admins approved');
     }
   }, [admin.status, allAdminsApproved]);
 
@@ -2701,41 +2152,22 @@ const AdminCard = memo(({ admin, isDark, onView, onEdit, onDelete, onForward, on
                       View Details
                     </button>
 
-                    <button
-                      onClick={() => handleMenuAction(() => onEdit(admin))}
-                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-amber-500/20 text-gray-300' : 'hover:bg-amber-100 text-gray-700'
-                        }`}
-                    >
-                      <Edit size={16} />
-                      Edit
-                    </button>
-
-                    {/* Submit for Validation - Only for Draft status with 100% completion */}
-                    {canSubmitForValidation && (
+                    {/* Edit - Hidden when Approved */}
+                    {admin.status !== 'Approved' && (
                       <button
-                        onClick={() => handleMenuAction(() => onSubmitForValidation(admin))}
-                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-purple-500/20 text-gray-300' : 'hover:bg-purple-100 text-gray-700'}`}
+                        onClick={() => handleMenuAction(() => onEdit(admin))}
+                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-amber-500/20 text-gray-300' : 'hover:bg-amber-100 text-gray-700'
+                          }`}
                       >
-                        <FileCheck size={16} />
-                        Submit for Validation
+                        <Edit size={16} />
+                        Edit
                       </button>
                     )}
 
-                    {/* Validation - Only for Pending-Validation status */}
-                    {canValidate && (
+                    {/* Change Status - Hidden when Approved */}
+                    {admin.status !== 'Approved' && (
                       <button
-                        onClick={() => handleMenuAction(() => onValidate(admin))}
-                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-emerald-500/20 text-gray-300' : 'hover:bg-emerald-100 text-gray-700'}`}
-                      >
-                        <CheckCircle size={16} />
-                        Validation
-                      </button>
-                    )}
-
-                    {/* Approval - Only for Validated status */}
-                    {canApprove && (
-                      <button
-                        onClick={() => handleMenuAction(() => onApprove(admin))}
+                        onClick={() => handleMenuAction(() => onApproveAdmin(admin))}
                         className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-violet-500/20 text-gray-300' : 'hover:bg-violet-100 text-gray-700'}`}
                       >
                         <CheckCircle size={16} />
@@ -2743,17 +2175,20 @@ const AdminCard = memo(({ admin, isDark, onView, onEdit, onDelete, onForward, on
                       </button>
                     )}
 
-                    <button
-                      onClick={() => handleMenuAction(() => onForward(admin))}
-                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-violet-500/20 text-gray-300' : 'hover:bg-violet-100 text-gray-700'
-                        }`}
-                    >
-                      <Send size={16} />
-                      Forward
-                    </button>
+                    {admin.addedByCurrentAdmin && admin.status === 'Approved' && (
+                      <>
+                        <button
+                          onClick={() => handleMenuAction(() => onInvite(admin))}
+                          className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 ${isDark ? 'hover:bg-green-500/20 text-gray-300' : 'hover:bg-green-100 text-gray-700'
+                            }`}
+                        >
+                          <Key size={16} />
+                          Invite Admin
+                        </button>
+                      </>
+                    )}
 
-                    <div className={`my-2 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'
-                      }`} />
+                    <div className={`my-2 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`} />
 
                     <button
                       onClick={() => handleMenuAction(() => onDelete(admin))}
@@ -2999,7 +2434,7 @@ const AdminCard = memo(({ admin, isDark, onView, onEdit, onDelete, onForward, on
             }`}>
             <BadgeCheck size={12} className="flex-shrink-0" />
             {admin.profileCompletion}% Complete
-            {admin.status === 'Inactive' && admin.profileCompletion === 100 && (
+            {admin.status === 'Inactive' && admin.profileCompletion >= 93 && (
               <span className="ml-1 text-emerald-500">✓</span>
             )}
           </div>
@@ -3069,7 +2504,7 @@ const AdminDetailModal = ({ admin, isDark, onClose, onStatusChange, onVerificati
           color: 'text-emerald-500',
           bgColor: isDark ? 'bg-emerald-500/20' : 'bg-emerald-100',
           borderColor: isDark ? 'border-emerald-500/30' : 'border-emerald-200',
-          label: type === 'validation' ? 'Validated' : 'Approved'
+          label: type === 'validation' ? 'Approved' : 'Approved'
         };
       case 'rejection':
         return {
@@ -3104,7 +2539,7 @@ const AdminDetailModal = ({ admin, isDark, onClose, onStatusChange, onVerificati
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, pointerEvents: 'none' }}
           transition={{ type: "spring", damping: 25 }}
-          className={`rounded-3xl w-full max-w-5xl mx-2 sm:mx-4 ${isDark
+          className={`rounded-3xl w-full max-w-4xl mx-2 sm:mx-4 ${isDark
             ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
             : 'bg-gradient-to-br from-white via-white to-gray-50'
             }`}
@@ -3317,6 +2752,33 @@ const AdminDetailModal = ({ admin, isDark, onClose, onStatusChange, onVerificati
                       </label>
                       <p className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{admin.bio}</p>
                     </div>
+                    
+                    {/* Status - Simple display */}
+                    {admin.statusHistory?.length > 0 && (
+                      <div>
+                        <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Status
+                        </label>
+                        {[...admin.statusHistory]
+                          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                          .slice(0, 1)
+                          .map((record, index) => (
+                            <div key={`status-${index}`} className="flex items-center justify-between gap-2">
+                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                record.toStatus === 'Approved' ? 'bg-emerald-500/20 text-emerald-600' :
+                                record.toStatus === 'Rejected' ? 'bg-rose-500/20 text-rose-600' :
+                                record.toStatus === 'Pending' ? 'bg-amber-500/20 text-amber-600' :
+                                isDark ? 'bg-gray-600/20 text-gray-300' : 'bg-gray-200/50 text-gray-700'
+                              }`}>
+                                {record.toStatus}
+                              </span>
+                              <p className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                                {formatDate(record.timestamp)}
+                              </p>
+                            </div>
+                          ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -3393,16 +2855,12 @@ const AdminDetailModal = ({ admin, isDark, onClose, onStatusChange, onVerificati
                           Status
                         </span>
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${admin.status === 'Approved'
-                            ? 'bg-emerald-500/20 text-emerald-600'
-                            : admin.status === 'Pending-Validation'
-                              ? 'bg-amber-500/20 text-amber-600'
-                              : admin.status === 'Draft'
-                                ? 'bg-slate-500/20 text-slate-600'
-                                : admin.status === 'Rejected'
-                                  ? 'bg-rose-500/20 text-rose-600'
-                                  : admin.status === 'Validated'
-                                    ? 'bg-blue-500/20 text-blue-600'
-                                    : 'bg-gray-500/20 text-gray-600'
+                          ? isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-500/20 text-emerald-600'
+                          : admin.status === 'Pending'
+                            ? isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-500/20 text-amber-600'
+                          : admin.status === 'Rejected'
+                            ? isDark ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-500/20 text-rose-600'
+                            : isDark ? 'bg-gray-500/20 text-gray-400' : 'bg-gray-500/20 text-gray-600'
                           }`}>
                           {admin.status}
                         </span>
@@ -3456,164 +2914,7 @@ const AdminDetailModal = ({ admin, isDark, onClose, onStatusChange, onVerificati
                 </div>
               </div>
 
-              {/* Forwarding History Section - Full width on its own row */}
-              {admin.forwardingHistory && admin.forwardingHistory.length > 0 && (
-                <div className={`p-4 sm:p-6 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
-                  <h3 className={`text-base sm:text-lg font-bold mb-4 sm:mb-6 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    <Send size={18} className="text-violet-500" />
-                    Forwarding History ({admin.forwardingHistory.length})
-                  </h3>
-                  <div className="space-y-3 sm:space-y-4">
-                    {admin.forwardingHistory.map((record, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-                              <Send size={14} className="text-violet-500 flex-shrink-0" />
-                              <span className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                                {getAdminName(record.fromAdmin)} → {getAdminName(record.toAdmin)}
-                              </span>
-                            </div>
-                            <p className={`text-xs font-medium mb-1 sm:mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                              {record.reason}
-                            </p>
-                            <p className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                              <Clock size={12} className="inline mr-1" />
-                              {formatDate(record.timestamp)}
-                            </p>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
-              {/* Review History (Validation & Approval History) - Full width on its own row */}
-              {(admin.validationHistory?.length > 0 || admin.approvalHistory?.length > 0) && (
-                <div className={`p-4 sm:p-6 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className={`text-base sm:text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      <MessageSquare size={18} className="text-violet-500" />
-                      Review History
-                    </h3>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setShowComments(!showComments)}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-semibold ${isDark
-                        ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
-                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                        }`}
-                    >
-                      {showComments ? (
-                        <>
-                          <ChevronUp size={16} />
-                          Hide History
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown size={16} />
-                          Show History
-                        </>
-                      )}
-                    </motion.button>
-                  </div>
-
-                  <AnimatePresence>
-                    {showComments && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="space-y-3 sm:space-y-4">
-                          {/* Validation History */}
-                          {admin.validationHistory?.map((record, index) => {
-                            const config = getCommentConfig(record.type || 'validation');
-                            const Icon = config.icon;
-
-                            return (
-                              <motion.div
-                                key={`validation-${index}`}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-                                      <Icon size={14} className={`${config.color} flex-shrink-0`} />
-                                      <span className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                                        Validation
-                                      </span>
-                                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${config.bgColor} ${config.color}`}>
-                                        {record.validatedBy}
-                                      </span>
-                                    </div>
-                                    <p className={`text-xs font-medium mb-1 sm:mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                                      {record.comment}
-                                    </p>
-                                    <p className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                                      <Clock size={12} className="inline mr-1" />
-                                      {formatDate(record.timestamp)}
-                                    </p>
-                                  </div>
-                                </div>
-                              </motion.div>
-                            );
-                          })}
-
-                          {/* Approval History */}
-                          {admin.approvalHistory?.map((record, index) => {
-                            const config = getCommentConfig(record.type || 'approval');
-                            const Icon = config.icon;
-
-                            return (
-                              <motion.div
-                                key={`approval-${index}`}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: (admin.validationHistory?.length || 0) + index * 0.1 }}
-                                className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-                                      <Icon size={14} className={`${config.color} flex-shrink-0`} />
-                                      <span className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                                        Approval
-                                      </span>
-                                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${config.bgColor} ${config.color}`}>
-                                        {record.approvedBy}
-                                      </span>
-                                    </div>
-                                    <p className={`text-xs font-medium mb-1 sm:mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                                      {record.comment}
-                                    </p>
-                                    <p className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                                      <Clock size={12} className="inline mr-1" />
-                                      {formatDate(record.timestamp)}
-                                    </p>
-                                  </div>
-                                </div>
-                              </motion.div>
-                            );
-                          })}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )}
             </div>
           </div>
         </motion.div>
@@ -3663,10 +2964,316 @@ const AdminDetailModal = ({ admin, isDark, onClose, onStatusChange, onVerificati
   );
 };
 
-const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) => {
+const CustomSelectDropdown = memo(({
+  value,
+  onChange,
+  isDark,
+  fieldError,
+  shakeFields,
+  fieldName = 'field',
+  options = [],
+  placeholder = 'Select an option...'
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [hoveredOption, setHoveredOption] = useState(null);
+  const [isActive, setIsActive] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const selectOptions = [
+    { value: '', label: placeholder },
+    ...options
+  ];
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+        setHoveredOption(null);
+        setIsActive(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedOption = selectOptions.find(opt => opt.value === value);
+
+  const shakeAnimation = {
+    initial: { x: 0 },
+    shake: {
+      x: [0, -10, 10, -10, 10, 0],
+      transition: { duration: 0.6, ease: "easeInOut" }
+    }
+  };
+
+  return (
+    <div ref={dropdownRef} className="relative w-full" style={{ overflow: 'visible', position: 'relative' }}>
+      <motion.div
+        animate={shakeFields?.includes(fieldName) ? "shake" : "initial"}
+        variants={shakeAnimation}
+        style={{ overflow: 'visible', zIndex: isOpen ? 10000 : 'auto' }}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            setIsOpen(!isOpen);
+            setIsActive(true);
+          }}
+          style={{ position: 'relative', zIndex: 10001 }}
+          className={`w-full p-2 sm:p-3 rounded-2xl border-2 text-sm font-medium transition-colors flex items-center justify-between focus:outline-none ${isActive ? 'ring-4 ring-violet-500/30 border-violet-500' : 'focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500'
+            } ${isDark
+              ? 'bg-gray-800 border-gray-600'
+              : 'bg-white border-gray-200'
+            } ${fieldError ? 'border-rose-500' : ''}`}
+        >
+          <span className={selectedOption && value !== ''
+            ? (isDark ? 'text-white' : 'text-gray-900')
+            : (isDark ? 'text-gray-400' : 'text-gray-500')
+          }>
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
+
+          <motion.div
+            animate={{ rotate: isOpen ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              color: value !== ''
+                ? (isDark ? '#FFFFFF' : '#231827')
+                : (isDark ? '#9CA3AF' : '#6B7280')
+            }}
+          >
+            <ChevronDown size={18} />
+          </motion.div>
+        </button>
+      </motion.div>
+
+      <motion.div
+        initial={{ height: 0, opacity: 0 }}
+        animate={isOpen ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
+        transition={{ duration: 0.2, ease: "easeInOut" }}
+        className={`absolute top-8 left-0 right-0 shadow-lg border-x border-b ${isDark
+          ? 'bg-gray-800 border-gray-700'
+          : 'bg-white border-gray-200'
+          }`}
+        style={{
+          borderTop: 'none',
+          borderBottomLeftRadius: '1rem',
+          borderBottomRightRadius: '1rem',
+          borderTopLeftRadius: 0,
+          borderTopRightRadius: 0,
+          zIndex: 9999,
+          position: 'absolute',
+          pointerEvents: isOpen ? 'auto' : 'none',
+          overflow: 'visible',
+        }}
+      >
+        {selectOptions.map((option, index) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => {
+              onChange({ target: { name: fieldName, value: option.value } });
+              setIsOpen(false);
+              setHoveredOption(null);
+            }}
+            onMouseEnter={() => setHoveredOption(option.value)}
+            onMouseLeave={() => setHoveredOption(null)}
+            className={`w-full px-4 text-left text-sm font-medium transition-colors ${option.value === ''
+              ? (isDark ? 'text-[#9CA3AF]' : 'text-[#6B7280]')
+              : (isDark ? 'text-white' : 'text-gray-900')
+              } ${hoveredOption === option.value
+                ? (isDark ? 'bg-blue-600/20' : 'bg-blue-100')
+                : (value === option.value && hoveredOption === null)
+                  ? (isDark ? 'bg-blue-600/20' : 'bg-blue-100')
+                  : ''
+              }`}
+            style={{
+              margin: 0,
+              marginTop: index === 0 ? '1rem' : '0',
+              marginBottom: 0,
+              marginLeft: 0,
+              marginRight: 0,
+              paddingTop: '0.625rem',
+              paddingBottom: '0.625rem',
+              paddingLeft: '1rem',
+              paddingRight: '1rem'
+            }}
+          >
+            {option.label}
+          </button>
+        ))}
+      </motion.div>
+
+      {/* Error Message */}
+      {fieldError && (
+        <motion.p
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+          style={{ marginTop: '0.5rem' }}
+        >
+          <XCircle size={12} />
+          {fieldError}
+        </motion.p>
+      )}
+    </div>
+  );
+});
+
+// Legacy Gender Dropdown - Now uses Generic Component
+const CustomGenderDropdown = memo(({
+  value,
+  onChange,
+  isDark,
+  fieldError,
+  shakeFields,
+  fieldName = 'gender'
+}) => {
+  const genderOptions = [
+    { value: 'Male', label: 'Male' },
+    { value: 'Female', label: 'Female' },
+    { value: 'Other', label: 'Other' }
+  ];
+
+  return (
+    <CustomSelectDropdown
+      value={value}
+      onChange={onChange}
+      isDark={isDark}
+      fieldError={fieldError}
+      shakeFields={shakeFields}
+      fieldName={fieldName}
+      options={genderOptions}
+      placeholder="Select Gender..."
+    />
+  );
+});
+
+// Marital Status Dropdown
+const CustomMaritalStatusDropdown = memo(({
+  value,
+  onChange,
+  isDark,
+  fieldError,
+  shakeFields,
+  fieldName = 'maritalStatus'
+}) => {
+  const maritalStatusOptions = [
+    { value: 'Single', label: 'Single' },
+    { value: 'Married', label: 'Married' },
+    { value: 'Divorced', label: 'Divorced' },
+    { value: 'Widowed', label: 'Widowed' }
+  ];
+
+  return (
+    <CustomSelectDropdown
+      value={value}
+      onChange={onChange}
+      isDark={isDark}
+      fieldError={fieldError}
+      shakeFields={shakeFields}
+      fieldName={fieldName}
+      options={maritalStatusOptions}
+      placeholder="Select Marital Status..."
+    />
+  );
+});
+
+// Department Dropdown
+const CustomDepartmentDropdown = memo(({
+  value,
+  onChange,
+  isDark,
+  fieldError,
+  shakeFields,
+  fieldName = 'department'
+}) => {
+  const departmentOptions = [
+    { value: 'Management', label: 'Management' },
+    { value: 'Verification', label: 'Verification' },
+    { value: 'Support', label: 'Support' },
+    { value: 'Customer Support', label: 'Customer Support' },
+    { value: 'Finance', label: 'Finance' },
+    { value: 'IT', label: 'IT' }
+  ];
+
+  return (
+    <CustomSelectDropdown
+      value={value}
+      onChange={onChange}
+      isDark={isDark}
+      fieldError={fieldError}
+      shakeFields={shakeFields}
+      fieldName={fieldName}
+      options={departmentOptions}
+      placeholder="Select Department..."
+    />
+  );
+});
+
+// Designation Dropdown
+const CustomDesignationDropdown = memo(({
+  value,
+  onChange,
+  isDark,
+  fieldError,
+  shakeFields,
+  fieldName = 'designation'
+}) => {
+  const designationOptions = [
+    { value: 'Super Admin', label: 'Super Admin' },
+    { value: 'Approver', label: 'Approver' },
+    { value: 'Co-Approver', label: 'Co-Approver' },
+    { value: 'Support Admin', label: 'Support Admin' },
+    { value: 'Verification Officer', label: 'Verification Officer' }
+  ];
+
+  return (
+    <CustomSelectDropdown
+      value={value}
+      onChange={onChange}
+      isDark={isDark}
+      fieldError={fieldError}
+      shakeFields={shakeFields}
+      fieldName={fieldName}
+      options={designationOptions}
+      placeholder="Select Designation..."
+    />
+  );
+});
+
+// Set Status Dropdown
+const CustomSetStatusDropdown = memo(({
+  value,
+  onChange,
+  isDark,
+  fieldError,
+  shakeFields,
+  fieldName = 'setStatus'
+}) => {
+  const setStatusOptions = [
+    { value: 'Approved', label: 'Approved' },
+    { value: 'Rejected', label: 'Rejected' }
+  ];
+
+  return (
+    <CustomSelectDropdown
+      value={value}
+      onChange={onChange}
+      isDark={isDark}
+      fieldError={fieldError}
+      shakeFields={shakeFields}
+      fieldName={fieldName}
+      options={setStatusOptions}
+      placeholder="Set Status..."
+    />
+  );
+});
+
+const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin, onSuccess }) => {
   const isEditing = !!admin;
 
-  // Initial form data with all fields
   const initialFormData = isEditing ? {
     ...admin,
     profilePhoto: admin.profilePhoto || '',
@@ -3682,9 +3289,11 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
     designation: admin.designation || '',
     address: admin.address || '',
     bio: admin.bio || '',
+    setStatus: admin.setStatus || '',
     documents: admin.documents || [],
     profileCompletion: admin.profileCompletion || 0,
-    status: admin.status || 'Unknown'
+    status: admin.status || 'Unknown',
+    statusHistory: admin.statusHistory || []
   } : {
     profilePhoto: '',
     fullName: '',
@@ -3699,18 +3308,22 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
     designation: '',
     address: '',
     bio: '',
+    setStatus: '',
     documents: [],
     profileCompletion: 0,
-    status: 'Unknown'
+    status: 'Unknown',
+    statusHistory: []
   };
 
   const [formData, setFormData] = useState(initialFormData);
   const [originalData] = useState(initialFormData);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
+  const [pendingAdminData, setPendingAdminData] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
   const [shakeFields, setShakeFields] = useState([]);
   const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [formInstanceId] = useState(() => `form-${Date.now()}-${Math.random()}`);
   const [completionChecklist, setCompletionChecklist] = useState({
     personalInfo: false,
     workInfo: false,
@@ -3734,40 +3347,58 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
     designation: useRef(null),
     address: useRef(null),
     bio: useRef(null),
+    setStatus: useRef(null),
     documents: useRef(null)
   };
 
   useEffect(() => {
-    const allFieldsEmpty = !formData.fullName && !formData.email && !formData.phone &&
-      !formData.dateOfBirth && !formData.whatsappNumber && !formData.gender &&
-      !formData.maritalStatus && !formData.department && !formData.designation &&
-      !formData.address && !formData.bio && !formData.profilePhoto &&
-      formData.documents.length === 0;
+    // Only auto-set status when creating new admins, not when editing
+    if (!isEditing) {
+      // Check if absolutely nothing is filled (including setStatus and documents)
+      const allFieldsEmpty = !formData.fullName && !formData.email && !formData.phone &&
+        !formData.dateOfBirth && !formData.whatsappNumber && !formData.gender &&
+        !formData.maritalStatus && !formData.nationality && !formData.department && 
+        !formData.designation && !formData.address && !formData.bio && !formData.profilePhoto &&
+        formData.documents.length === 0 && !formData.setStatus;
 
-    if (allFieldsEmpty) {
-      setFormData(prev => ({ ...prev, status: 'Unknown' }));
-    } else if (!formData.fullName || !formData.email || !formData.phone ||
-      !formData.dateOfBirth || !formData.whatsappNumber || !formData.gender ||
-      !formData.maritalStatus || !formData.department || !formData.designation ||
-      !formData.address || !formData.bio || !formData.profilePhoto ||
-      formData.documents.length === 0) {
-      setFormData(prev => ({ ...prev, status: 'Incomplete' }));
+      if (allFieldsEmpty) {
+        // Absolutely nothing filled → "Unknown"
+        setFormData(prev => ({ ...prev, status: 'Unknown' }));
+      } else {
+        // Something is filled, check if all core required fields are complete
+        const coreFieldsFilled = formData.fullName && formData.email && formData.phone &&
+          formData.dateOfBirth && formData.whatsappNumber && formData.gender &&
+          formData.maritalStatus && formData.nationality && formData.department && 
+          formData.designation && formData.address && formData.bio && formData.profilePhoto &&
+          formData.documents.length >= 1;
+
+        if (coreFieldsFilled) {
+          // Check if setStatus is also filled
+          if (formData.setStatus) {
+            // All core fields filled + at least 1 document + setStatus filled → use selected status
+            setFormData(prev => ({ ...prev, status: formData.setStatus }));
+          } else {
+            // All core fields filled + at least 1 document but setStatus empty → "Pending" (orange)
+            setFormData(prev => ({ ...prev, status: 'Pending' }));
+          }
+        } else {
+          // Core fields incomplete → "Incomplete" (show that some fields are filled but not all)
+          setFormData(prev => ({ ...prev, status: 'Incomplete' }));
+        }
+      }
     }
   }, [formData.fullName, formData.email, formData.phone, formData.dateOfBirth,
-  formData.whatsappNumber, formData.gender, formData.maritalStatus, formData.department,
-  formData.designation, formData.address, formData.bio, formData.profilePhoto,
-  formData.documents]);
+  formData.whatsappNumber, formData.gender, formData.maritalStatus, formData.nationality,
+  formData.department, formData.designation, formData.address, formData.bio, 
+  formData.profilePhoto, formData.documents, formData.setStatus, isEditing]);
 
-  // Calculate completion percentage and update checklist
   useEffect(() => {
     const percentage = calculateProfileCompletion(formData);
-
-    // Update checklist to match the new structure
     const checklist = {
-      personalInfo: ['fullName', 'email', 'phone', 'dateOfBirth', 'whatsappNumber', 'gender', 'maritalStatus', 'nationality'].every(
+      personalInfo: ['fullName', 'email', 'phone', 'dateOfBirth', 'whatsappNumber', 'gender', 'maritalStatus', 'nationality', 'address'].every(
         field => formData[field] && formData[field].toString().trim() !== ''
       ),
-      workInfo: ['department', 'designation', 'address', 'bio'].every(
+      workInfo: ['department', 'designation', 'bio'].every(
         field => formData[field] && formData[field].toString().trim() !== ''
       ),
       profilePhoto: formData.profilePhoto && formData.profilePhoto.toString().trim() !== '',
@@ -3801,9 +3432,7 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
               inline: 'nearest'
             });
 
-            // Special handling for profile photo
             if (firstInvalidField === 'profilePhoto') {
-              // Try to focus the camera button or the container
               const cameraButton = fieldRef.current.querySelector('label[for="avatar-upload"]');
               if (cameraButton) {
                 cameraButton.focus();
@@ -3828,6 +3457,121 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
     }
   };
 
+  const handleEnhancedFocus = (e) => {
+    const input = e.target;
+    const fieldName = input.name;
+
+    if (['fullName', 'email', 'phone', 'whatsappNumber', 'address', 'nationality', 'bio'].includes(fieldName)) {
+      input.setAttribute('readonly', 'readonly');
+      setTimeout(() => {
+        input.removeAttribute('readonly');
+      }, 5);
+      input.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
+    }
+  };
+
+  const handleInput = (e) => {
+    const input = e.target;
+    const fieldName = input.name;
+
+    if (['fullName', 'email', 'phone', 'whatsappNumber', 'address', 'nationality', 'bio'].includes(fieldName)) {
+      input.setAttribute('data-autofill-prevent', Math.random().toString(36).substring(7));
+      input.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
+      setTimeout(() => {
+        input.setAttribute('autocomplete', 'off');
+      }, 5);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    const input = e.target;
+    const fieldName = input.name;
+
+    if (['fullName', 'email', 'phone', 'whatsappNumber', 'address', 'nationality', 'bio'].includes(fieldName)) {
+      input.setAttribute('data-typing', 'true');
+    }
+  };
+
+  const handlePaste = (e) => {
+    const input = e.target;
+    const fieldName = input.name;
+
+    if (['fullName', 'email', 'phone', 'whatsappNumber', 'address', 'nationality', 'bio'].includes(fieldName)) {
+      e.stopPropagation();
+    }
+  };
+
+  const handleMouseDown = (e) => {
+    const input = e.target;
+    const fieldName = input.name;
+
+    if (['fullName', 'email', 'phone', 'whatsappNumber', 'address', 'nationality', 'bio'].includes(fieldName)) {
+      input.setAttribute('readonly', 'readonly');
+      setTimeout(() => {
+        input.removeAttribute('readonly');
+      }, 5);
+    }
+  };
+
+  // Add CSS styles for autofill prevention
+  const autofillStyles = `
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+    box-shadow: 0 0 0 30px white inset !important;
+    -webkit-text-fill-color: #000 !important;
+    transition: background-color 5000s ease-in-out 0s;
+    background-color: white !important;
+  }
+  
+  input::-webkit-contacts-auto-fill-button,
+  input::-webkit-credentials-auto-fill-button {
+    visibility: hidden;
+    display: none !important;
+    pointer-events: none;
+    height: 0;
+    width: 0;
+    margin: 0;
+  }
+
+  input {
+    autocomplete: off !important;
+  }
+  
+  input:-internal-autofill-selected {
+    background-color: white !important;
+  }
+`;
+
+  const [fieldNames, setFieldNames] = useState({
+    fullName: `name_${Math.random().toString(36).substring(2, 10)}`,
+    email: `email_${Math.random().toString(36).substring(2, 10)}`,
+    phone: `phone_${Math.random().toString(36).substring(2, 10)}`,
+    whatsappNumber: `whatsapp_${Math.random().toString(36).substring(2, 10)}`,
+    address: `address_${Math.random().toString(36).substring(2, 10)}`,
+    nationality: `nationality_${Math.random().toString(36).substring(2, 10)}`,
+    bio: `bio_${Math.random().toString(36).substring(2, 10)}`
+  });
+
+  // 2. Add this handler for all text inputs
+  const handleAutofillPrevention = (e) => {
+    const input = e.target;
+    // Remove readonly on actual user interaction
+    if (input.hasAttribute('readonly')) {
+      input.removeAttribute('readonly');
+    }
+  };
+
+  // 3. Add this to make fields readonly initially and on blur
+  const makeReadonly = (e) => {
+    const input = e.target;
+    if (input.value === '') {
+      input.setAttribute('readonly', 'readonly');
+    }
+  };
+
   const validateForm = () => {
     const errors = {};
     const invalidFields = [];
@@ -3841,35 +3585,6 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
 
     const isValidName = (name) => {
       return /^[A-Za-z\s]+$/.test(name.trim());
-    };
-
-    const isValidEmail = (email) => {
-      email = email.trim().toLowerCase();
-
-      if (!email) return false;
-      if (email.length > 254) return false;
-
-      const parts = email.split('@');
-      if (parts.length !== 2) return false;
-
-      const [local, domain] = parts;
-
-      if (local.length === 0 || local.length > 64) return false;
-      if (domain.length === 0 || domain.length > 255) return false;
-
-      const localRegex = /^[a-z0-9][a-z0-9._+-]*[a-z0-9]$|^[a-z0-9]$/;
-      if (!localRegex.test(local)) return false;
-
-      if (local.includes('..')) return false;
-      if (local.startsWith('.') || local.endsWith('.')) return false;
-
-      const domainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/;
-      if (!domainRegex.test(domain)) return false;
-
-      if (domain.includes('--')) return false;
-      if (domain.startsWith('-') || domain.endsWith('-')) return false;
-
-      return true;
     };
 
     const isValidPhone = (phone) => {
@@ -3896,8 +3611,8 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
     if (!formData.email.trim()) {
       errors.email = 'Email is required';
       invalidFields.push('email');
-    } else if (!isValidEmail(formData.email)) {
-      errors.email = 'Please enter a valid email address';
+    } else if (!isValidGmail(formData.email)) {
+      errors.email = 'Please enter a valid Gmail address';
       invalidFields.push('email');
     }
 
@@ -4001,10 +3716,45 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
       return;
     }
 
+    if (isEditing) {
+      const hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
+
+      if (!hasChanges) {
+        onClose();
+        return;
+      }
+    }
+
+    // Determine the status based on setStatus field
+    let statusToSet = 'Pending';
+    if (formData.setStatus && formData.setStatus.trim() !== '') {
+      if (formData.setStatus === 'Pending') {
+        statusToSet = 'Pending';
+      } else if (formData.setStatus === 'Approved') {
+        statusToSet = 'Approved';
+      } else if (formData.setStatus === 'Rejected') {
+        statusToSet = 'Rejected';
+      }
+    }
+
+    // Build statusHistory for new admins with selected status
+    let statusHistory = formData.statusHistory || [];
+    if (!isEditing && formData.setStatus && formData.setStatus.trim() !== '') {
+      const initialStatusEntry = {
+        fromStatus: 'Pending',
+        toStatus: statusToSet,
+        changedBy: 'Current Admin',
+        timestamp: new Date().toISOString(),
+        reason: 'Initial status set during admin creation',
+        type: 'selected-status'
+      };
+      statusHistory = [initialStatusEntry];
+    }
+
     const adminToSubmit = {
       ...formData,
       id: isEditing ? formData.id : `ADM-${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`,
-      status: 'Draft', // Set status to Draft when Add Admin button is clicked
+      status: statusToSet,
       role: isEditing ? formData.role : 'support',
       createdBy: isEditing ? formData.createdBy : 'Current User',
       createdAt: isEditing ? formData.createdAt : new Date().toISOString().split('T')[0],
@@ -4012,6 +3762,7 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
       forwardingHistory: isEditing ? formData.forwardingHistory : [],
       validationHistory: isEditing ? formData.validationHistory : [],
       approvalHistory: isEditing ? formData.approvalHistory : [],
+      statusHistory: statusHistory,
       profileCompletion: completionPercentage
     };
 
@@ -4023,20 +3774,36 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
       }
     });
 
+    setPendingAdminData(adminToSubmit);
     setShowConfirmation(true);
   };
 
   const handleConfirm = () => {
-    if (pendingAction) {
-      pendingAction();
+    if (pendingAction && pendingAdminData) {
+      onClose();
+      if (isEditing) {
+        onUpdateAdmin(pendingAdminData);
+      } else {
+        onAddAdmin(pendingAdminData);
+      }
+
+      const successMsg = isEditing
+        ? 'Admin updated successfully'
+        : 'Admin added successfully';
+
+      if (onSuccess) {
+        onSuccess(successMsg);
+      }
     }
     setShowConfirmation(false);
     setPendingAction(null);
+    setPendingAdminData(null);
   };
 
   const handleCancel = () => {
     setShowConfirmation(false);
     setPendingAction(null);
+    setPendingAdminData(null);
   };
 
   const handleChange = (e) => {
@@ -4080,6 +3847,51 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
 
       if (value.startsWith('+91-')) {
         newValue = '+91-' + newValue;
+      }
+    }
+    else if (name === 'setStatus') {
+      newValue = value;
+
+      // Track status change in history when setStatus is changed from edit mode
+      if (isEditing && value && value.trim() !== '') {
+        const oldStatus = formData.status;
+        let newStatus = 'Pending';
+        if (value === 'Pending') {
+          newStatus = 'Pending';
+        } else if (value === 'Approved') {
+          newStatus = 'Approved';
+        } else if (value === 'Rejected') {
+          newStatus = 'Rejected';
+        }
+
+        // Only add to history if status actually changed
+        if (oldStatus !== newStatus) {
+          const statusHistoryEntry = {
+            fromStatus: oldStatus,
+            toStatus: newStatus,
+            changedBy: 'Current Admin',
+            timestamp: new Date().toISOString(),
+            reason: 'Status updated from edit modal',
+            type: 'selected-status'
+          };
+
+          setFormData(prev => ({
+            ...prev,
+            [name]: newValue,
+            status: newStatus,
+            statusHistory: [...(prev.statusHistory || []), statusHistoryEntry]
+          }));
+
+          if (fieldErrors[name]) {
+            setFieldErrors(prev => {
+              const newErrors = { ...prev };
+              delete newErrors[name];
+              return newErrors;
+            });
+          }
+
+          return;
+        }
       }
     }
     else {
@@ -4126,9 +3938,6 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
       });
     }
   };
-
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
 
   return (
     <>
@@ -4179,8 +3988,123 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
-            <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+          <div className="flex-1 overflow-y-auto" autoComplete="off">
+            <style>{`
+              input:-webkit-autofill,
+              input:-webkit-autofill:hover,
+              input:-webkit-autofill:focus,
+              input:-webkit-autofill:active {
+                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                box-shadow: 0 0 0 30px white inset !important;
+                -webkit-text-fill-color: #000 !important;
+                transition: background-color 5000s ease-in-out 0s;
+              }
+              
+              input::-webkit-contacts-auto-fill-button,
+              input::-webkit-credentials-auto-fill-button {
+                visibility: hidden;
+                display: none !important;
+                pointer-events: none;
+                height: 0;
+                width: 0;
+                margin: 0;
+              }
+
+              input {
+                autocomplete: off;
+              }
+
+              input[type="text"],
+              input[type="email"],
+              input[type="password"],
+              input[type="tel"] {
+                -webkit-autofill: off;
+              }
+
+              textarea:-webkit-autofill {
+                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                box-shadow: 0 0 0 30px white inset !important;
+                -webkit-text-fill-color: #000 !important;
+              }
+
+              select:-webkit-autofill {
+                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                box-shadow: 0 0 0 30px white inset !important;
+              }
+
+              /* Remove autofill styling and black outline */
+              input:-webkit-autofill,
+              input:-webkit-autofill:hover,
+              input:-webkit-autofill:focus,
+              input:-webkit-autofill:active {
+                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                box-shadow: 0 0 0 30px white inset !important;
+                -webkit-text-fill-color: #000 !important;
+                caret-color: #000 !important;
+                outline: none !important;
+                border: 2px solid #e5e7eb !important;
+              }
+
+              textarea:-webkit-autofill,
+              textarea:-webkit-autofill:hover,
+              textarea:-webkit-autofill:focus {
+                -webkit-box-shadow: 0 0 0 30px white inset !important;
+                box-shadow: 0 0 0 30px white inset !important;
+                -webkit-text-fill-color: #000 !important;
+                outline: none !important;
+                border: 2px solid #e5e7eb !important;
+              }
+            `}</style>
+            <form
+              onSubmit={handleSubmit}
+              className="p-4 sm:p-6 space-y-4 sm:space-y-6"
+              name={formInstanceId}
+              id={formInstanceId}
+              autoComplete="off"
+              spellCheck="false"
+            >
+              <input
+                type="text"
+                name="prevent_autofill_username"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="username"
+                readOnly
+              />
+              <input
+                type="password"
+                name="prevent_autofill_password"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="current-password"
+                readOnly
+              />
+              <input
+                type="text"
+                name="prevent_autofill_name"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="name"
+                readOnly
+              />
+              <input
+                type="email"
+                name="prevent_autofill_email"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="email"
+                readOnly
+              />
+              <input
+                type="tel"
+                name="prevent_autofill_tel"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="tel"
+                readOnly
+              />
+              <input
+                type="text"
+                name="prevent_autofill_address"
+                style={{ display: 'none', position: 'absolute', left: '-9999px' }}
+                autoComplete="street-address"
+                readOnly
+              />
               {/* Profile Photo Section */}
               <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
                 <h3 className={`text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -4234,17 +4158,31 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
                         name="fullName"
                         value={formData.fullName}
                         onChange={handleChange}
-                        placeholder="John Doe"
+                        onFocus={handleEnhancedFocus}
+                        onInput={handleInput}
+                        onKeyDown={handleKeyDown}
+                        onPaste={handlePaste}
+                        onMouseDown={handleMouseDown}
+                        placeholder="Enter your full name..."
                         maxLength={50}
                         autoComplete="off"
-                        readOnly
-                        onFocus={(e) => e.target.removeAttribute('readonly')}
+                        spellCheck="false"
+                        data-lpignore="true"
+                        data-1p-ignore="true"
+                        data-form-type="other"
+                        aria-label="Full Name"
+                        aria-autocomplete="none"
+                        required={false}
+                        onAutoComplete={(e) => {
+                          e.preventDefault();
+                          e.target.value = '';
+                        }}
                         className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
                           ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
                           : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
                           } ${fieldErrors.fullName ? 'border-rose-500' : ''}`}
                       />
-                      <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'
+                      <div className={`absolute bottom-1 right-3 text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'
                         }`}>
                         {formData.fullName.length}/50
                       </div>
@@ -4272,35 +4210,54 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
                       className="overflow-visible relative"
                     >
                       <input
-                        type="email"
+                        type="text"
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        placeholder="john.doe@example.com"
+                        onFocus={handleEnhancedFocus}
+                        onInput={handleInput}
+                        onKeyDown={handleKeyDown}
+                        onPaste={handlePaste}
+                        onMouseDown={handleMouseDown}
+                        placeholder="Enter your email..."
                         maxLength={100}
                         autoComplete="off"
-                        readOnly
-                        onFocus={(e) => e.target.removeAttribute('readonly')}
+                        spellCheck="false"
+                        data-lpignore="true"
+                        data-1p-ignore="true"
+                        data-form-type="other"
+                        aria-label="Email"
+                        aria-autocomplete="none"
+                        required={false}
+                        onAutoComplete={(e) => {
+                          e.preventDefault();
+                          e.target.value = '';
+                        }}
                         className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
                           ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
                           : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
                           } ${fieldErrors.email ? 'border-rose-500' : ''}`}
                       />
-                      <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'
+                      <div className={`absolute bottom-1 right-3 text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'
                         }`}>
                         {formData.email.length}/100
                       </div>
                     </motion.div>
-                    {fieldErrors.email && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                      >
-                        <XCircle size={12} />
-                        {fieldErrors.email}
-                      </motion.p>
-                    )}
+                    <AnimatePresence>
+                      {fieldErrors.email && (
+                        <motion.p
+                          key="email-error"
+                          initial={{ opacity: 0, y: -10, height: 0 }}
+                          animate={{ opacity: 1, y: 0, height: 'auto' }}
+                          exit={{ opacity: 0, y: -10, height: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="flex items-center gap-2 text-rose-600 text-xs font-medium mt-2 px-1"
+                        >
+                          <XCircle size={14} />
+                          <span>{fieldErrors.email}</span>
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   <div ref={fieldRefs.phone} className="overflow-visible">
@@ -4335,17 +4292,31 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
                             name="phone"
                             value={formData.phone}
                             onChange={handleChange}
-                            placeholder="98765-43210"
+                            onFocus={handleEnhancedFocus}
+                            onInput={handleInput}
+                            onKeyDown={handleKeyDown}
+                            onPaste={handlePaste}
+                            onMouseDown={handleMouseDown}
+                            placeholder="Enter your phone..."
                             maxLength={12}
                             autoComplete="off"
-                            readOnly
-                            onFocus={(e) => e.target.removeAttribute('readonly')}
-                            className={`w-full h-[48px] p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                            spellCheck="false"
+                            data-lpignore="true"
+                            data-1p-ignore="true"
+                            data-form-type="other"
+                            aria-label="Phone Number"
+                            aria-autocomplete="none"
+                            required={false}
+                            onAutoComplete={(e) => {
+                              e.preventDefault();
+                              e.target.value = '';
+                            }}
+                            className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
                               ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
                               : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
                               } ${fieldErrors.phone ? 'border-rose-500' : ''}`}
                           />
-                          <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'
+                          <div className={`absolute bottom-1 right-3 text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'
                             }`}>
                             {formData.phone.replace(/\D/g, '').length}/10
                           </div>
@@ -4374,30 +4345,93 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
                       variants={shakeAnimation}
                       className="overflow-visible"
                     >
-                      <input
-                        type="date"
-                        name="dateOfBirth"
-                        value={formData.dateOfBirth}
-                        onChange={handleChange}
-                        autoComplete="off"
-                        onFocus={(e) => e.target.removeAttribute('readonly')}
-                        className={`date-field w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-200 text-gray-900'
-                          } ${fieldErrors.dateOfBirth ? 'border-rose-500' : ''} 
-                          ${formData.dateOfBirth ? (isDark ? 'text-white' : 'text-gray-900') : (isDark ? 'text-gray-400' : 'text-gray-500')}`}
-                        style={{
-                          color: formData.dateOfBirth ? '' : (isDark ? '#9CA3AF' : '#6B7280')
-                        }}
-                      />
-                      <style jsx>{`
-                          .date-field::-webkit-calendar-picker-indicator {
-                            ${isDark
-                          ? 'filter: invert(39%) sepia(6%) saturate(1199%) hue-rotate(182deg) brightness(94%) contrast(87%);'
-                          : 'filter: invert(39%) sepia(6%) saturate(1199%) hue-rotate(182deg) brightness(94%) contrast(87%);'
-                        }
-                          }
-                        `}</style>
+                      <div className="date-input-modal relative">
+                        <input
+                          type="date"
+                          name="dateOfBirth"
+                          value={formData.dateOfBirth}
+                          onChange={(e) => {
+                            const newValue = e.target.value;
+                            setFieldErrors(prev => ({ ...prev, dateOfBirth: '' }));
+                            setShakeFields(prev => prev.filter(f => f !== 'dateOfBirth'));
+                            if (!newValue || newValue === '') {
+                              handleChange(e);
+                              return;
+                            }
+                            const date = new Date(newValue);
+                            const isValid = !isNaN(date.getTime());
+                            if (isValid) {
+                              const [year, month, day] = newValue.split('-').map(Number);
+                              const isValidDate = year > 1900 && year < 2100 &&
+                                month >= 1 && month <= 12 &&
+                                day >= 1 && day <= 31;
+
+                              if (isValidDate) {
+                                handleChange(e);
+                                setFieldErrors(prev => ({ ...prev, dateOfBirth: '' }));
+                                setShakeFields(prev => prev.filter(f => f !== 'dateOfBirth'));
+                              } else {
+                                setFieldErrors(prev => ({ ...prev, dateOfBirth: 'Please enter a valid date' }));
+                                setShakeFields(prev => [...prev, 'dateOfBirth']);
+                                setTimeout(() => setShakeFields(prev => prev.filter(f => f !== 'dateOfBirth')), 600);
+                              }
+                            } else {
+                              setFieldErrors(prev => ({ ...prev, dateOfBirth: 'Please enter a valid date' }));
+                              setShakeFields(prev => [...prev, 'dateOfBirth']);
+                              setTimeout(() => setShakeFields(prev => prev.filter(f => f !== 'dateOfBirth')), 600);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const value = e.target.value;
+                            if (value) {
+                              const [year, month, day] = value.split('-').map(Number);
+                              const isValidDate = !isNaN(year) && !isNaN(month) && !isNaN(day) &&
+                                year > 1900 && year < 2100 &&
+                                month >= 1 && month <= 12 &&
+                                day >= 1 && day <= 31;
+                              if (!isValidDate) {
+                                setFieldErrors(prev => ({ ...prev, dateOfBirth: 'Please enter a valid date' }));
+                                setShakeFields(prev => [...prev, 'dateOfBirth']);
+                                setTimeout(() => setShakeFields(prev => prev.filter(f => f !== 'dateOfBirth')), 600);
+                              }
+                            } else {
+                              setFieldErrors(prev => ({ ...prev, dateOfBirth: '' }));
+                              setShakeFields(prev => prev.filter(f => f !== 'dateOfBirth'));
+                            }
+                          }}
+                          autoComplete="off"
+                          className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium pr-10 transition-all ${isDark
+                            ? 'bg-gray-800 border-gray-600 text-white'
+                            : 'bg-white border-gray-200 text-gray-900'
+                            } ${fieldErrors.dateOfBirth ? 'border-rose-500' : ''}`}
+                          style={{
+                            color: formData.dateOfBirth ? '' : (isDark ? '#9CA3AF' : '#6B7280'),
+                          }}
+                        />
+                        <Calendar
+                          size={18}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer transition-all duration-200 hover:scale-110"
+                          onClick={() => {
+                            const input = document.querySelector('.date-input-modal input[type="date"]');
+                            if (input) {
+                              if (input.showPicker) {
+                                input.showPicker();
+                              } else {
+                                input.focus();
+                                input.click();
+                              }
+                            }
+                          }}
+                          style={{
+                            zIndex: 10,
+                            color: formData.dateOfBirth
+                              ? (isDark ? '#FFFFFF' : '#1F2937')
+                              : (isDark ? '#9CA3AF' : '#6B7280'),
+                            filter: 'none',
+                            pointerEvents: 'auto'
+                          }}
+                        />
+                      </div>
                     </motion.div>
                     {fieldErrors.dateOfBirth && (
                       <motion.p
@@ -4443,17 +4477,28 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
                             name="whatsappNumber"
                             value={formData.whatsappNumber}
                             onChange={handleChange}
-                            placeholder="98765-43210"
+                            placeholder="Enter your WhatsApp number..."
                             maxLength={12}
                             autoComplete="off"
+                            spellCheck="false"
                             readOnly
                             onFocus={(e) => e.target.removeAttribute('readonly')}
+                            data-lpignore="true"
+                            data-1p-ignore="true"
+                            data-form-type="other"
+                            aria-label="WhatsApp Number"
+                            aria-autocomplete="none"
+                            required={false}
+                            onAutoComplete={(e) => {
+                              e.preventDefault();
+                              e.target.value = '';
+                            }}
                             className={`w-full h-[48px] p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
                               ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
                               : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
                               } ${fieldErrors.whatsappNumber ? 'border-rose-500' : ''}`}
                           />
-                          <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'
+                          <div className={`absolute bottom-1 right-3 text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'
                             }`}>
                             {formData.whatsappNumber.replace(/\D/g, '').length}/10
                           </div>
@@ -4477,61 +4522,14 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
                       }`}>
                       &nbsp;Gender <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
                     </label>
-                    <div className="relative">
-                      <motion.div
-                        animate={shakeFields.includes('gender') ? "shake" : "initial"}
-                        variants={shakeAnimation}
-                        className="overflow-visible"
-                      >
-                        <select
-                          name="gender"
-                          value={formData.gender}
-                          onChange={handleChange}
-                          autoComplete="off"
-                          readOnly
-                          onFocus={(e) => e.target.removeAttribute('readonly')}
-                          className={`w-full p-2 sm:p-3 rounded-2xl text-sm font-medium transition-all appearance-none ${isDark
-                            ? 'bg-gray-800 border-gray-600'
-                            : 'bg-white border-gray-200'
-                            } border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none ${formData.gender === ""
-                              ? (isDark ? 'text-[#9CA3AF]' : 'text-[#6B7280]')
-                              : (isDark ? 'text-white' : 'text-gray-900')
-                            } ${fieldErrors.gender ? 'border-rose-500' : ''}`}
-                        >
-                          <option value="" className={`${isDark ? 'text-gray-400 bg-gray-800' : 'text-gray-500 bg-white'
-                            } font-medium`}>
-                            &nbsp;Select Gender...
-                          </option>
-                          <option value="Male" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Male
-                          </option>
-                          <option value="Female" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Female
-                          </option>
-                          <option value="Other" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Other
-                          </option>
-                        </select>
-
-                        <div className={`absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'
-                          }`}>
-                          <ChevronDown size={16} />
-                        </div>
-                      </motion.div>
-                    </div>
-                    {fieldErrors.gender && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                      >
-                        <XCircle size={12} />
-                        {fieldErrors.gender}
-                      </motion.p>
-                    )}
+                    <CustomGenderDropdown
+                      value={formData.gender}
+                      onChange={handleChange}
+                      isDark={isDark}
+                      fieldError={fieldErrors.gender}
+                      shakeFields={shakeFields}
+                      fieldName="gender"
+                    />
                   </div>
 
                   <div ref={fieldRefs.maritalStatus} className="overflow-visible">
@@ -4539,71 +4537,20 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
                       }`}>
                       &nbsp;Marital Status <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
                     </label>
-                    <div className="relative">
-                      <motion.div
-                        animate={shakeFields.includes('maritalStatus') ? "shake" : "initial"}
-                        variants={shakeAnimation}
-                        className="overflow-visible"
-                      >
-                        <select
-                          name="maritalStatus"
-                          value={formData.maritalStatus}
-                          onChange={handleChange}
-                          autoComplete="off"
-                          readOnly
-                          onFocus={(e) => e.target.removeAttribute('readonly')}
-                          className={`w-full p-2 sm:p-3 rounded-2xl text-sm font-medium transition-all appearance-none ${isDark
-                            ? 'bg-gray-800 border-gray-600'
-                            : 'bg-white border-gray-200'
-                            } border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none ${formData.maritalStatus === ""
-                              ? (isDark ? 'text-[#9CA3AF]' : 'text-[#6B7280]')
-                              : (isDark ? 'text-white' : 'text-gray-900')
-                            } ${fieldErrors.maritalStatus ? 'border-rose-500' : ''}`}
-                        >
-                          <option value="" className={`${isDark ? 'text-gray-400 bg-gray-800' : 'text-gray-500 bg-white'
-                            } font-medium`}>
-                            &nbsp;Select Marital Status...
-                          </option>
-                          <option value="Single" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Single
-                          </option>
-                          <option value="Married" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Married
-                          </option>
-                          <option value="Divorced" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Divorced
-                          </option>
-                          <option value="Widowed" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Widowed
-                          </option>
-                        </select>
-
-                        <div className={`absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'
-                          }`}>
-                          <ChevronDown size={16} />
-                        </div>
-                      </motion.div>
-                    </div>
-                    {fieldErrors.maritalStatus && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                      >
-                        <XCircle size={12} />
-                        {fieldErrors.maritalStatus}
-                      </motion.p>
-                    )}
+                    <CustomMaritalStatusDropdown
+                      value={formData.maritalStatus}
+                      onChange={handleChange}
+                      isDark={isDark}
+                      fieldError={fieldErrors.maritalStatus}
+                      shakeFields={shakeFields}
+                      fieldName="maritalStatus"
+                    />
                   </div>
 
                   <div ref={fieldRefs.nationality} className="overflow-visible">
                     <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
                       }`}>
-                      &nbsp;Nationality <span className="text-rose-500 font-normal normal-case">*</span>
+                      &nbsp;Nationality <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
                     </label>
                     <motion.div
                       animate={shakeFields.includes('nationality') ? "shake" : "initial"}
@@ -4615,17 +4562,28 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
                         name="nationality"
                         value={formData.nationality}
                         onChange={handleChange}
-                        placeholder="Enter nationality"
+                        placeholder="Enter your nationality..."
                         maxLength={50}
                         autoComplete="off"
+                        spellCheck="false"
                         readOnly
                         onFocus={(e) => e.target.removeAttribute('readonly')}
+                        data-lpignore="true"
+                        data-1p-ignore="true"
+                        data-form-type="other"
+                        aria-label="Nationality"
+                        aria-autocomplete="none"
+                        required={false}
+                        onAutoComplete={(e) => {
+                          e.preventDefault();
+                          e.target.value = '';
+                        }}
                         className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
                           ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
                           : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
                           } ${fieldErrors.nationality ? 'border-rose-500' : ''}`}
                       />
-                      <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'
+                      <div className={`absolute bottom-1 right-3 text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'
                         }`}>
                         {formData.nationality.length}/50
                       </div>
@@ -4638,6 +4596,62 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
                       >
                         <XCircle size={12} />
                         {fieldErrors.nationality}
+                      </motion.p>
+                    )}
+                  </div>
+
+                  <div ref={fieldRefs.address} className="md:col-span-2 overflow-visible">
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
+                      &nbsp;Address <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+                    </label>
+                    <motion.div
+                      animate={shakeFields.includes('address') ? "shake" : "initial"}
+                      variants={shakeAnimation}
+                      className="overflow-visible relative"
+                    >
+                      <input
+                        type="text"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleChange}
+                        onFocus={handleEnhancedFocus}
+                        onInput={handleInput}
+                        onKeyDown={handleKeyDown}
+                        onPaste={handlePaste}
+                        onMouseDown={handleMouseDown}
+                        placeholder="Enter your address..."
+                        maxLength={100}
+                        autoComplete="off"
+                        spellCheck="false"
+                        data-lpignore="true"
+                        data-1p-ignore="true"
+                        data-form-type="other"
+                        aria-label="Address"
+                        aria-autocomplete="none"
+                        required={false}
+                        onAutoComplete={(e) => {
+                          e.preventDefault();
+                          e.target.value = '';
+                        }}
+                        className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                          ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                          : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                          } ${fieldErrors.address ? 'border-rose-500' : ''}`}
+                      />
+                      <div className={`absolute bottom-1 right-3 text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'
+                        }`}>
+                        {formData.address.length}/100
+                      </div>
+                    </motion.div>
+                    {fieldErrors.address && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+                      >
+                        <XCircle size={12} />
+                        {fieldErrors.address}
                       </motion.p>
                     )}
                   </div>
@@ -4654,196 +4668,40 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div ref={fieldRefs.department} className="overflow-visible">
+                  <div ref={fieldRefs.department} className="overflow-visible" style={{ zIndex: 70, position: 'relative' }}>
                     <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
                       }`}>
                       &nbsp;Department <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
                     </label>
-                    <div className="relative">
-                      <motion.div
-                        animate={shakeFields.includes('department') ? "shake" : "initial"}
-                        variants={shakeAnimation}
-                        className="overflow-visible"
-                      >
-                        <select
-                          name="department"
-                          value={formData.department}
-                          onChange={handleChange}
-                          autoComplete="off"
-                          readOnly
-                          onFocus={(e) => e.target.removeAttribute('readonly')}
-                          className={`w-full p-2 sm:p-3 rounded-2xl text-sm font-medium transition-all appearance-none ${isDark
-                            ? 'bg-gray-800 border-gray-600'
-                            : 'bg-white border-gray-200'
-                            } border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none ${formData.department === ""
-                              ? (isDark ? 'text-[#9CA3AF]' : 'text-[#6B7280]')
-                              : (isDark ? 'text-white' : 'text-gray-900')
-                            } ${fieldErrors.department ? 'border-rose-500' : ''}`}
-                        >
-                          <option value="" className={`${isDark ? 'text-gray-400 bg-gray-800' : 'text-gray-500 bg-white'
-                            } font-medium`}>
-                            &nbsp;Select Department...
-                          </option>
-                          <option value="Management" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Management
-                          </option>
-                          <option value="Verification" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Verification
-                          </option>
-                          <option value="Support" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Support
-                          </option>
-                          <option value="Customer Support" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Customer Support
-                          </option>
-                          <option value="Finance" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Finance
-                          </option>
-                          <option value="IT" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;IT
-                          </option>
-                        </select>
-
-                        <div className={`absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'
-                          }`}>
-                          <ChevronDown size={16} />
-                        </div>
-                      </motion.div>
-                    </div>
-                    {fieldErrors.department && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                      >
-                        <XCircle size={12} />
-                        {fieldErrors.department}
-                      </motion.p>
-                    )}
+                    <CustomDepartmentDropdown
+                      value={formData.department}
+                      onChange={handleChange}
+                      isDark={isDark}
+                      fieldError={fieldErrors.department}
+                      shakeFields={shakeFields}
+                      fieldName="department"
+                    />
                   </div>
 
-                  <div ref={fieldRefs.designation} className="overflow-visible">
+                  <div ref={fieldRefs.designation} className="overflow-visible" style={{ zIndex: 60, position: 'relative' }}>
                     <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
                       }`}>
                       &nbsp;Designation <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
                     </label>
-                    <div className="relative">
-                      <motion.div
-                        animate={shakeFields.includes('designation') ? "shake" : "initial"}
-                        variants={shakeAnimation}
-                        className="overflow-visible"
-                      >
-                        <select
-                          name="designation"
-                          value={formData.designation}
-                          onChange={handleChange}
-                          autoComplete="off"
-                          readOnly
-                          onFocus={(e) => e.target.removeAttribute('readonly')}
-                          className={`w-full p-2 sm:p-3 rounded-2xl text-sm font-medium transition-all appearance-none ${isDark
-                            ? 'bg-gray-800 border-gray-600'
-                            : 'bg-white border-gray-200'
-                            } border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none ${formData.designation === ""
-                              ? (isDark ? 'text-[#9CA3AF]' : 'text-[#6B7280]')
-                              : (isDark ? 'text-white' : 'text-gray-900')
-                            } ${fieldErrors.designation ? 'border-rose-500' : ''}`}
-                        >
-                          <option value="" className={`${isDark ? 'text-gray-400 bg-gray-800' : 'text-gray-500 bg-white'
-                            } font-medium`}>
-                            &nbsp;Select Designation...
-                          </option>
-                          <option value="Super Admin" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Super Admin
-                          </option>
-                          <option value="Approver" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Approver
-                          </option>
-                          <option value="Co-Approver" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Co-Approver
-                          </option>
-                          <option value="Support Admin" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Support Admin
-                          </option>
-                          <option value="Verification Officer" className={`${isDark ? 'text-white bg-gray-800' : 'text-gray-900 bg-white'
-                            } font-medium`}>
-                            &nbsp;Verification Officer
-                          </option>
-                        </select>
-
-                        <div className={`absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'
-                          }`}>
-                          <ChevronDown size={16} />
-                        </div>
-                      </motion.div>
-                    </div>
-                    {fieldErrors.designation && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                      >
-                        <XCircle size={12} />
-                        {fieldErrors.designation}
-                      </motion.p>
-                    )}
-                  </div>
-
-                  <div ref={fieldRefs.address} className="md:col-span-2 overflow-visible">
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
-                      }`}>
-                      &nbsp;Address <span className="text-rose-500 font-normal normal-case">*</span>
-                    </label>
-                    <motion.div
-                      animate={shakeFields.includes('address') ? "shake" : "initial"}
-                      variants={shakeAnimation}
-                      className="overflow-visible relative"
-                    >
-                      <input
-                        type="text"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                        placeholder="Enter full address"
-                        maxLength={100}
-                        autoComplete="off"
-                        readOnly
-                        onFocus={(e) => e.target.removeAttribute('readonly')}
-                        className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
-                          ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
-                          : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
-                          } ${fieldErrors.address ? 'border-rose-500' : ''}`}
-                      />
-                      <div className={`absolute bottom-2 right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'
-                        }`}>
-                        {formData.address.length}/100
-                      </div>
-                    </motion.div>
-                    {fieldErrors.address && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
-                      >
-                        <XCircle size={12} />
-                        {fieldErrors.address}
-                      </motion.p>
-                    )}
+                    <CustomDesignationDropdown
+                      value={formData.designation}
+                      onChange={handleChange}
+                      isDark={isDark}
+                      fieldError={fieldErrors.designation}
+                      shakeFields={shakeFields}
+                      fieldName="designation"
+                    />
                   </div>
 
                   <div ref={fieldRefs.bio} className="md:col-span-2 overflow-visible">
                     <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
                       }`}>
-                      &nbsp;Bio <span className="text-rose-500 font-normal normal-case">*</span>
+                      &nbsp;Bio <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
                     </label>
                     <motion.div
                       animate={shakeFields.includes('bio') ? "shake" : "initial"}
@@ -4855,21 +4713,32 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
                           name="bio"
                           value={formData.bio}
                           onChange={handleChange}
-                          placeholder="Enter bio information"
+                          placeholder="Enter your bio..."
                           maxLength={300}
                           rows={3}
                           autoComplete="off"
+                          spellCheck="false"
                           readOnly
                           onFocus={(e) => e.target.removeAttribute('readonly')}
+                          data-lpignore="true"
+                          data-1p-ignore="true"
+                          data-form-type="other"
+                          aria-label="Bio"
+                          aria-autocomplete="none"
+                          required={false}
+                          onAutoComplete={(e) => {
+                            e.preventDefault();
+                            e.target.value = '';
+                          }}
                           className={`w-full p-2 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium resize-none ${isDark
                             ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
                             : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
                             } ${fieldErrors.bio ? 'border-rose-500' : ''}`}
                         />
-                        <div className={`absolute right-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'
+                        <div className={`absolute right-3 text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'
                           }`}
                           style={{
-                            bottom: '0.8rem',
+                            bottom: '0.5rem',
                             pointerEvents: 'none'
                           }}
                         >
@@ -4888,6 +4757,24 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
                       </motion.p>
                     )}
                   </div>
+
+                  {/* Conditionally show setStatus field for new admins or when original admin status is Pending */}
+                  {(!isEditing || admin?.status === 'Pending') && (
+                    <div ref={fieldRefs.setStatus} className="md:col-span-2 overflow-visible" style={{ zIndex: 50, position: 'relative' }}>
+                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'
+                        }`}>
+                        &nbsp;Status <span className="text-rose-500 font-normal normal-case">(</span>O<span style={{ textTransform: 'lowercase' }}>ptional</span><span className="text-rose-500 font-normal normal-case">)</span>
+                      </label>
+                      <CustomSetStatusDropdown
+                        value={formData.setStatus}
+                        onChange={handleChange}
+                        isDark={isDark}
+                        fieldError={fieldErrors.setStatus}
+                        shakeFields={shakeFields}
+                        fieldName="setStatus"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -4926,7 +4813,7 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
                       isDark={isDark}
                     />
                     <p className={`text-xs font-medium mt-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {completionPercentage === 100 ? 'Ready to submit!' : 'Complete all fields to submit'}
+                      {completionPercentage >= 93 ? 'Ready to submit!' : 'Complete at least 93% of fields to submit'}
                     </p>
 
                     {/* Status Overview */}
@@ -4935,19 +4822,39 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
                         <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                           Status
                         </span>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${formData.status === 'Approved'
-                            ? 'bg-emerald-500/20 text-emerald-600'
-                            : formData.status === 'Pending-Validation'
-                              ? 'bg-amber-500/20 text-amber-600'
-                              : formData.status === 'Draft'
-                                ? 'bg-slate-500/20 text-slate-600'
-                                : formData.status === 'Rejected'
-                                  ? 'bg-rose-500/20 text-rose-600'
-                                  : formData.status === 'Validated'
-                                    ? 'bg-blue-500/20 text-blue-600'
-                                    : 'bg-gray-500/20 text-gray-600'
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${(() => {
+                          let displayStatus = formData.status;
+                          // Only show setStatus if form is complete (all core fields filled)
+                          // If status is Incomplete or Unknown, show that instead
+                          if ((displayStatus === 'Pending' || displayStatus === 'Approved' || displayStatus === 'Rejected') && 
+                              formData.setStatus && formData.setStatus.trim() !== '') {
+                            displayStatus = formData.setStatus;
+                          }
+                          return displayStatus === 'Approved'
+                            ? isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-500/20 text-emerald-600'
+                            : displayStatus === 'Pending'
+                              ? isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-500/20 text-amber-600'
+                            : displayStatus === 'Rejected'
+                              ? isDark ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-500/20 text-rose-600'
+                            : displayStatus === 'Incomplete'
+                              ? isDark ? 'bg-slate-500/20 text-slate-300' : 'bg-slate-500/20 text-slate-600'
+                            : displayStatus === 'Unknown'
+                              ? isDark ? 'bg-slate-500/20 text-slate-300' : 'bg-slate-500/20 text-slate-600'
+                              : isDark ? 'bg-gray-500/20 text-gray-400' : 'bg-gray-500/20 text-gray-600';
+                        })()}
                           }`}>
-                          {formData.status}
+                          {
+                            (() => {
+                              let displayStatus = formData.status;
+                              // Only show setStatus if form is complete (all core fields filled)
+                              // If status is Incomplete or Unknown, show that instead
+                              if ((displayStatus === 'Pending' || displayStatus === 'Approved' || displayStatus === 'Rejected') && 
+                                  formData.setStatus && formData.setStatus.trim() !== '') {
+                                displayStatus = formData.setStatus;
+                              }
+                              return displayStatus;
+                            })()
+                          }
                         </span>
                       </div>
                     </div>
@@ -5068,17 +4975,6 @@ const AddAdminModal = ({ isDark, admin, onClose, onAddAdmin, onUpdateAdmin }) =>
             onConfirm={handleConfirm}
             onCancel={handleCancel}
             confirmText={isEditing ? "Update" : "Add"}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showSuccessDialog && (
-          <SuccessDialog
-            isDark={isDark}
-            title="Success"
-            message={successMessage}
-            onClose={() => setShowSuccessDialog(false)}
           />
         )}
       </AnimatePresence>
@@ -5209,51 +5105,1738 @@ const Pagination = React.memo(({ currentPage, totalPages, onPageChange, isDark, 
   );
 });
 
+const InviteAdminModal = ({ isDark, selectedAdmin, onClose, onSuccess }) => {
+  // Determine invitation type based on selectedAdmin
+  const isLoginInvitation = !!selectedAdmin;
+  const [invitationType, setInvitationType] = useState(isLoginInvitation ? 'login' : 'signup');
+
+  const [invitationKey, setInvitationKey] = useState('');
+  const [originalPassword, setOriginalPassword] = useState('');
+  const [showGeneratedKey, setShowGeneratedKey] = useState(false);
+  const [activeTab, setActiveTab] = useState('email');
+  const [pasteFieldValueEmail, setPasteFieldValueEmail] = useState('');
+  const [pasteFieldValueSms, setPasteFieldValueSms] = useState('');
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Signup template - for code-based invitations
+  const professionalTemplateSignUp = `Dear Sir/Madam,
+
+You have been invited to join as an administrator on our platform.
+
+INVITATION DETAILS
+
+• Invitation Code: KEY
+• Valid for: 7 days
+• Role: Administrator
+
+REGISTRATION LINK
+
+1. Sign up here: http://localhost:5173/AdminSignup
+2. Website Link Login here: http://localhost:5173/
+
+NEXT STEPS
+
+1. Click the registration link above
+2. Enter invitation code: KEY
+3. Go to website Login to Account
+4. Complete your profile
+5. Submit required documents
+6. Wait for approval
+
+IMPORTANT NOTES
+
+• This invitation is for individual use only
+• Do not share your code with others
+• Complete registration within 7 days
+• For assistance: support@yourdomain.com
+
+Best regards,
+Administration Team
+• Your Company Name
+• support@yourdomain.com
+• www.yourdomain.com
+
+This is an automated message, please do not reply.`;
+
+  // Login template - for password-based login invitations
+  const professionalTemplateLogin = `Dear Sir/Madam,
+
+You have been invited to join as an administrator on our platform.
+
+INVITATION DETAILS
+
+• Your Password: KEY
+• Valid for: 7 days
+• Role: Administrator
+
+LOGIN LINK
+
+1. Login here: http://localhost:5173/Login
+2. Website Link: http://localhost:5173/
+
+NEXT STEPS
+
+1. Login using your password above
+2. Update your password "KEY" it is temporary only valid for 7 days
+3. Start your work
+
+IMPORTANT NOTES
+
+• This invitation is for individual use only
+• Do not share your temporary password with others
+• Update your password within 7 days
+• For assistance: support@yourdomain.com
+
+Best regards,
+Administration Team
+• Your Company Name
+• support@yourdomain.com
+• www.yourdomain.com
+
+This is an automated message, please do not reply.`;
+
+  const [emailData, setEmailData] = useState({
+    to: selectedAdmin?.email || '',
+    subject: isLoginInvitation ? 'Invitation to Join as Administrator' : 'Invitation to Join as Administrator',
+    message: isLoginInvitation ? professionalTemplateLogin : professionalTemplateSignUp
+  });
+
+  // Format phone number for SMS
+  const formatInitialPhone = () => {
+    if (!selectedAdmin?.phone) return '';
+    const digits = selectedAdmin.phone.replace(/\D/g, '').slice(0, 10);
+    if (digits.length === 0) return '';
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+  };
+
+  const [smsData, setSmsData] = useState({
+    to: formatInitialPhone(),
+    message: isLoginInvitation ? professionalTemplateLogin : professionalTemplateSignUp
+  });
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [isEditingSms, setIsEditingSms] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [shakeFields, setShakeFields] = useState([]);
+  const modalRef = useRef(null);
+  const [showCopyTooltip, setShowCopyTooltip] = useState(false);
+  const [showPasteTooltip, setShowPasteTooltip] = useState(false);
+  const [copyButtonText, setCopyButtonText] = useState('Copy');
+  const [originalCode, setOriginalCode] = useState('');
+  const [pasteClipboardCopiedEmail, setPasteClipboardCopiedEmail] = useState(false);
+  const [pasteClipboardCopiedSms, setPasteClipboardCopiedSms] = useState(false);
+  const [showClipboardIcon, setShowClipboardIcon] = useState(false);
+  const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
+  const [pendingInvitation, setPendingInvitation] = useState(null);
+  const [isHoveringCopy, setIsHoveringCopy] = useState(false);
+  const [isHoveringPasteEmail, setIsHoveringPasteEmail] = useState(false);
+  const [isHoveringPasteSms, setIsHoveringPasteSms] = useState(false);
+  const [pasteFieldActivatedEmail, setPasteFieldActivatedEmail] = useState(false);
+  const [pasteFieldActivatedSms, setPasteFieldActivatedSms] = useState(false);
+
+  const fieldRefs = {
+    invitationKey: useRef(null),
+    pasteInvitationCodeEmail: useRef(null),
+    pasteInvitationCodeSms: useRef(null),
+    emailTo: useRef(null),
+    emailSubject: useRef(null),
+    emailMessage: useRef(null),
+    smsTo: useRef(null),
+    smsMessage: useRef(null)
+  };
+
+  const resetPasteFields = () => {
+    setPasteFieldValueEmail('');
+    setPasteFieldValueSms('');
+    setPasteClipboardCopiedEmail(false);
+    setPasteClipboardCopiedSms(false);
+    setPasteFieldActivatedEmail(false);
+    setPasteFieldActivatedSms(false);
+    setFieldErrors(prev => ({
+      ...prev,
+      pasteInvitationCode: '',
+      pasteInvitationCodeSms: ''
+    }));
+
+    setShakeFields(prev => prev.filter(field =>
+      field !== 'pasteInvitationCode' && field !== 'pasteInvitationCodeSms'
+    ));
+  };
+
+  const scrollToFirstInvalidField = (invalidFields) => {
+    if (invalidFields.length > 0) {
+      const fieldOrder = [
+        'invitationKey',
+        activeTab === 'email' ? 'pasteInvitationCodeEmail' : 'pasteInvitationCodeSms',
+        activeTab === 'email' ? 'emailTo' : 'smsTo',
+        activeTab === 'email' ? 'emailSubject' : null,
+        activeTab === 'email' ? 'emailMessage' : 'smsMessage'
+      ].filter(Boolean);
+
+      const firstInvalidField = fieldOrder.find(field => invalidFields.includes(field));
+
+      if (firstInvalidField && fieldRefs[firstInvalidField]?.current) {
+        setTimeout(() => {
+          const el = fieldRefs[firstInvalidField].current;
+          const scrollContainer = el.closest?.('[data-scroll]')
+            || el.closest?.('.overflow-y-auto')
+            || el.closest?.('[style*="overflow"]');
+
+          if (scrollContainer) {
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const elementRect = el.getBoundingClientRect();
+            const relativeTop = elementRect.top - containerRect.top;
+            const offset = 80;
+            scrollContainer.scrollTo({
+              top: scrollContainer.scrollTop + relativeTop - offset,
+              behavior: 'smooth'
+            });
+          } else {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+
+          setTimeout(() => {
+            const input = el.querySelector('input, textarea, select');
+            if (input) input.focus();
+          }, 300);
+        }, 50);
+      }
+    }
+  };
+
+  const formatPhoneNumberLive = (value) => {
+    let digits = value.replace(/\D/g, '');
+    digits = digits.slice(0, 10);
+
+    if (digits.length === 0) {
+      return '';
+    }
+
+    if (digits.length <= 3) {
+      return digits;
+    } else if (digits.length <= 6) {
+      return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    } else {
+      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+    }
+  };
+
+  const isValidEmail = (email) => {
+    email = email.trim().toLowerCase();
+    if (!email) return false;
+    if (email.length > 254) return false;
+
+    const parts = email.split('@');
+    if (parts.length !== 2) return false;
+
+    const [local, domain] = parts;
+    if (local.length === 0 || local.length > 64) return false;
+    if (domain.length === 0 || domain.length > 255) return false;
+
+    const localRegex = /^[a-z0-9][a-z0-9._+-]*[a-z0-9]$|^[a-z0-9]$/;
+    if (!localRegex.test(local)) return false;
+
+    if (local.includes('..')) return false;
+    if (local.startsWith('.') || local.endsWith('.')) return false;
+
+    const domainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/;
+    if (!domainRegex.test(domain)) return false;
+
+    if (domain.includes('--')) return false;
+    if (domain.startsWith('-') || domain.endsWith('-')) return false;
+
+    return true;
+  };
+
+  const isValidPhone = (phone) => {
+    const digits = phone.replace(/\D/g, '');
+    return digits.length === 10;
+  };
+
+  const isValidSpecialCharacters = (text, fieldType) => {
+    if (fieldType === 'subject') {
+      const allowedRegex = /^[A-Za-z0-9\s.,!?\-'"\/()&]*$/;
+      return allowedRegex.test(text);
+    } else if (fieldType === 'message') {
+      const allowedRegex = /^[\p{L}\p{N}\p{P}\p{Z}\n\r\t•–—]*$/u;
+      return allowedRegex.test(text);
+    }
+    return true;
+  };
+
+  // Password generation function for login invitations
+  const generateRandomPassword = () => {
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const numbers = '0123456789';
+    const symbols = '!@#$%^&*';
+
+    const allChars = uppercase + lowercase + numbers + symbols;
+    const password = [];
+
+    // Ensure at least one of each type
+    password.push(uppercase.charAt(Math.floor(Math.random() * uppercase.length)));
+    password.push(lowercase.charAt(Math.floor(Math.random() * lowercase.length)));
+    password.push(numbers.charAt(Math.floor(Math.random() * numbers.length)));
+    password.push(symbols.charAt(Math.floor(Math.random() * symbols.length)));
+
+    // Fill the rest with random characters to reach 60 characters
+    for (let i = password.length; i < 60; i++) {
+      password.push(allChars.charAt(Math.floor(Math.random() * allChars.length)));
+    }
+
+    // Shuffle the password array
+    return password.sort(() => Math.random() - 0.5).join('');
+  };
+
+  // Hash generation function for display (simulated bcrypt format)
+  const generateSimulatedBcryptHash = (password) => {
+    const bcryptPrefix = '$2a$10$';
+    const randomChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789./:';
+    let hash = bcryptPrefix;
+    for (let i = 0; i < 53; i++) {
+      hash += randomChars.charAt(Math.floor(Math.random() * randomChars.length));
+    }
+    return hash;
+  };
+
+  const generateInvitationKey = () => {
+    if (invitationType === 'login') {
+      // Generate password for login invitation
+      const password = generateRandomPassword();
+      const hash = generateSimulatedBcryptHash(password);
+
+      setInvitationKey(hash); // Display the hash
+      setOriginalPassword(hash); // Store the HASH (not original password) so validation compares correctly
+      setShowGeneratedKey(true);
+      // Set success message immediately after generation
+      setFieldErrors(prev => ({ ...prev, invitationKey: 'Password generated. Valid for 7 days.' }));
+    } else {
+      // Generate code for signup invitation
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      const code = Array.from({ length: 12 }, () =>
+        chars.charAt(Math.floor(Math.random() * chars.length))
+      ).join('');
+
+      setInvitationKey(code);
+      setOriginalCode(code);
+      setShowGeneratedKey(true);
+      // Set success message immediately after generation for code too
+      setFieldErrors(prev => ({ ...prev, invitationKey: 'Code generated. Valid for 7 days.' }));
+    }
+
+    setCopyButtonText('Copy');
+    setHasAttemptedSubmit(false);
+    setShakeFields(prev => prev.filter(f => f !== 'invitationKey'));
+    setShowClipboardIcon(false);
+    resetPasteFields();
+    if (document.activeElement) {
+      document.activeElement.blur();
+    }
+  };
+
+  const copyInvitationKey = () => {
+    navigator.clipboard.writeText(invitationKey);
+    setCopied(true);
+    setShowClipboardIcon(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const handlePasteInvitationCode = () => {
+    if (invitationKey) {
+      if (activeTab === 'email') {
+        setPasteFieldValueEmail(invitationKey);
+        setPasteClipboardCopiedEmail(true);
+        setPasteFieldActivatedEmail(true);
+        setFieldErrors(prev => ({ ...prev, pasteInvitationCode: '' }));
+        setTimeout(() => {
+          setPasteClipboardCopiedEmail(false);
+        }, 2000);
+      } else {
+        setPasteFieldValueSms(invitationKey);
+        setPasteClipboardCopiedSms(true);
+        setPasteFieldActivatedSms(true);
+        setFieldErrors(prev => ({ ...prev, pasteInvitationCodeSms: '' }));
+        setTimeout(() => {
+          setPasteClipboardCopiedSms(false);
+        }, 2000);
+      }
+    }
+  };
+
+  const handleSendEmail = () => {
+    const errors = {};
+    const invalidFields = [];
+
+    setShakeFields([]);
+
+    // Conditional validation based on invitation type
+    if (invitationType === 'login') {
+      // For login invitations, only validate password and email
+      // Paste field is not shown for login invitations
+    } else {
+      // For signup invitations, validate code as usual
+      if (!invitationKey) {
+        errors.invitationKey = 'Please generate an invitation code first';
+        invalidFields.push('invitationKey');
+      } else if (invitationKey.length !== 12) {
+        errors.invitationKey = 'Invitation code must be exactly 12 characters';
+        invalidFields.push('invitationKey');
+      } else if (invitationKey !== originalCode) {
+        errors.invitationKey = 'Invitation code does not match';
+        invalidFields.push('invitationKey');
+      }
+
+      // Validate paste invitation code
+      if (!pasteFieldValueEmail) {
+        errors.pasteInvitationCode = 'Please paste the invitation code';
+        invalidFields.push('pasteInvitationCodeEmail');
+      } else if (pasteFieldValueEmail.length !== 12) {
+        errors.pasteInvitationCode = 'Invitation code must be exactly 12 characters';
+        invalidFields.push('pasteInvitationCodeEmail');
+      } else if (pasteFieldValueEmail !== invitationKey) {
+        errors.pasteInvitationCode = 'Invitation code does not match';
+        invalidFields.push('pasteInvitationCodeEmail');
+      }
+    }
+
+    // Validate email recipient
+    if (!emailData.to.trim()) {
+      errors.emailTo = 'Please enter an email address';
+      invalidFields.push('emailTo');
+    } else if (!isValidEmail(emailData.to)) {
+      errors.emailTo = 'Please enter a valid email address';
+      invalidFields.push('emailTo');
+    }
+
+    // Validate email subject
+    if (!emailData.subject.trim()) {
+      errors.emailSubject = 'Please enter an email subject';
+      invalidFields.push('emailSubject');
+    } else if (emailData.subject.length > 100) {
+      errors.emailSubject = 'Subject must be less than 100 characters';
+      invalidFields.push('emailSubject');
+    } else if (!isValidSpecialCharacters(emailData.subject, 'subject')) {
+      errors.emailSubject = 'Subject contains invalid special characters. Allowed: . , ! ? - \' " / ( ) &';
+      invalidFields.push('emailSubject');
+    }
+
+    // Validate email message
+    if (!emailData.message.trim()) {
+      errors.emailMessage = 'Please enter an email message';
+      invalidFields.push('emailMessage');
+    } else if (emailData.message.length > 1000) {
+      errors.emailMessage = 'Message must be less than 1000 characters';
+      invalidFields.push('emailMessage');
+    } else if (!isValidSpecialCharacters(emailData.message, 'message')) {
+      errors.emailMessage = 'Message contains invalid special characters';
+      invalidFields.push('emailMessage');
+    }
+
+    setFieldErrors(errors);
+
+    if (invalidFields.length > 0) {
+      // Force animation retrigger by clearing first, then re-adding with setTimeout
+      setShakeFields([]);
+      setTimeout(() => {
+        setShakeFields([...invalidFields]);
+        scrollToFirstInvalidField(invalidFields);
+      }, 0);
+
+      setTimeout(() => {
+        setShakeFields([]);
+      }, 600);
+
+      return;
+    }
+
+    // Prepare message with appropriate password/code substitution
+    let messageToSend = emailData.message;
+
+    if (invitationType === 'login') {
+      // For login invitations, replace KEY placeholder with original password
+      messageToSend = messageToSend.replace(/KEY/g, originalPassword);
+    } else {
+      // For signup invitations, replace KEY placeholder with invitation code
+      messageToSend = messageToSend.replace(/KEY/g, invitationKey);
+    }
+
+    // All validation passed - show confirmation dialog
+    setPendingInvitation({
+      type: 'email',
+      to: emailData.to,
+      subject: emailData.subject,
+      message: messageToSend
+    });
+    setShowConfirmationDialog(true);
+  };
+
+  const handleSendSms = () => {
+    const errors = {};
+    const invalidFields = [];
+
+    setShakeFields([]);
+
+    // Conditional validation based on invitation type
+    if (invitationType === 'login') {
+      // For login invitations, only validate phone and message
+      // Paste field is not shown for login invitations
+    } else {
+      // For signup invitations, validate code as usual
+      if (!invitationKey) {
+        errors.invitationKey = 'Please generate an invitation code first';
+        invalidFields.push('invitationKey');
+      } else if (invitationKey.length !== 12) {
+        errors.invitationKey = 'Invitation code must be exactly 12 characters';
+        invalidFields.push('invitationKey');
+      } else if (invitationKey !== originalCode) {
+        errors.invitationKey = 'Invitation code does not match';
+        invalidFields.push('invitationKey');
+      }
+
+      // Validate paste invitation code (SMS)
+      if (!pasteFieldValueSms) {
+        errors.pasteInvitationCodeSms = 'Please paste the invitation code';
+        invalidFields.push('pasteInvitationCodeSms');
+      } else if (pasteFieldValueSms.length !== 12) {
+        errors.pasteInvitationCodeSms = 'Invitation code must be exactly 12 characters';
+        invalidFields.push('pasteInvitationCodeSms');
+      } else if (pasteFieldValueSms !== invitationKey) {
+        errors.pasteInvitationCodeSms = 'Invitation code does not match';
+        invalidFields.push('pasteInvitationCodeSms');
+      }
+    }
+
+    // Validate SMS recipient phone
+    if (!smsData.to) {
+      errors.smsTo = 'Please enter a phone number';
+      invalidFields.push('smsTo');
+    } else if (!isValidPhone(smsData.to)) {
+      errors.smsTo = 'Please enter a valid 10-digit phone number';
+      invalidFields.push('smsTo');
+    }
+
+    // Validate SMS message
+    if (!smsData.message.trim()) {
+      errors.smsMessage = 'Please enter an SMS message';
+      invalidFields.push('smsMessage');
+    } else if (smsData.message.length > 1000) {
+      errors.smsMessage = 'Message must be less than 1000 characters';
+      invalidFields.push('smsMessage');
+    } else if (!isValidSpecialCharacters(smsData.message, 'message')) {
+      errors.smsMessage = 'Message contains invalid special characters';
+      invalidFields.push('smsMessage');
+    }
+
+    setFieldErrors(errors);
+
+    if (invalidFields.length > 0) {
+      // Force animation retrigger by clearing first, then re-adding with setTimeout
+      setShakeFields([]);
+      setTimeout(() => {
+        setShakeFields([...invalidFields]);
+        scrollToFirstInvalidField(invalidFields);
+      }, 0);
+
+      setTimeout(() => {
+        setShakeFields([]);
+      }, 600);
+
+      return;
+    }
+
+    // Prepare message with appropriate password/code substitution
+    let messageToSend = smsData.message;
+
+    if (invitationType === 'login') {
+      // For login invitations, replace KEY placeholder with original password
+      messageToSend = messageToSend.replace(/KEY/g, originalPassword);
+    } else {
+      // For signup invitations, replace KEY placeholder with invitation code
+      messageToSend = messageToSend.replace(/KEY/g, invitationKey);
+    }
+
+    // All validation passed - show confirmation dialog
+    setPendingInvitation({
+      type: 'sms',
+      to: smsData.to,
+      message: smsData.message
+    });
+    setShowConfirmationDialog(true);
+  };
+
+  // Add this helper function inside InviteAdminModal component (before confirmAndSendInvitation)
+  const formatPhoneNumber = (phoneNumber) => {
+    // Remove all non-digit characters
+    const digits = phoneNumber.replace(/\D/g, '');
+
+    // Format as +91 XXX-XXX-XXXX
+    if (digits.length === 10) {
+      return `+91 ${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+    }
+
+    // If already has +91 or different format, clean and format
+    let cleanNumber = phoneNumber.replace(/[^\d+]/g, '');
+    if (cleanNumber.startsWith('+91')) {
+      const numberPart = cleanNumber.slice(3).replace(/\D/g, '');
+      if (numberPart.length === 10) {
+        return `+91 ${numberPart.slice(0, 3)}-${numberPart.slice(3, 6)}-${numberPart.slice(6)}`;
+      }
+    }
+
+    // Fallback: return original
+    return phoneNumber;
+  };
+
+  // Update confirmAndSendInvitation function
+  const confirmAndSendInvitation = () => {
+    if (!pendingInvitation) return;
+
+    let msg;
+    if (pendingInvitation.type === 'email') {
+      msg = `Invitation email sent successfully to ${pendingInvitation.to}!`;
+    } else {
+      const formattedPhone = formatPhoneNumber(pendingInvitation.to);
+      msg = `Invitation SMS sent successfully to ${formattedPhone}!`;
+    }
+
+    setShowConfirmationDialog(false);
+    setPendingInvitation(null);
+    onClose();           // close invite modal
+    onSuccess(msg);      // pass message to parent - parent will show success dialog
+  };
+
+  const renderEmailSection = () => (
+    <div className="space-y-4" autoComplete="off">
+      <div>
+        <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          &nbsp;Paste {invitationType === 'login' ? 'Password' : 'Invitation Code'} <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+        </label>
+        <motion.div
+          ref={fieldRefs.pasteInvitationCodeEmail}
+          animate={shakeFields.includes('pasteInvitationCodeEmail') ? "shake" : "initial"}
+          variants={shakeAnimation}
+          className="overflow-visible relative"
+        >
+          <input
+            id="paste-invite-input-email"
+            type="text"
+            name={`invite_code_${Math.random().toString(36).substring(7)}`}
+            value={pasteFieldValueEmail}
+            onChange={(e) => {
+              const maxLength = invitationType === 'login' ? 60 : 12;
+              // For login mode, allow all characters; for signup, allow only alphanumeric
+              const value = invitationType === 'login'
+                ? e.target.value.slice(0, maxLength)
+                : e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, maxLength);
+              setPasteFieldValueEmail(value);
+
+              if (value !== invitationKey) {
+                setPasteClipboardCopiedEmail(false);
+              }
+
+              // Only show validation errors if the paste field has been activated
+              if (!pasteFieldActivatedEmail) {
+                setFieldErrors(prev => ({ ...prev, pasteInvitationCode: '' }));
+                return;
+              }
+
+              const maxLen = invitationType === 'login' ? 60 : 12;
+              if (!invitationKey) {
+                setFieldErrors(prev => ({ ...prev, pasteInvitationCode: '' }));
+                setShakeFields(prev => prev.filter(f => f !== 'pasteInvitationCodeEmail'));
+              } else if (value.length < maxLen) {
+                const fieldLabel = invitationType === 'login' ? 'Password is incomplete' : 'Code is incomplete';
+                setFieldErrors(prev => ({ ...prev, pasteInvitationCode: fieldLabel }));
+                setShakeFields(prev => prev.filter(f => f !== 'pasteInvitationCodeEmail'));
+                setTimeout(() => {
+                  setShakeFields(prev => prev.includes('pasteInvitationCodeEmail') ? prev : [...prev, 'pasteInvitationCodeEmail']);
+                }, 0);
+              } else if (value !== invitationKey) {
+                const fieldLabel = invitationType === 'login' ? 'Invalid password' : 'Invalid code';
+                setFieldErrors(prev => ({ ...prev, pasteInvitationCode: fieldLabel }));
+                setShakeFields(prev => prev.filter(f => f !== 'pasteInvitationCodeEmail'));
+                setTimeout(() => {
+                  setShakeFields(prev => prev.includes('pasteInvitationCodeEmail') ? prev : [...prev, 'pasteInvitationCodeEmail']);
+                }, 0);
+              } else {
+                setFieldErrors(prev => ({ ...prev, pasteInvitationCode: '' }));
+                setShakeFields(prev => prev.filter(f => f !== 'pasteInvitationCodeEmail'));
+              }
+            }}
+            placeholder={invitationType === 'login' ? "Paste admin password..." : "Enter invitation code..."}
+            maxLength={invitationType === 'login' ? 60 : 12}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck="false"
+            data-lpignore="true"
+            data-1p-ignore="true"
+            data-form-type="other"
+            className={`w-full pl-4 pr-12 py-2 sm:py-3 h-12 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+              ? `bg-gray-800 border-gray-600 text-white placeholder-gray-400 ${fieldErrors.pasteInvitationCode ? 'border-rose-500' : ''}`
+              : `bg-white border-gray-200 text-gray-900 placeholder-gray-500 ${fieldErrors.pasteInvitationCode ? 'border-rose-500' : ''}`
+              }`}
+          />
+          {(showClipboardIcon && invitationKey) && (
+            <div
+              className="absolute right-4 top-[45%] transform -translate-y-1/2 w-6 h-6 flex items-center justify-center"
+              onMouseEnter={() => setIsHoveringPasteEmail(true)}
+              onMouseLeave={() => setIsHoveringPasteEmail(false)}
+            >
+              <AnimatePresence>
+                {(isHoveringPasteEmail || pasteClipboardCopiedEmail) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 8 }}
+                    className="absolute bottom-full mb-2 text-xs font-semibold whitespace-nowrap pointer-events-none bg-black text-white px-3 py-2 rounded-lg"
+                  >
+                    <span>{pasteClipboardCopiedEmail ? 'Pasted!' : 'Paste'}</span>
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-black"></div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <button
+                type="button"
+                onClick={handlePasteInvitationCode}
+                disabled={!invitationKey}
+                className={`transition-colors ${isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-600'}`}
+              >
+                {pasteClipboardCopiedEmail ? (
+                  <Check size={18} />
+                ) : (
+                  <Clipboard size={18} />
+                )}
+              </button>
+            </div>
+          )}
+          <div className={`absolute bottom-1 right-3 text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            {pasteFieldValueEmail.length}/{invitationType === 'login' ? 60 : 12}
+          </div>
+        </motion.div>
+        {pasteFieldValueEmail.length === (invitationType === 'login' ? 60 : 12) && !fieldErrors.pasteInvitationCode && invitationKey && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-1 flex items-center gap-1.5 px-1"
+          >
+            <CheckCircle
+              size={12}
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={isDark ? "text-white" : "text-gray-700"}
+            />
+            <span className={`text-xs font-medium ${isDark ? "text-white" : "text-gray-700"}`}>
+              {invitationType === 'login' ? 'Password is valid.' : 'Code is valid.'}
+            </span>
+          </motion.div>
+        )}
+        {fieldErrors.pasteInvitationCode && (
+          <motion.p
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+          >
+            <XCircle size={12} />
+            {fieldErrors.pasteInvitationCode}
+          </motion.p>
+        )}
+      </div>
+
+      <div>
+        <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          &nbsp;Recipient Email <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+        </label>
+        <motion.div
+          ref={fieldRefs.emailTo}
+          animate={shakeFields.includes('emailTo') ? "shake" : "initial"}
+          variants={shakeAnimation}
+          className="overflow-visible relative"
+        >
+          <Mail className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 z-10 ${isDark ? 'text-violet-400' : 'text-violet-500'}`} />
+          <input
+            type="text"
+            name={`recipient_email_${Math.random().toString(36).substring(7)}`}
+            value={emailData.to}
+            onChange={(e) => {
+              const value = e.target.value.slice(0, 100);
+              setEmailData(prev => ({ ...prev, to: value }));
+              if (fieldErrors.emailTo) setFieldErrors(prev => ({ ...prev, emailTo: '' }));
+            }}
+            onFocus={(e) => {
+              e.target.setAttribute('readonly', 'readonly');
+              setTimeout(() => {
+                e.target.removeAttribute('readonly');
+              }, 5);
+              e.target.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
+            }}
+            onMouseDown={(e) => {
+              e.target.setAttribute('readonly', 'readonly');
+              setTimeout(() => {
+                e.target.removeAttribute('readonly');
+              }, 5);
+            }}
+            placeholder="Enter recipient email..."
+            maxLength={100}
+            autoComplete="off"
+            data-form-type="other"
+            data-lpignore="true"
+            data-1p-ignore="true"
+            className={`w-full pl-12 pr-12 py-2 sm:py-3 h-12 border-2 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-violet-500/30
+              focus:border-violet-500 focus:outline-none 
+            ${isDark
+                ? `bg-gray-800 border-gray-600 text-white placeholder-gray-400 ${fieldErrors.emailTo ? 'border-rose-500' : ''}`
+                : `bg-white border-gray-200 text-gray-900 placeholder-gray-500 ${fieldErrors.emailTo ? 'border-rose-500' : ''}`
+              }`}
+          />
+          <div className={`absolute bottom-1 right-3 text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            {emailData.to.length}/100
+          </div>
+          {emailData.to && isValidEmail(emailData.to) && (
+            <CheckCircle className="absolute right-4 top-[45%] transform -translate-y-1/2 w-5 h-5 text-emerald-500 z-10" />
+          )}
+          {fieldErrors.emailTo && (
+            <XCircle className="absolute right-4 top-[45%] transform -translate-y-1/2 w-5 h-5 text-rose-500 z-10" />
+          )}
+        </motion.div>
+        {fieldErrors.emailTo && (
+          <motion.p
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+          >
+            <XCircle size={12} />
+            {fieldErrors.emailTo}
+          </motion.p>
+        )}
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className={`block text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            &nbsp;Email Subject <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+          </label>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsEditingEmail(!isEditingEmail)}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold ${isDark
+              ? 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
+              : 'bg-violet-100 text-violet-700 hover:bg-violet-200'
+              }`}
+          >
+            <EditIcon size={12} />
+            {isEditingEmail ? 'Save' : 'Edit'}
+          </motion.button>
+        </div>
+        {isEditingEmail ? (
+          <div>
+            <motion.div
+              ref={fieldRefs.emailSubject}
+              animate={shakeFields.includes('emailSubject') ? "shake" : "initial"}
+              variants={shakeAnimation}
+              className="overflow-visible relative"
+            >
+              <input
+                type="text"
+                name={`email_subject_${Math.random().toString(36).substring(7)}`}
+                value={emailData.subject}
+                onChange={(e) => {
+                  let value = e.target.value.slice(0, 100);
+                  value = value.replace(/[^A-Za-z0-9\s.,!?\-'"\/()&]/g, '');
+                  setEmailData(prev => ({ ...prev, subject: value }));
+                  if (fieldErrors.emailSubject) setFieldErrors(prev => ({ ...prev, emailSubject: '' }));
+                }}
+                onFocus={(e) => {
+                  e.target.setAttribute('readonly', 'readonly');
+                  setTimeout(() => {
+                    e.target.removeAttribute('readonly');
+                  }, 5);
+                  e.target.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
+                }}
+                onMouseDown={(e) => {
+                  e.target.setAttribute('readonly', 'readonly');
+                  setTimeout(() => {
+                    e.target.removeAttribute('readonly');
+                  }, 5);
+                }}
+                onKeyPress={(e) => {
+                  if (!/[A-Za-z0-9\s.,!?\-'"\/()&]/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                placeholder="Enter email subject..."
+                maxLength={100}
+                autoComplete="off"
+                data-form-type="other"
+                data-lpignore="true"
+                data-1p-ignore="true"
+                className={`w-full px-4 pr-14 py-2 sm:py-3 h-12 border-2 rounded-2xl text-sm font-medium
+                  focus:outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/20 ${isDark
+                    ? `bg-gray-800 border-gray-600 text-white placeholder-gray-400 ${fieldErrors.emailSubject ? 'border-rose-500' : ''}`
+                    : `bg-white border-gray-200 text-gray-900 ${fieldErrors.emailSubject ? 'border-rose-500' : ''}`
+                  }`}
+              />
+              <div className={`absolute bottom-1 right-3 text-[10px] pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {emailData.subject.length}/100
+              </div>
+            </motion.div>
+            {fieldErrors.emailSubject && (
+              <motion.p
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+              >
+                <XCircle size={12} />
+                {fieldErrors.emailSubject}
+              </motion.p>
+            )}
+          </div>
+        ) : (
+          <div>
+            <motion.div
+              ref={fieldRefs.emailSubject}
+              animate={shakeFields.includes('emailSubject') ? "shake" : "initial"}
+              variants={shakeAnimation}
+              className="overflow-visible relative"
+            >
+              <div className={`px-4 pr-14 py-2 sm:py-3 h-12 rounded-2xl border-2 ${fieldErrors.emailSubject ? 'border-rose-500' : isDark ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                <p className={`text-sm font-medium ${emailData.subject ? (isDark ? 'text-gray-300' : 'text-gray-700') : (isDark ? 'text-gray-500' : 'text-gray-400')}`}>
+                  {emailData.subject || 'Enter email subject...'}
+                </p>
+              </div>
+              <span className={`absolute bottom-1 right-3 text-[10px] pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {emailData.subject.length}/100
+              </span>
+            </motion.div>
+            {fieldErrors.emailSubject && (
+              <motion.p
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+              >
+                <XCircle size={12} />
+                {fieldErrors.emailSubject}
+              </motion.p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className={`block text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            &nbsp;Email Message <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+          </label>
+        </div>
+        {isEditingEmail ? (
+          <div>
+            <motion.div
+              ref={fieldRefs.emailMessage}
+              animate={shakeFields.includes('emailMessage') ? "shake" : "initial"}
+              variants={shakeAnimation}
+              className="overflow-visible relative"
+            >
+              <div className={`px-4 pr-16 py-4 rounded-2xl border-2 min-h-[150px] focus-within:border-violet-500 focus-within:ring-4 focus-within:ring-violet-500/20 transition-all overflow-hidden ${fieldErrors.emailMessage ? 'border-rose-500' : isDark ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
+                <textarea
+                  value={emailData.message}
+                  onChange={(e) => {
+                    const value = e.target.value.slice(0, 1000);
+                    setEmailData(prev => ({ ...prev, message: value }));
+                    if (fieldErrors.emailMessage) setFieldErrors(prev => ({ ...prev, emailMessage: '' }));
+                  }}
+                  rows={Math.max(6, emailData.message.split('\n').length)}
+                  maxLength={1000}
+                  placeholder="Enter email message..."
+                  className={`w-full px-0 py-0 border-0 text-sm font-medium resize-none bg-transparent scrollbar-hide
+                  focus:outline-none ${isDark
+                      ? `text-white placeholder-gray-400`
+                      : `text-gray-900`
+                    }`}
+                />
+              </div>
+              <div className={`absolute bottom-1 right-3 text-[10px] pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {emailData.message.length}/1000
+              </div>
+            </motion.div>
+            {fieldErrors.emailMessage && (
+              <motion.p
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+              >
+                <XCircle size={12} />
+                {fieldErrors.emailMessage}
+              </motion.p>
+            )}
+          </div>
+        ) : (
+          <div>
+            <motion.div
+              ref={fieldRefs.emailMessage}
+              animate={shakeFields.includes('emailMessage') ? "shake" : "initial"}
+              variants={shakeAnimation}
+              className="overflow-visible relative"
+            >
+              <div className={`px-4 pr-16 py-4 rounded-2xl border-2 min-h-[150px] ${fieldErrors.emailMessage ? 'border-rose-500' : isDark ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                <div className={`text-sm whitespace-pre-wrap font-medium ${emailData.message ? (isDark ? 'text-gray-300' : 'text-gray-700') : (isDark ? 'text-gray-500' : 'text-gray-400')}`}>
+                  {emailData.message ? (
+                    emailData.message.split('\n').map((line, i) => {
+                      if (line.includes('KEY')) {
+                        const parts = line.split('KEY');
+                        return (
+                          <span key={i}>
+                            {parts[0]}
+                            {pasteFieldValueEmail === invitationKey && invitationKey ? (
+                              <span className="font-bold">{invitationKey}</span>
+                            ) : (
+                              <span className="font-bold text-gray-500">[{invitationType === 'login' ? 'PASSWORD' : 'CODE'}]</span>
+                            )}
+                            {parts.slice(1).join('KEY')}
+                            <br />
+                          </span>
+                        );
+                      }
+                      return <span key={i}>{line}<br /></span>;
+                    })
+                  ) : (
+                    <span>Enter email message content...</span>
+                  )}
+                </div>
+              </div>
+              <span className={`absolute bottom-1 right-3 text-[10px] pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {emailData.message.length}/1000
+              </span>
+            </motion.div>
+            {fieldErrors.emailMessage && (
+              <motion.p
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+              >
+                <XCircle size={12} />
+                {fieldErrors.emailMessage}
+              </motion.p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderSmsSection = () => (
+    <div className="space-y-4">
+      {/* Paste Invitation Code/Password Field for SMS Section */}
+      <div ref={fieldRefs.pasteInvitationCodeSms}>
+        <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          &nbsp;Paste {invitationType === 'login' ? 'Password' : 'Invitation Code'} <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+        </label>
+        <motion.div
+          animate={shakeFields.includes('pasteInvitationCodeSms') ? "shake" : "initial"}
+          variants={shakeAnimation}
+          className="overflow-visible relative"
+        >
+          <input
+            id="paste-invite-input-sms"
+            type="text"
+            value={pasteFieldValueSms}
+            onChange={(e) => {
+              const maxLength = invitationType === 'login' ? 60 : 12;
+              // For login mode, allow all characters; for signup, allow only alphanumeric
+              const value = invitationType === 'login'
+                ? e.target.value.slice(0, maxLength)
+                : e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, maxLength);
+              setPasteFieldValueSms(value);
+
+              if (value !== invitationKey) {
+                setPasteClipboardCopiedSms(false);
+              }
+
+              // Only show validation errors if the paste field has been activated
+              if (!pasteFieldActivatedSms) {
+                setFieldErrors(prev => ({ ...prev, pasteInvitationCodeSms: '' }));
+                return;
+              }
+
+              const maxLen = invitationType === 'login' ? 60 : 12;
+              if (!invitationKey) {
+                setFieldErrors(prev => ({ ...prev, pasteInvitationCodeSms: '' }));
+                setShakeFields(prev => prev.filter(f => f !== 'pasteInvitationCodeSms'));
+              } else if (value.length < maxLen) {
+                const fieldLabel = invitationType === 'login' ? 'Password is incomplete' : 'Code is incomplete';
+                setFieldErrors(prev => ({ ...prev, pasteInvitationCodeSms: fieldLabel }));
+                setShakeFields(prev => prev.filter(f => f !== 'pasteInvitationCodeSms'));
+                setTimeout(() => {
+                  setShakeFields(prev => prev.includes('pasteInvitationCodeSms') ? prev : [...prev, 'pasteInvitationCodeSms']);
+                }, 0);
+              } else if (value !== invitationKey) {
+                const fieldLabel = invitationType === 'login' ? 'Invalid password' : 'Invalid code';
+                setFieldErrors(prev => ({ ...prev, pasteInvitationCodeSms: fieldLabel }));
+                setShakeFields(prev => prev.filter(f => f !== 'pasteInvitationCodeSms'));
+                setTimeout(() => {
+                  setShakeFields(prev => prev.includes('pasteInvitationCodeSms') ? prev : [...prev, 'pasteInvitationCodeSms']);
+                }, 0);
+              } else {
+                setFieldErrors(prev => ({ ...prev, pasteInvitationCodeSms: '' }));
+                setShakeFields(prev => prev.filter(f => f !== 'pasteInvitationCodeSms'));
+              }
+            }}
+            placeholder={invitationType === 'login' ? "Paste admin password..." : "Enter invitation code..."}
+            maxLength={invitationType === 'login' ? 60 : 12}
+            autoComplete="off"
+            className={`w-full pl-4 pr-12 py-2 sm:py-3 h-12 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+              ? `bg-gray-800 border-gray-600 text-white placeholder-gray-400 ${fieldErrors.pasteInvitationCodeSms ? 'border-rose-500' : ''}`
+              : `bg-white border-gray-200 text-gray-900 placeholder-gray-500 ${fieldErrors.pasteInvitationCodeSms ? 'border-rose-500' : ''}`
+              }`}
+          />
+          {(showClipboardIcon && invitationKey) && (
+            <div
+              className="absolute right-4 top-[45%] transform -translate-y-1/2 w-6 h-6 flex items-center justify-center"
+              onMouseEnter={() => setIsHoveringPasteSms(true)}
+              onMouseLeave={() => setIsHoveringPasteSms(false)}
+            >
+              <AnimatePresence>
+                {(isHoveringPasteSms || pasteClipboardCopiedSms) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 8 }}
+                    className="absolute bottom-full mb-2 text-xs font-semibold whitespace-nowrap pointer-events-none bg-black text-white px-3 py-2 rounded-lg"
+                  >
+                    <span>{pasteClipboardCopiedSms ? 'Pasted!' : 'Paste'}</span>
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-black"></div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <button
+                type="button"
+                onClick={handlePasteInvitationCode}
+                disabled={!invitationKey}
+                className={`transition-colors ${isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-600'}`}
+              >
+                {pasteClipboardCopiedSms ? (
+                  <Check size={18} />
+                ) : (
+                  <Clipboard size={18} />
+                )}
+              </button>
+            </div>
+          )}
+          <div className={`absolute bottom-1 right-3 text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            {pasteFieldValueSms.length}/{invitationType === 'login' ? 60 : 12}
+          </div>
+        </motion.div>
+        {pasteFieldValueSms.length === (invitationType === 'login' ? 60 : 12) && !fieldErrors.pasteInvitationCodeSms && invitationKey && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-1 flex items-center gap-1.5 px-1"
+          >
+            <CheckCircle
+              size={12}
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={isDark ? "text-white" : "text-gray-700"}
+            />
+            <span className={`text-xs font-medium ${isDark ? "text-white" : "text-gray-700"}`}>
+              {invitationType === 'login' ? 'Password is valid.' : 'Code is valid.'}
+            </span>
+          </motion.div>
+        )}
+        {fieldErrors.pasteInvitationCodeSms && (
+          <motion.p
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`flex items-center gap-1 text-xs font-medium mt-1 ${
+              isDark ? 'text-rose-600' : 'text-rose-600'
+            }`}
+          >
+            <XCircle size={12} className={isDark ? 'text-rose-600' : 'text-rose-600'} />
+            {fieldErrors.pasteInvitationCodeSms}
+          </motion.p>
+        )}
+      </div>
+
+      {/* Recipient Phone Number Field - With static 🇮🇳 and +91 */}
+      <div ref={fieldRefs.smsTo}>
+        <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          &nbsp;Recipient Phone Number <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+        </label>
+        <motion.div
+          animate={shakeFields.includes('smsTo') ? "shake" : "initial"}
+          variants={shakeAnimation}
+          className="overflow-visible"
+        >
+          <div className="flex gap-2">
+            <div className="flex-shrink-0">
+              <div className={`h-12 flex items-center px-4 rounded-2xl border-2 text-sm font-medium ${fieldErrors.smsTo
+                ? isDark ? 'border-rose-500 bg-gray-800' : 'border-rose-500 bg-white'
+                : isDark ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-white'
+                }`}>
+                <div className={`flex items-center gap-2 ${smsData.to.length > 0
+                  ? isDark ? 'text-white' : 'text-gray-900'
+                  : isDark ? 'text-gray-400' : 'text-gray-500'
+                  }`}>
+                  <span className="text-lg">🇮🇳</span>
+                  <span className="text-sm font-semibold">+91</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1 relative">
+              <Phone className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 z-10 ${isDark ? 'text-violet-400' : 'text-violet-500'}`} />
+              <input
+                type="tel"
+                value={smsData.to}
+                onChange={(e) => {
+                  const formattedValue = formatPhoneNumberLive(e.target.value);
+                  setSmsData(prev => ({ ...prev, to: formattedValue }));
+                  if (fieldErrors.smsTo) setFieldErrors(prev => ({ ...prev, smsTo: '' }));
+                }}
+                placeholder="Enter recipient phone number..."
+                autoComplete="off"
+                className={`w-full pl-12 pr-12 py-2 sm:py-3 h-12 border-2 rounded-2xl text-sm font-medium
+              focus:outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/20
+              ${isDark
+                    ? `bg-gray-800 border-gray-600 text-white placeholder-gray-400 ${fieldErrors.smsTo ? 'border-rose-500' : ''}`
+                    : `bg-white border-gray-200 text-gray-900 placeholder-gray-500 ${fieldErrors.smsTo ? 'border-rose-500' : ''}`
+                  }`}
+              />
+              <div className={`absolute bottom-1 right-3 text-[10px] ${fieldErrors.smsTo ? 'text-rose-500' : isDark ? 'text-gray-400' : 'text-gray-500'
+                }`}>
+                {smsData.to.replace(/\D/g, '').length}/10
+              </div>
+              {smsData.to.replace(/\D/g, '').length === 10 && !fieldErrors.smsTo && (
+                <CheckCircle className="absolute right-3 top-[45%] transform -translate-y-1/2 w-5 h-5 text-emerald-500 z-10" />
+              )}
+              {fieldErrors.smsTo && (
+                <XCircle className="absolute right-3 top-[45%] transform -translate-y-1/2 w-5 h-5 text-rose-500 z-10" />
+              )}
+            </div>
+          </div>
+        </motion.div>
+        {fieldErrors.smsTo && (
+          <motion.p
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+          >
+            <XCircle size={12} />
+            {fieldErrors.smsTo}
+          </motion.p>
+        )}
+      </div>
+
+      {/* SMS Message - Rest remains same */}
+      <div ref={fieldRefs.smsMessage}>
+        <div className="flex items-center justify-between mb-2">
+          <label className={`block text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            &nbsp;SMS Message <span className="text-rose-500 font-normal normal-case">&nbsp;*</span>
+          </label>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsEditingSms(!isEditingSms)}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold ${isDark
+              ? 'bg-violet-500/20 text-violet-300 hover:bg-violet-500/30'
+              : 'bg-violet-100 text-violet-700 hover:bg-violet-200'
+              }`}
+          >
+            <EditIcon size={12} />
+            {isEditingSms ? 'Save' : 'Edit'}
+          </motion.button>
+        </div>
+        {isEditingSms ? (
+          <div>
+            <motion.div
+              animate={shakeFields.includes('smsMessage') ? "shake" : "initial"}
+              variants={shakeAnimation}
+              className="overflow-visible relative"
+            >
+              <div className={`px-4 pr-16 py-4 rounded-2xl border-2 min-h-[80px] focus-within:border-violet-500 focus-within:ring-4 focus-within:ring-violet-500/20 transition-all overflow-hidden ${fieldErrors.smsMessage ? 'border-rose-500' : isDark ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
+                <textarea
+                  value={smsData.message}
+                  onChange={(e) => {
+                    const value = e.target.value.slice(0, 1000);
+                    setSmsData(prev => ({ ...prev, message: value }));
+                    if (fieldErrors.smsMessage) setFieldErrors(prev => ({ ...prev, smsMessage: '' }));
+                  }}
+                  rows={Math.max(3, smsData.message.split('\n').length)}
+                  maxLength={1000}
+                  placeholder="Enter SMS message..."
+                  className={`w-full px-0 py-0 border-0 text-sm font-medium resize-none bg-transparent scrollbar-hide
+                focus:outline-none ${isDark
+                      ? `text-white placeholder-gray-400`
+                      : `text-gray-900`
+                    }`}
+                />
+              </div>
+              <div className={`absolute bottom-1 right-3 text-[10px] pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {smsData.message.length}/1000
+              </div>
+            </motion.div>
+            {fieldErrors.smsMessage && (
+              <motion.p
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+              >
+                <XCircle size={12} />
+                {fieldErrors.smsMessage}
+              </motion.p>
+            )}
+          </div>
+        ) : (
+          <div>
+            <motion.div
+              animate={shakeFields.includes('smsMessage') ? "shake" : "initial"}
+              variants={shakeAnimation}
+              className="overflow-visible relative"
+            >
+              <div className={`px-4 pr-16 py-4 rounded-2xl border-2 min-h-[80px] ${fieldErrors.smsMessage ? 'border-rose-500' : isDark ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                <div className={`text-sm whitespace-pre-wrap font-medium ${smsData.message ? (isDark ? 'text-gray-300' : 'text-gray-700') : (isDark ? 'text-gray-500' : 'text-gray-400')}`}>
+                  {smsData.message ? (
+                    smsData.message.split('\n').map((line, i) => {
+                      if (line.includes('KEY')) {
+                        const parts = line.split('KEY');
+                        return (
+                          <span key={i}>
+                            {parts[0]}
+                            {pasteFieldValueSms === invitationKey && invitationKey ? (
+                              <span className="font-bold">{invitationKey}</span>
+                            ) : (
+                              <span className="font-bold text-gray-500">[{invitationType === 'login' ? 'PASSWORD' : 'CODE'}]</span>
+                            )}
+                            {parts.slice(1).join('KEY')}
+                            <br />
+                          </span>
+                        );
+                      }
+                      return <span key={i}>{line}<br /></span>;
+                    })
+                  ) : (
+                    <span>Enter SMS message content...</span>
+                  )}
+                </div>
+              </div>
+              <span className={`absolute bottom-1 right-3 text-[10px] pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {smsData.message.length}/1000
+              </span>
+            </motion.div>
+            {fieldErrors.smsMessage && (
+              <motion.p
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+              >
+                <XCircle size={12} />
+                {fieldErrors.smsMessage}
+              </motion.p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
+        style={{ margin: 0, padding: 0 }}
+      >
+        <motion.div
+          ref={modalRef}
+          initial={{ opacity: 0, scale: 0.9, y: 30 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, pointerEvents: 'none' }}
+          transition={{ type: "spring", damping: 25 }}
+          className={`rounded-3xl w-full max-w-2xl mx-2 sm:mx-4 ${isDark
+            ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
+            : 'bg-gradient-to-br from-white via-white to-gray-50'
+            }`}
+          style={{
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.3)',
+            maxHeight: 'calc(100vh - 1rem)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="relative p-4 sm:p-6 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-t-3xl">
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">
+                  {invitationType === 'login' ? `Login Invitation` : 'Sign-Up Invitation'}
+                </h2>
+                <p className="text-violet-100 text-xs sm:text-sm font-semibold truncate">
+                  {invitationType === 'login'
+                    ? `Send invitation to admin, send via Email or SMS`
+                    : 'Send invitation to admin, send via Email or SMS'}
+                </p>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.1, rotate: 90 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={onClose}
+                className="p-1.5 sm:p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm flex-shrink-0 ml-2"
+              >
+                <X size={18} className="text-white" />
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto" data-scroll="true">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+              {/* Invitation Key Generation Section */}
+              <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+                <h3 className={`text-sm sm:text-base font-bold mb-3 sm:mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  <Key size={16} className="text-violet-500" />
+                  {invitationType === 'login' ? 'Admin Password' : 'Invitation Code'} <span className="text-rose-500 font-normal normal-case">*</span>
+                </h3>
+
+                {/* Full width field container */}
+                <div className="w-full overflow-visible mb-3">
+                  <motion.div
+                    ref={fieldRefs.invitationKey}
+                    initial="initial"
+                    animate={shakeFields.includes('invitationKey') ? "shake" : "initial"}
+                    variants={shakeAnimation}
+                    className="relative"
+                  >
+                    <input
+                      type="text"
+                      value={invitationKey}
+                      onChange={(e) => {
+                        const maxLength = invitationType === 'login' ? 60 : 12;
+                        // For login mode, allow all characters; for signup, allow only alphanumeric
+                        const value = invitationType === 'login'
+                          ? e.target.value.slice(0, maxLength)
+                          : e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, maxLength);
+                        setInvitationKey(value);
+
+                        // Validation for both modes
+                        if (invitationType === 'login') {
+                          // For login mode, validate password in real-time
+                          if (!originalPassword) {
+                            setFieldErrors(prev => ({ ...prev, invitationKey: '' }));
+                            setShakeFields(prev => prev.filter(f => f !== 'invitationKey'));
+                            setShowGeneratedKey(false);
+                            return;
+                          }
+                          if (value.length === 0) {
+                            setFieldErrors(prev => ({ ...prev, invitationKey: '' }));
+                            setShakeFields(prev => prev.filter(f => f !== 'invitationKey'));
+                            setShowGeneratedKey(false);
+                          } else if (value.length < 60) {
+                            setFieldErrors(prev => ({ ...prev, invitationKey: 'Password is incomplete' }));
+                            setShakeFields(prev => prev.filter(f => f !== 'invitationKey'));
+                            setTimeout(() => {
+                              setShakeFields(prev => prev.includes('invitationKey') ? prev : [...prev, 'invitationKey']);
+                            }, 0);
+                            setShowGeneratedKey(false);
+                          } else if (value !== originalPassword) {
+                            setFieldErrors(prev => ({ ...prev, invitationKey: 'Invalid password' }));
+                            setShakeFields(prev => prev.filter(f => f !== 'invitationKey'));
+                            setTimeout(() => {
+                              setShakeFields(prev => prev.includes('invitationKey') ? prev : [...prev, 'invitationKey']);
+                            }, 0);
+                            setShowGeneratedKey(false);
+                          } else {
+                            setFieldErrors(prev => ({ ...prev, invitationKey: 'Password generated. Valid for 7 days.' }));
+                            setShakeFields(prev => prev.filter(f => f !== 'invitationKey'));
+                            setShowGeneratedKey(true);
+                          }
+                        } else {
+                          // For signup mode, validate code
+                          if (value === originalCode || value === '') {
+                            setShowGeneratedKey(!!originalCode && value === originalCode);
+                          } else {
+                            setShowGeneratedKey(false);
+                          }
+
+                          if (!originalCode) {
+                            setFieldErrors(prev => ({ ...prev, invitationKey: '' }));
+                            setShakeFields(prev => prev.filter(f => f !== 'invitationKey'));
+                            return;
+                          }
+                          if (value.length === 0) {
+                            setFieldErrors(prev => ({ ...prev, invitationKey: '' }));
+                            setShakeFields(prev => prev.filter(f => f !== 'invitationKey'));
+                            setShowGeneratedKey(false);
+                          } else if (value.length < 12) {
+                            setFieldErrors(prev => ({ ...prev, invitationKey: 'Code is incomplete' }));
+                            setShakeFields(prev => prev.filter(f => f !== 'invitationKey'));
+                            setTimeout(() => {
+                              setShakeFields(prev => prev.includes('invitationKey') ? prev : [...prev, 'invitationKey']);
+                            }, 0);
+                            setShowGeneratedKey(false);
+                          } else if (value !== originalCode) {
+                            setFieldErrors(prev => ({ ...prev, invitationKey: 'Invalid code' }));
+                            setShakeFields(prev => prev.filter(f => f !== 'invitationKey'));
+                            setTimeout(() => {
+                              setShakeFields(prev => prev.includes('invitationKey') ? prev : [...prev, 'invitationKey']);
+                            }, 0);
+                            setShowGeneratedKey(false);
+                          } else {
+                            setFieldErrors(prev => ({ ...prev, invitationKey: 'Code generated. Valid for 7 days.' }));
+                            setShakeFields(prev => prev.filter(f => f !== 'invitationKey'));
+                            setShowGeneratedKey(true);
+                          }
+                        }
+                      }}
+                      placeholder={invitationType === 'login' ? "Generate admin password..." : "Generate invitation code..."}
+                      maxLength={invitationType === 'login' ? 60 : 12}
+                      autoComplete="off"
+                      className={`w-full p-2 sm:p-3 h-12 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium transition-colors ${isDark
+                        ? `bg-gray-800 border-gray-600 text-white placeholder-gray-400 ${fieldErrors.invitationKey && !fieldErrors.invitationKey.includes('generated') ? 'border-rose-500' : ''}`
+                        : `bg-white border-gray-200 text-gray-900 placeholder-gray-500 ${fieldErrors.invitationKey && !fieldErrors.invitationKey.includes('generated') ? 'border-rose-500' : ''}`
+                        }`}
+                    />
+
+                    {/* Show copy icon only when password/code is correct */}
+                    {showGeneratedKey && invitationKey && (
+                      <div
+                        className="absolute right-4 top-[45%] transform -translate-y-1/2 w-6 h-6 flex items-center justify-center"
+                        onMouseEnter={() => setIsHoveringCopy(true)}
+                        onMouseLeave={() => setIsHoveringCopy(false)}
+                      >
+                        <AnimatePresence>
+                          {(isHoveringCopy || copied) && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 8 }}
+                              className="absolute bottom-full mb-2 text-xs font-semibold whitespace-nowrap pointer-events-none bg-black text-white px-3 py-2 rounded-lg"
+                            >
+                              {copied ? 'Copied!' : 'Copy'}
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-black"></div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                        <button
+                          onClick={copyInvitationKey}
+                          className={`transition-colors ${isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-600'
+                            }`}
+                        >
+                          {copied ? (
+                            <Check size={18} />
+                          ) : (
+                            <Copy size={18} />
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    <div
+                      className={`absolute bottom-1 right-3 text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+                    >
+                      {invitationKey.length}/{invitationType === 'login' ? 60 : 12}
+                    </div>
+                  </motion.div>
+                </div>
+
+                {/* Message and Button Row - message on left, button on right */}
+                <div className="flex items-start gap-3 w-full">
+                  {/* Message area on the left - grows to fill space */}
+                  <div className="flex-1 overflow-visible flex flex-col justify-start">
+                    {fieldErrors.invitationKey && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`flex items-center gap-1 text-xs font-medium -mt-2 ${
+                          fieldErrors.invitationKey.includes('generated')
+                            ? isDark ? 'text-white' : 'text-gray-700'
+                            : isDark ? 'text-rose-600' : 'text-rose-600'
+                        }`}
+                      >
+                        {fieldErrors.invitationKey.includes('generated') ? (
+                          <CheckCircle
+                            size={12}
+                            strokeWidth={2.5}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className={isDark ? "text-white" : "text-gray-700"}
+                          />
+                        ) : (
+                          <XCircle size={12} className={isDark ? 'text-rose-600' : 'text-rose-600'} />
+                        )}
+                        {fieldErrors.invitationKey}
+                      </motion.p>
+                    )}
+                  </div>
+
+                  {/* Button on the right - fixed size, never moves */}
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={generateInvitationKey}
+                    className="px-4 py-2 sm:py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 shadow-xl whitespace-nowrap focus:outline-none active:outline-none flex-shrink-0"
+                    style={{ outline: 'none' }}
+                  >
+                    <RefreshCw size={16} />
+                    {invitationType === 'login' ? 'Generate Password' : 'Generate Code'}
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* Tab Navigation */}
+              <div className={`p-3 sm:p-4 rounded-2xl ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+                {/* Tab Buttons */}
+                <div className={`flex rounded-2xl p-1 mb-4 ${isDark ? 'bg-gray-800' : 'bg-gradient-to-r from-violet-50 to-fuchsia-50'} border ${isDark ? 'border-gray-700' : 'border-violet-100'}`}>
+                  {[
+                    { id: 'email', label: 'Email Invitation', icon: Mail },
+                    { id: 'sms', label: 'SMS Invitation', icon: Smartphone }
+                  ].map((tab) => (
+                    <motion.button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-300 text-sm font-semibold ${activeTab === tab.id
+                        ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg'
+                        : isDark
+                          ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
+                          : 'text-gray-600 hover:text-gray-800 hover:bg-white/60'
+                        }`}
+                    >
+                      <tab.icon size={16} />
+                      {tab.label}
+                    </motion.button>
+                  ))}
+                </div>
+                <div>
+                  {activeTab === 'email' ? renderEmailSection() : renderSmsSection()}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 sm:gap-3 pt-2 flex-nowrap">
+                <motion.button
+                  type="button"
+                  onClick={onClose}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`flex-1 min-w-[100px] px-3 py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${isDark
+                    ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                    }`}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  type="button"
+                  onClick={activeTab === 'email' ? handleSendEmail : handleSendSms}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex-1 min-w-[100px] px-3 py-3 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 shadow-xl transition-all bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white"
+                >
+                  <Send size={16} />
+                  Send Invitation
+                </motion.button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* In the confirmation dialog JSX, update the message prop */}
+      <AnimatePresence>
+        {showConfirmationDialog && (
+          <ConfirmationDialog
+            isDark={isDark}
+            title={`Confirm ${pendingInvitation?.type === 'email' ? 'Email' : 'SMS'} Invitation`}
+            message={`Are you sure you want to send the invitation ${pendingInvitation?.type === 'email'
+              ? `to ${pendingInvitation?.to}`
+              : `to ${formatPhoneNumber(pendingInvitation?.to)}`
+              }?`}
+            onConfirm={confirmAndSendInvitation}
+            onCancel={() => {
+              setShowConfirmationDialog(false);
+              setPendingInvitation(null);
+            }}
+            confirmText="Send"
+            cancelText="Cancel"
+          />
+        )}
+      </AnimatePresence>
+    </>
+  );
+};
+
 const AdminsManagement = ({ isDark }) => {
   const [admins, setAdmins] = useState(adminsData.map(admin => ({
     ...admin,
-    status: admin.status || 'Unknown'
+    status: admin.status || 'Unknown',
+    isFromMockData: true,
+    addedByCurrentAdmin: false
   })));
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('All Status');
-  const [selectedRole, setSelectedRole] = useState('All Roles');
+  const filterButtonRef = useRef(null);
+  const [showFilterGlow, setShowFilterGlow] = useState(false);
+  const [searchMethod, setSearchMethod] = useState('');
+  const [dateOfBirthRange, setDateOfBirthRange] = useState({ start: '', end: '' });
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedRole, setSelectedRole] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('All Departments');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [showFilters, setShowFilters] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState(null);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showAddAdminModal, setShowAddAdminModal] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [shakeFields, setShakeFields] = useState([]);
   const [editingAdmin, setEditingAdmin] = useState(null);
-  const [showForwardModal, setShowForwardModal] = useState(false);
-  const [adminToForward, setAdminToForward] = useState(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [adminToDelete, setAdminToDelete] = useState(null);
-  const [showForwardConfirmDialog, setShowForwardConfirmDialog] = useState(false);
-  const [forwardData, setForwardData] = useState(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(6);
-  const [showValidationModal, setShowValidationModal] = useState(false);
-  const [adminToValidate, setAdminToValidate] = useState(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [adminToApprove, setAdminToApprove] = useState(null);
-  const [showValidationSubmitDialog, setShowValidationSubmitDialog] = useState(false);
-  const [adminToSubmitForValidation, setAdminToSubmitForValidation] = useState(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const startDateRef = useRef(null);
+  const endDateRef = useRef(null);
+  const [startDateError, setStartDateError] = useState('');
+  const [endDateError, setEndDateError] = useState('');
   const scrollPosition = useRef(0);
 
-  // Status options
   const statusOptions = [
     'All Status',
-    'Draft',
-    'Pending-Validation',
-    'Validated',
+    'Pending',
     'Approved',
-    'Rejected',
-    'Closed'
+    'Rejected'
   ];
 
-  // Role options
+  const searchMethods = [
+    'Search by...',
+    'Full Name',
+    'Email',
+    'Phone',
+    'Date of Birth',
+    'WhatsApp Number',
+    'Gender',
+    'Marital Status',
+    'Nationality',
+    'Department',
+    'Designation',
+    'Address',
+    'Bio'
+  ];
+
   const roleOptions = [
     'All Roles',
     'super_admin',
@@ -5262,7 +6845,6 @@ const AdminsManagement = ({ isDark }) => {
     'support'
   ];
 
-  // Department options
   const departmentOptions = [
     'All Departments',
     'Management',
@@ -5273,101 +6855,10 @@ const AdminsManagement = ({ isDark }) => {
     'IT'
   ];
 
-  const handleSubmitForValidation = useCallback((admin) => {
-    if (admin.status !== 'Draft' || admin.profileCompletion !== 100) {
-      setSuccessMessage('Admin must be in Draft status and have 100% profile completion to submit for validation.');
-      setShowSuccessDialog(true);
-      return;
-    }
-
-    setAdminToSubmitForValidation(admin);
-    setShowValidationSubmitDialog(true);
-  }, []);
-
-  const confirmSubmitForValidation = useCallback(() => {
-    if (adminToSubmitForValidation) {
-      setAdmins(prev => prev.map(admin => {
-        if (admin.id === adminToSubmitForValidation.id) {
-          return {
-            ...admin,
-            status: 'Pending-Validation',
-            validationHistory: [
-              ...(admin.validationHistory || []),
-              {
-                validatedBy: 'Current User',
-                timestamp: new Date().toISOString(),
-                comment: 'Submitted for validation',
-                type: 'submission'
-              }
-            ]
-          };
-        }
-        return admin;
-      }));
-
-      setSuccessMessage(`${adminToSubmitForValidation.fullName} has been submitted for validation successfully!`);
-      setShowSuccessDialog(true);
-      setShowValidationSubmitDialog(false);
-      setAdminToSubmitForValidation(null);
-    }
-  }, [adminToSubmitForValidation]);
-
-  const handleValidateAdmin = useCallback((admin) => {
-    // Only allow validation for Pending-Validation status
-    if (admin.status !== 'Pending-Validation') {
-      setSuccessMessage('Admin must be in Pending-Validation status to validate.');
-      setShowSuccessDialog(true);
-      return;
-    }
-
-    setAdminToValidate(admin);
-    setShowValidationModal(true);
-  }, []);
-
-  const handleValidationSubmit = useCallback((adminId, validationData) => {
-    const { validationType, reason, comment } = validationData;
-
-    setAdmins(prev => prev.map(admin => {
-      if (admin.id === adminId) {
-        const updatedAdmin = {
-          ...admin,
-          validationHistory: [
-            ...(admin.validationHistory || []),
-            {
-              id: Date.now(),
-              comment: reason || comment || (validationType === 'validate' ? 'Validated' : 'Rejected'),
-              timestamp: new Date().toISOString(),
-              validatedBy: 'Current User',
-              type: validationType === 'validate' ? 'validation' : 'rejection'
-            }
-          ]
-        };
-
-        if (validationType === 'validate') {
-          updatedAdmin.status = 'Validated';
-        } else if (validationType === 'reject') {
-          updatedAdmin.status = 'Rejected';
-        }
-
-        return updatedAdmin;
-      }
-      return admin;
-    }));
-
-    setShowValidationModal(false);
-    setAdminToValidate(null);
-    setSuccessMessage(`Admin ${validationType === 'validate' ? 'validated' : 'rejected'} successfully!`);
-    setShowSuccessDialog(true);
-  }, []);
+  // Simplified to directly open approval modal for status changes
 
   const handleApproveAdmin = useCallback((admin) => {
-    // Only allow approval for Validated status
-    if (admin.status !== 'Validated') {
-      setSuccessMessage('Admin must be in Validated status to approve.');
-      setShowSuccessDialog(true);
-      return;
-    }
-
+    // In the new system, any admin can be approved
     setAdminToApprove(admin);
     setShowApprovalModal(true);
   }, []);
@@ -5377,6 +6868,16 @@ const AdminsManagement = ({ isDark }) => {
 
     setAdmins(prev => prev.map(admin => {
       if (admin.id === adminId) {
+        const previousStatus = admin.status;
+        let newStatus = admin.status;
+        let actionReason = reason || comment || (approvalType === 'approve' ? 'Approval approved' : 'Approval rejected');
+
+        if (approvalType === 'approve') {
+          newStatus = 'Approved';
+        } else if (approvalType === 'reject') {
+          newStatus = 'Rejected';
+        }
+
         const updatedAdmin = {
           ...admin,
           approvalHistory: [
@@ -5391,12 +6892,21 @@ const AdminsManagement = ({ isDark }) => {
           ]
         };
 
-        if (approvalType === 'approve') {
-          updatedAdmin.status = 'Approved';
-        } else if (approvalType === 'reject') {
-          updatedAdmin.status = 'Rejected';
+        // Add status history if status changes
+        if (newStatus !== previousStatus) {
+          updatedAdmin.statusHistory = [
+            ...(admin.statusHistory || []),
+            {
+              fromStatus: previousStatus,
+              toStatus: newStatus,
+              changedBy: 'Current User',
+              timestamp: new Date().toISOString(),
+              reason: actionReason
+            }
+          ];
         }
 
+        updatedAdmin.status = newStatus;
         return updatedAdmin;
       }
       return admin;
@@ -5408,20 +6918,61 @@ const AdminsManagement = ({ isDark }) => {
     setShowSuccessDialog(true);
   }, []);
 
-  // Add a useEffect to check for all admins approved status
   useEffect(() => {
-    // Check if all admins are approved (you can implement this logic based on your requirements)
     const allAdminsApproved = admins.length > 0 && admins.every(admin => admin.status === 'Approved');
 
     if (allAdminsApproved) {
       console.log('All admins are approved - overall status is Closed');
-      // You can update a global state or show a notification here
     }
   }, [admins]);
 
   useEffect(() => {
+    if (!showFilters) return;
+
+    const handleClickInsideFilters = (event) => {
+      const filtersContainer = document.querySelector('.filters-container');
+      if (filtersContainer && filtersContainer.contains(event.target)) {
+        setShowFilterGlow(false);
+      }
+
+      if (filtersContainer &&
+        !filtersContainer.contains(event.target) &&
+        filterButtonRef.current &&
+        !filterButtonRef.current.contains(event.target)) {
+        setShowFilterGlow(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickInsideFilters);
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickInsideFilters);
+    };
+  }, [showFilters]);
+
+  useEffect(() => {
+    if (showFilters || !showFilterGlow) return;
+
+    const handleClickToHideGlow = () => {
+      setShowFilterGlow(false);
+    };
+
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickToHideGlow);
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickToHideGlow);
+    };
+  }, [showFilters, showFilterGlow]);
+
+  useEffect(() => {
     const isAnyModalOpen =
-      showAddAdminModal || showAdminModal || showValidationModal || showApprovalModal || showForwardModal || showDeleteDialog || showForwardConfirmDialog || showSuccessDialog || showValidationSubmitDialog;
+      showAddAdminModal || showAdminModal || showApprovalModal || showDeleteDialog || showSuccessDialog || showInviteModal;
 
     if (isAnyModalOpen) {
       scrollPosition.current = window.pageYOffset || document.documentElement.scrollTop;
@@ -5450,20 +7001,78 @@ const AdminsManagement = ({ isDark }) => {
       document.body.style.paddingRight = '';
       document.body.classList.remove('modal-open');
     };
-  }, [showAddAdminModal, showAdminModal, showValidationModal, showApprovalModal, showForwardModal, showDeleteDialog, showForwardConfirmDialog, showSuccessDialog, showValidationSubmitDialog]);
+  }, [showAddAdminModal, showAdminModal, showApprovalModal, showDeleteDialog, showSuccessDialog, showInviteModal]);
 
   const filteredAdmins = useMemo(() => {
     return admins.filter(admin => {
-      const matchesSearch =
-        admin.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        admin.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        admin.phone.includes(searchTerm) ||
-        admin.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        admin.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        admin.designation.toLowerCase().includes(searchTerm.toLowerCase());
+      let matchesSearch = true;
 
-      const matchesStatus = selectedStatus === 'All Status' || admin.status === selectedStatus;
-      const matchesRole = selectedRole === 'All Roles' || admin.role === selectedRole;
+      // Handle Date of Birth search separately since it doesn't use searchTerm
+      if (searchMethod === 'Date of Birth') {
+        const adminDOB = admin.dateOfBirth; // Format: 'YYYY-MM-DD'
+        matchesSearch =
+          (!dateOfBirthRange.start || adminDOB >= dateOfBirthRange.start) &&
+          (!dateOfBirthRange.end || adminDOB <= dateOfBirthRange.end);
+      } else if (searchMethod !== '' && searchTerm.trim() !== '') {
+        // If search method is selected and search term is not empty, apply method-specific search
+        const term = searchTerm.toLowerCase().trim();
+
+        switch (searchMethod) {
+          case 'Full Name':
+            matchesSearch = admin.fullName.toLowerCase().includes(term);
+            break;
+          case 'Email':
+            matchesSearch = admin.email.toLowerCase().includes(term);
+            break;
+          case 'Phone':
+            matchesSearch = admin.phone.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, ''));
+            break;
+          case 'WhatsApp Number':
+            matchesSearch = admin.whatsappNumber.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, ''));
+            break;
+          case 'Gender':
+            // Exact match for gender field
+            matchesSearch = admin.gender.toLowerCase() === term;
+            break;
+          case 'Marital Status':
+            // Exact match for marital status field
+            matchesSearch = admin.maritalStatus.toLowerCase() === term;
+            break;
+          case 'Nationality':
+            // Partial match but case-insensitive for nationality
+            matchesSearch = admin.nationality.toLowerCase().includes(term);
+            break;
+          case 'Department':
+            // Exact match for department field
+            matchesSearch = admin.department.toLowerCase() === term;
+            break;
+          case 'Designation':
+            // Exact match for designation field to avoid Co-Approver appearing when searching Approver
+            matchesSearch = admin.designation.toLowerCase() === term;
+            break;
+          case 'Address':
+            matchesSearch = admin.address.toLowerCase().includes(term);
+            break;
+          case 'Bio':
+            matchesSearch = admin.bio.toLowerCase().includes(term);
+            break;
+          default:
+            matchesSearch = true;
+        }
+      } else if (searchMethod === '' && searchTerm.trim() !== '') {
+        // Default search behavior when no specific method is selected
+        const term = searchTerm.toLowerCase().trim();
+        matchesSearch =
+          admin.fullName.toLowerCase().includes(term) ||
+          admin.email.toLowerCase().includes(term) ||
+          admin.phone.includes(searchTerm) ||
+          admin.id.toLowerCase().includes(term) ||
+          admin.department.toLowerCase().includes(term) ||
+          admin.designation.toLowerCase().includes(term);
+      }
+
+      const matchesStatus = selectedStatus === '' || admin.status === selectedStatus;
+      const matchesRole = selectedRole === '' || admin.role === selectedRole;
       const matchesDepartment = selectedDepartment === 'All Departments' || admin.department === selectedDepartment;
 
       const matchesDateRange =
@@ -5472,7 +7081,7 @@ const AdminsManagement = ({ isDark }) => {
 
       return matchesSearch && matchesStatus && matchesRole && matchesDepartment && matchesDateRange;
     });
-  }, [admins, searchTerm, selectedStatus, selectedRole, selectedDepartment, dateRange]);
+  }, [admins, searchTerm, searchMethod, dateOfBirthRange, selectedStatus, selectedRole, selectedDepartment, dateRange]);
 
   const paginatedAdmins = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -5483,7 +7092,7 @@ const AdminsManagement = ({ isDark }) => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedStatus, selectedRole, selectedDepartment, dateRange]);
+  }, [searchTerm, searchMethod, dateOfBirthRange, selectedStatus, selectedRole, selectedDepartment, dateRange]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -5492,7 +7101,7 @@ const AdminsManagement = ({ isDark }) => {
   const stats = useMemo(() => {
     const totalAdmins = admins.length;
     const approvedAdmins = admins.filter(a => a.status === 'Approved').length;
-    const pendingAdmins = admins.filter(a => a.status === 'Pending-Validation').length;
+    const pendingAdmins = admins.filter(a => a.status === 'Pending').length;
     const rejectedAdmins = admins.filter(a => a.status === 'Rejected').length;
     const superAdmins = admins.filter(a => a.role === 'super_admin').length;
     const approvers = admins.filter(a => a.role === 'approver').length;
@@ -5522,9 +7131,12 @@ const AdminsManagement = ({ isDark }) => {
   }, []);
 
   const handleAddAdmin = useCallback((newAdmin) => {
-    setAdmins(prev => [...prev, newAdmin]);
-    setSuccessMessage('Admin added successfully');
-    setShowSuccessDialog(true);
+    const adminWithTracking = {
+      ...newAdmin,
+      isFromMockData: false,
+      addedByCurrentAdmin: true
+    };
+    setAdmins(prev => [adminWithTracking, ...prev]);
   }, []);
 
   const handleUpdateAdmin = useCallback((updatedAdmin) => {
@@ -5532,8 +7144,6 @@ const AdminsManagement = ({ isDark }) => {
       admin.id === updatedAdmin.id ? updatedAdmin : admin
     ));
     setEditingAdmin(null);
-    setSuccessMessage('Admin updated successfully');
-    setShowSuccessDialog(true);
   }, []);
 
   const handleDeleteAdmin = useCallback((admin) => {
@@ -5551,48 +7161,7 @@ const AdminsManagement = ({ isDark }) => {
     }
   }, [adminToDelete]);
 
-  const handleOpenForwardModal = useCallback((admin) => {
-    setAdminToForward(admin);
-    setShowForwardModal(true);
-  }, []);
-
-  const handleForwardConfirm = useCallback((adminId, targetAdminId, reason) => {
-    setForwardData({ adminId, targetAdminId, reason });
-    setShowForwardConfirmDialog(true);
-  }, []);
-
-  const handleForwardRequest = useCallback((adminId, targetAdminId, reason) => {
-    const currentAdmin = 'admin1';
-
-    setAdmins(prev => prev.map(admin => {
-      if (admin.id === adminId) {
-        const forwardRecord = {
-          fromAdmin: currentAdmin,
-          toAdmin: targetAdminId,
-          reason: reason,
-          timestamp: new Date().toISOString()
-        };
-
-        return {
-          ...admin,
-          forwardingHistory: [...(admin.forwardingHistory || []), forwardRecord]
-        };
-      }
-      return admin;
-    }));
-
-    setSuccessMessage(`Admin successfully forwarded to ${availableAdmins.find(a => a.id === targetAdminId)?.name}`);
-    setShowSuccessDialog(true);
-  }, []);
-
-  const confirmForward = useCallback(() => {
-    if (forwardData) {
-      handleForwardRequest(forwardData.adminId, forwardData.targetAdminId, forwardData.reason);
-      setShowForwardConfirmDialog(false);
-      setForwardData(null);
-      setShowForwardModal(false);
-    }
-  }, [forwardData, handleForwardRequest]);
+  // Forward functionality removed - no longer needed
 
   const handleExportExcel = useCallback(() => {
     const data = filteredAdmins.map(admin => ({
@@ -5692,497 +7261,906 @@ const AdminsManagement = ({ isDark }) => {
 
   const handleResetFilters = useCallback(() => {
     setSearchTerm('');
-    setSelectedStatus('All Status');
-    setSelectedRole('All Roles');
+    setSearchMethod('');
+    setDateOfBirthRange({ start: '', end: '' });
+    setSelectedStatus('');
+    setSelectedRole('');
     setSelectedDepartment('All Departments');
     setDateRange({ start: '', end: '' });
+    setFieldErrors({});
+    setShakeFields([]);
+    setShowFilterGlow(false);
+
+    setTimeout(() => {
+      const startDateInput = document.querySelectorAll('.date-input-filter input[type="date"]')[0];
+      const endDateInput = document.querySelectorAll('.date-input-filter input[type="date"]')[1];
+
+      if (startDateInput) {
+        startDateInput.value = '';
+        const changeEvent = new Event('change', { bubbles: true });
+        startDateInput.dispatchEvent(changeEvent);
+      }
+
+      if (endDateInput) {
+        endDateInput.value = '';
+        const changeEvent = new Event('change', { bubbles: true });
+        endDateInput.dispatchEvent(changeEvent);
+      }
+    }, 0);
   }, []);
 
   const closeModals = useCallback(() => {
     setShowAdminModal(false);
     setShowAddAdminModal(false);
-    setShowForwardModal(false);
     setEditingAdmin(null);
     setSelectedAdmin(null);
-    setAdminToForward(null);
   }, []);
 
   return (
-    <div className="space-y-4 sm:space-y-6 md:space-y-8 px-3 sm:px-4">
-      {/* Header Section with Add Button */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 sm:gap-6">
-        <div className="flex-1 min-w-0">
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
-          <motion.button
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowAddAdminModal(true)}
-            className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold shadow-xl w-full sm:w-auto"
-          >
-            <UserPlus size={16} />
-            <span className="truncate">Add New Admin</span>
-          </motion.button>
-
-          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+    <>
+      <div className="space-y-4 sm:space-y-6 md:space-y-8 px-3 sm:px-4">
+        {/* Header Section with Add Button */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 sm:gap-6">
+          <div className="flex-1 min-w-0">
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
             <motion.button
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
-              onClick={handleExportExcel}
-              className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold shadow-xl flex-1 sm:flex-none"
+              onClick={() => {
+                setSelectedAdmin(null);
+                setShowInviteModal(true);
+              }}
+              className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold shadow-xl w-full sm:w-auto"
             >
-              <Download size={16} />
-              <span className="truncate">Excel</span>
+              <Key size={16} />
+              <span className="truncate">Invite Admin</span>
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
-              onClick={handleExportPDF}
-              className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-rose-600 to-pink-600 text-white rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold shadow-xl flex-1 sm:flex-none"
+              onClick={() => setShowAddAdminModal(true)}
+              className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold shadow-xl w-full sm:w-auto"
             >
-              <Download size={16} />
-              <span className="truncate">PDF</span>
+              <UserPlus size={16} />
+              <span className="truncate">Add New Admin</span>
             </motion.button>
+
+            <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+              <motion.button
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleExportExcel}
+                className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold shadow-xl flex-1 sm:flex-none"
+              >
+                <Download size={16} />
+                <span className="truncate">Excel</span>
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleExportPDF}
+                className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-rose-600 to-pink-600 text-white rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold shadow-xl flex-1 sm:flex-none"
+              >
+                <Download size={16} />
+                <span className="truncate">PDF</span>
+              </motion.button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Stats Cards */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6"
-      >
-        <EnhancedStatCard
-          icon={Users}
-          title="Total Admins"
-          value={stats.totalAdmins}
-          fullNumber={getFullFormattedNumber(stats.totalAdmins)}
-          change={8.3}
-          changeType="increase"
-          color="from-blue-500 to-blue-600"
-          delay={0.1}
-          isDark={isDark}
-        />
-        <EnhancedStatCard
-          icon={CheckCircle}
-          title="Approved"
-          value={stats.approvedAdmins}
-          fullNumber={getFullFormattedNumber(stats.approvedAdmins)}
-          change={12.5}
-          changeType="increase"
-          color="from-emerald-500 to-green-500"
-          delay={0.2}
-          isDark={isDark}
-        />
-        <EnhancedStatCard
-          icon={Clock}
-          title="Pending-Validation"
-          value={stats.pendingAdmins}
-          fullNumber={getFullFormattedNumber(stats.pendingAdmins)}
-          change={5.2}
-          changeType="increase"
-          color="from-amber-500 to-orange-500"
-          delay={0.3}
-          isDark={isDark}
-        />
-        <EnhancedStatCard
-          icon={XCircle}
-          title="Rejected"
-          value={stats.rejectedAdmins}
-          fullNumber={getFullFormattedNumber(stats.rejectedAdmins)}
-          change={3.7}
-          changeType="decrease"
-          color="from-rose-500 to-red-500"
-          delay={0.4}
-          isDark={isDark}
-        />
-      </motion.div>
-
-      {/* Search and Filters Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className={`rounded-2xl sm:rounded-3xl p-4 sm:p-6 overflow-hidden ${isDark
-          ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
-          : 'bg-gradient-to-br from-white via-white to-gray-50'
-          }`}
-        style={{
-          boxShadow: isDark
-            ? '0 10px 40px rgba(0, 0, 0, 0.3)'
-            : '0 10px 40px rgba(0, 0, 0, 0.08)'
-        }}
-      >
-        <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
-          <div className="flex-1 relative">
-            <motion.div
-              whileHover={{ scale: 1.01 }}
-              className="relative"
-            >
-              <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-violet-500" size={18} />
-              <input
-                type="text"
-                placeholder="Search admins by name, email, phone, ID, department, or designation..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium transition-all ${isDark
-                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                  : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
-                  }`}
-              />
-            </motion.div>
-          </div>
-
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${showFilters
-              ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white border-transparent'
-              : isDark
-                ? 'bg-gray-700 border-gray-600 text-white hover:border-violet-500'
-                : 'bg-white border-gray-200 text-gray-700 hover:border-violet-500'
-              }`}
-          >
-            <Filter size={16} />
-            <span className="hidden xs:inline">Filters</span>
-            {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </motion.button>
-        </div>
-
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <div className={`p-4 sm:p-6 rounded-2xl mb-4 ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
-                {/* Row 1: Status and Role */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
-                  <div className="relative">
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Status
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={selectedStatus}
-                        onChange={(e) => setSelectedStatus(e.target.value)}
-                        className={`w-full p-2.5 sm:p-3 rounded-xl border-2 focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium appearance-none ${isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-200 text-gray-900'
-                          }`}
-                      >
-                        {statusOptions.map(option => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                      <div className={`absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                        <ChevronDown size={16} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="relative">
-                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Role
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={selectedRole}
-                        onChange={(e) => setSelectedRole(e.target.value)}
-                        className={`w-full p-2.5 sm:p-3 rounded-xl border-2 focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium appearance-none ${isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-200 text-gray-900'
-                          }`}
-                      >
-                        {roleOptions.map(option => (
-                          <option key={option} value={option}>
-                            {option === 'All Roles' ? option : option.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                          </option>
-                        ))}
-                      </select>
-                      <div className={`absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                        <ChevronDown size={16} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Row 2: Date Range (Start and End dates) */}
-                <div className="mb-4">
-                  <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Date Range
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    <div>
-                      <div className="relative">
-                        <div className={`flex items-center gap-2 p-2.5 sm:p-3 rounded-xl border-2 ${isDark
-                          ? 'bg-gray-800 border-gray-600'
-                          : 'bg-white border-gray-200'
-                          }`}>
-                          <input
-                            type="date"
-                            value={dateRange.start}
-                            onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                            className={`w-full bg-transparent focus:outline-none text-sm font-medium ${isDark
-                              ? 'text-white'
-                              : 'text-gray-900'
-                              }`}
-                            placeholder="Start Date"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="relative">
-                        <div className={`flex items-center gap-2 p-2.5 sm:p-3 rounded-xl border-2 ${isDark
-                          ? 'bg-gray-800 border-gray-600'
-                          : 'bg-white border-gray-200'
-                          }`}>
-                          <input
-                            type="date"
-                            value={dateRange.end}
-                            onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                            className={`w-full bg-transparent focus:outline-none text-sm font-medium ${isDark
-                              ? 'text-white'
-                              : 'text-gray-900'
-                              }`}
-                            placeholder="End Date"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Results count and reset button */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-                  <span className={`text-xs sm:text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Showing {filteredAdmins.length} of {admins.length} admins
-                  </span>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleResetFilters}
-                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border-2 text-sm font-semibold ${isDark
-                      ? 'bg-gray-800 border-gray-600 text-white hover:border-violet-500'
-                      : 'bg-white border-gray-200 text-gray-700 hover:border-violet-500'
-                      }`}
-                  >
-                    <RefreshCw size={16} />
-                    Reset Filters
-                  </motion.button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-
-      {/* Admins Grid */}
-      {paginatedAdmins.length > 0 ? (
-        <>
-          <div className="admins-grid-container">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"
-            >
-              {paginatedAdmins.map((admin, index) => (
-                <AdminCard
-                  key={admin.id}
-                  admin={admin}
-                  isDark={isDark}
-                  onView={handleViewAdmin}
-                  onEdit={handleEditAdmin}
-                  onDelete={handleDeleteAdmin}
-                  onForward={handleOpenForwardModal}
-                  onValidate={handleValidateAdmin}
-                  onApprove={handleApproveAdmin}
-                  onSubmitForValidation={handleSubmitForValidation}
-                  index={index}
-                />
-              ))}
-            </motion.div>
-          </div>
-
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              isDark={isDark}
-              totalItems={filteredAdmins.length}
-              itemsPerPage={itemsPerPage}
-            />
-          )}
-        </>
-      ) : (
+        {/* Stats Cards */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className={`rounded-3xl p-12 md:p-20 text-center ${isDark
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6"
+        >
+          <EnhancedStatCard
+            icon={Users}
+            title="Total Admins"
+            value={stats.totalAdmins}
+            fullNumber={getFullFormattedNumber(stats.totalAdmins)}
+            change={8.3}
+            changeType="increase"
+            color="from-blue-500 to-blue-600"
+            delay={0.1}
+            isDark={isDark}
+          />
+          <EnhancedStatCard
+            icon={CheckCircle}
+            title="Approved"
+            value={stats.approvedAdmins}
+            fullNumber={getFullFormattedNumber(stats.approvedAdmins)}
+            change={12.5}
+            changeType="increase"
+            color="from-emerald-500 to-green-500"
+            delay={0.2}
+            isDark={isDark}
+          />
+          <EnhancedStatCard
+            icon={Clock}
+            title="Pending"
+            value={stats.pendingAdmins}
+            fullNumber={getFullFormattedNumber(stats.pendingAdmins)}
+            change={5.2}
+            changeType="increase"
+            color="from-amber-500 to-orange-500"
+            delay={0.3}
+            isDark={isDark}
+          />
+          <EnhancedStatCard
+            icon={XCircle}
+            title="Rejected"
+            value={stats.rejectedAdmins}
+            fullNumber={getFullFormattedNumber(stats.rejectedAdmins)}
+            change={3.7}
+            changeType="decrease"
+            color="from-rose-500 to-red-500"
+            delay={0.4}
+            isDark={isDark}
+          />
+        </motion.div>
+
+        {/* Search and Filters Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className={`rounded-2xl sm:rounded-3xl p-4 sm:p-6 ${isDark
             ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
             : 'bg-gradient-to-br from-white via-white to-gray-50'
             }`}
           style={{
             boxShadow: isDark
               ? '0 10px 40px rgba(0, 0, 0, 0.3)'
-              : '0 10px 40px rgba(0, 0, 0, 0.08)'
+              : '0 10px 40px rgba(0, 0, 0, 0.08)',
+            overflow: 'visible',
+            position: 'relative',
+            zIndex: 30
           }}
         >
+          {/* Hidden fields to trick browser autofill for search */}
+          <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0, pointerEvents: 'none' }}>
+            <input type="email" name="fake_search_email" autoComplete="email" />
+            <input type="text" name="fake_search_name" autoComplete="name" />
+            <input type="text" name="fake_search_username" autoComplete="username" />
+            <input type="tel" name="fake_search_tel" autoComplete="tel" />
+            <input type="text" name="fake_search_address" autoComplete="street-address" />
+          </div>
+
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
+            {/* Search Input Field */}
+            <div className="flex-1 relative">
+              {searchMethod === 'Date of Birth' ? (
+                // Date range input for Date of Birth - matching Filters button height
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1 relative">
+                    <motion.div
+                      animate={{}}
+                      className="date-input-modal relative"
+                    >
+                      <input
+                        type="date"
+                        value={dateOfBirthRange.start}
+                        onChange={(e) => setDateOfBirthRange(prev => ({ ...prev, start: e.target.value }))}
+                        className={`w-full pl-3 sm:pl-4 pr-10 py-2.5 sm:py-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium transition-all ${isDark
+                          ? 'bg-gray-800 border-gray-600 text-white'
+                          : 'bg-white border-gray-200 text-gray-900'
+                          }`}
+                        style={{
+                          color: dateOfBirthRange.start ? '' : (isDark ? '#9CA3AF' : '#6B7280'),
+                        }}
+                      />
+                      <Calendar
+                        size={18}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer transition-all duration-200 hover:scale-110"
+                        onClick={() => {
+                          const startInput = document.querySelectorAll('.date-input-modal input[type="date"]')[0];
+                          if (startInput) {
+                            if (startInput.showPicker) {
+                              startInput.showPicker();
+                            } else {
+                              startInput.focus();
+                              startInput.click();
+                            }
+                          }
+                        }}
+                        style={{
+                          zIndex: 10,
+                          color: dateOfBirthRange.start
+                            ? (isDark ? '#FFFFFF' : '#1F2937')
+                            : (isDark ? '#9CA3AF' : '#6B7280'),
+                          filter: 'none',
+                          pointerEvents: 'auto'
+                        }}
+                      />
+                    </motion.div>
+                  </div>
+                  <div className="flex-shrink-0 text-gray-500 font-semibold">-</div>
+                  <div className="flex-1 relative">
+                    <motion.div
+                      animate={{}}
+                      className="date-input-modal relative"
+                    >
+                      <input
+                        type="date"
+                        value={dateOfBirthRange.end}
+                        onChange={(e) => setDateOfBirthRange(prev => ({ ...prev, end: e.target.value }))}
+                        className={`w-full pl-3 sm:pl-4 pr-10 py-2.5 sm:py-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium transition-all ${isDark
+                          ? 'bg-gray-800 border-gray-600 text-white'
+                          : 'bg-white border-gray-200 text-gray-900'
+                          }`}
+                        style={{
+                          color: dateOfBirthRange.end ? '' : (isDark ? '#9CA3AF' : '#6B7280'),
+                        }}
+                      />
+                      <Calendar
+                        size={18}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer transition-all duration-200 hover:scale-110"
+                        onClick={() => {
+                          const endInput = document.querySelectorAll('.date-input-modal input[type="date"]')[1];
+                          if (endInput) {
+                            if (endInput.showPicker) {
+                              endInput.showPicker();
+                            } else {
+                              endInput.focus();
+                              endInput.click();
+                            }
+                          }
+                        }}
+                        style={{
+                          zIndex: 10,
+                          color: dateOfBirthRange.end
+                            ? (isDark ? '#FFFFFF' : '#1F2937')
+                            : (isDark ? '#9CA3AF' : '#6B7280'),
+                          filter: 'none',
+                          pointerEvents: 'auto'
+                        }}
+                      />
+                    </motion.div>
+                  </div>
+                </div>
+              ) : searchMethod === 'Phone' || searchMethod === 'WhatsApp Number' ? (
+                // Phone number input with +91 prefix - matching modal style
+                <div className="flex gap-2 sm:gap-1 items-stretch h-fit">
+                  <div className="flex-shrink-0">
+                    <div className={`h-full flex items-center px-3 rounded-2xl border-2 text-sm font-medium ${isDark
+                      ? 'bg-gray-800 border-gray-600'
+                      : 'bg-white border-gray-200'
+                      }`}>
+                      <div className={`flex items-center gap-2 ${searchTerm && searchTerm.replace(/\D/g, '').length > 0
+                        ? (isDark ? 'text-white' : 'text-gray-900')
+                        : (isDark ? 'text-gray-400' : 'text-gray-500')
+                        }`}>
+                        <span className="text-lg">🇮🇳</span>
+                        <span className="text-sm font-semibold">+91</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-violet-500" size={18} />
+                    <input
+                      type="tel"
+                      name={`search_phone_${Date.now()}_${Math.random().toString(36).substring(7)}`}
+                      placeholder={`Search by phone...`}
+                      value={searchTerm}
+                      onChange={(e) => {
+                        let value = e.target.value.replace(/[^\d\-]/g, '');
+                        const formatPhoneNumber = (digits) => {
+                          if (!digits) return '';
+                          const digitsOnly = digits.replace(/\D/g, '');
+                          const limitedDigits = digitsOnly.slice(0, 10);
+                          if (limitedDigits.length <= 3) {
+                            return limitedDigits;
+                          } else if (limitedDigits.length <= 6) {
+                            return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3)}`;
+                          } else {
+                            return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3, 6)}-${limitedDigits.slice(6, 10)}`;
+                          }
+                        };
+                        setSearchTerm(formatPhoneNumber(value));
+                      }}
+                      maxLength={12}
+                      autoComplete="off"
+                      spellCheck="false"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
+                      data-form-type="other"
+                      aria-label="Phone Search"
+                      aria-autocomplete="none"
+                      readOnly
+                      onFocus={(e) => {
+                        e.target.removeAttribute('readonly');
+                        e.target.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
+                      }}
+                      onMouseDown={(e) => {
+                        e.target.setAttribute('readonly', 'readonly');
+                        setTimeout(() => e.target.removeAttribute('readonly'), 5);
+                      }}
+                      className={`w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium ${isDark
+                        ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                        : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'
+                        }`}
+                    />
+                    <div className={`absolute bottom-1 right-3 text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                      {searchTerm.replace(/\D/g, '').length}/10
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // Regular text input for other search methods
+                <motion.div
+                  whileHover={{ scale: 1.01 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  className="relative"
+                >
+                  <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-violet-500" size={18} />
+                  <input
+                    type="text"
+                    name={`search_${Date.now()}_${Math.random().toString(36).substring(7)}`}
+                    placeholder={
+                      searchMethod === ''
+                        ? 'Search admins by name, email, phone, ID, department, or designation...'
+                        : `Search by ${searchMethod.toLowerCase()}...`
+                    }
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    autoComplete="off"
+                    spellCheck="false"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-form-type="other"
+                    aria-label="Search"
+                    aria-autocomplete="none"
+                    readOnly
+                    onFocus={(e) => {
+                      e.target.removeAttribute('readonly');
+                      e.target.setAttribute('autocomplete', 'off-' + Math.random().toString(36).substring(7));
+                    }}
+                    onMouseDown={(e) => {
+                      e.target.setAttribute('readonly', 'readonly');
+                      setTimeout(() => e.target.removeAttribute('readonly'), 5);
+                    }}
+                    className={`w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium transition-all ${isDark
+                      ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
+                      : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                      }`}
+                  />
+                  {(['Full Name', 'Email', 'Bio', 'Address', 'Nationality', 'Gender', 'Marital Status', 'Department', 'Designation'].includes(searchMethod)) && (
+                    <div className={`absolute bottom-1 right-3 text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                      {searchTerm.length}/100
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </div>
+
+            {/* Search Method Selector */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
+              className="w-full sm:w-56 relative"
+              style={{ zIndex: 50, position: 'relative', overflow: 'visible' }}
+            >
+              <CustomSelectDropdown
+                value={searchMethod}
+                onChange={(e) => {
+                  setSearchMethod(e.target.value);
+                  setSearchTerm('');
+                  setDateOfBirthRange({ start: '', end: '' });
+                }}
+                isDark={isDark}
+                fieldError={null}
+                shakeFields={[]}
+                fieldName="searchMethod"
+                options={searchMethods.filter(method => method !== 'Search by...').map(method => ({
+                  value: method,
+                  label: method
+                }))}
+                placeholder="Search by..."
+              />
+            </motion.div>
+
+            <motion.button
+              ref={filterButtonRef}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setShowFilters(!showFilters);
+                setShowFilterGlow(true);
+              }}
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl border-2 text-sm font-semibold transition-all ${showFilterGlow
+                ? isDark
+                  ? 'border-violet-500 bg-gray-800 text-white ring-4 ring-violet-500/30'
+                  : 'border-violet-500 bg-white text-gray-900 ring-4 ring-violet-500/30'
+                : isDark
+                  ? 'bg-gray-800 border-gray-600 text-white hover:border-gray-500'
+                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              <Filter
+                size={16}
+                style={{
+                  color: showFilters
+                    ? (isDark ? '#FFFFFF' : '#231827')
+                    : (isDark ? '#9CA3AF' : '#6B7280')
+                }}
+              />
+              <span className="hidden xs:inline">Filters</span>
+              {showFilters ? (
+                <ChevronUp
+                  size={16}
+                  style={{
+                    color: showFilters
+                      ? (isDark ? '#FFFFFF' : '#231827')
+                      : (isDark ? '#9CA3AF' : '#6B7280')
+                  }}
+                />
+              ) : (
+                <ChevronDown
+                  size={16}
+                  style={{
+                    color: showFilters
+                      ? (isDark ? '#FFFFFF' : '#231827')
+                      : (isDark ? '#9CA3AF' : '#6B7280')
+                  }}
+                />
+              )}
+            </motion.button>
+          </div>
+
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-visible filters-container"
+                style={{ overflow: 'visible', position: 'relative', zIndex: 10 }}
+              >
+                <div className={`p-4 sm:p-6 rounded-2xl mb-4 ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`} style={{ overflow: 'visible', position: 'relative', zIndex: 1 }}>
+                  {/* Row 1: Status and Role */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4" style={{ overflow: 'visible', position: 'relative' }}>
+                    <div style={{ zIndex: 30, position: 'relative', overflow: 'visible' }}>
+                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Status
+                      </label>
+                      <CustomSelectDropdown
+                        value={selectedStatus}
+                        onChange={(e) => setSelectedStatus(e.target.value)}
+                        isDark={isDark}
+                        fieldError={null}
+                        shakeFields={[]}
+                        fieldName="selectedStatus"
+                        options={statusOptions.filter(option => option !== 'All Status').map(option => ({
+                          value: option,
+                          label: option
+                        }))}
+                        placeholder="All Status"
+                      />
+                    </div>
+
+                    <div style={{ zIndex: 20, position: 'relative', overflow: 'visible' }}>
+                      <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Role
+                      </label>
+                      <CustomSelectDropdown
+                        value={selectedRole}
+                        onChange={(e) => setSelectedRole(e.target.value)}
+                        isDark={isDark}
+                        fieldError={null}
+                        shakeFields={[]}
+                        fieldName="selectedRole"
+                        options={roleOptions.filter(option => option !== 'All Roles').map(option => ({
+                          value: option,
+                          label: option === 'All Roles' ? option : option.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+                        }))}
+                        placeholder="All Roles"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mb-4" style={{ overflow: 'visible' }}>
+                    <label className={`block text-xs font-semibold uppercase tracking-wide mb-1 sm:mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Date Range
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4" style={{ overflow: 'visible' }}>
+                      {/* Start Date */}
+                      <div style={{ zIndex: 10, position: 'relative', overflow: 'visible' }}>
+                        <div className="date-input-filter relative">
+                          <input
+                            type="date"
+                            value={dateRange.start}
+                            onChange={(e) => {
+                              const newValue = e.target.value;
+                              if (!newValue) {
+                                setDateRange(prev => ({ ...prev, start: '' }));
+                                setFieldErrors(prev => ({ ...prev, startDate: '' }));
+                                setShakeFields(prev => prev.filter(f => f !== 'startDate'));
+                                return;
+                              }
+                              const date = new Date(newValue);
+                              const isValid = !isNaN(date.getTime());
+                              if (isValid) {
+                                const [year, month, day] = newValue.split('-').map(Number);
+                                const isValidDate = year > 1900 && year < 2100 &&
+                                  month >= 1 && month <= 12 &&
+                                  day >= 1 && day <= 31;
+
+                                if (isValidDate) {
+                                  setDateRange(prev => ({ ...prev, start: newValue }));
+                                  setFieldErrors(prev => ({ ...prev, startDate: '' }));
+                                  setShakeFields(prev => prev.filter(f => f !== 'startDate'));
+                                } else {
+                                  setFieldErrors(prev => ({ ...prev, startDate: 'Please enter a valid date' }));
+                                  setShakeFields(prev => [...prev, 'startDate']);
+                                  setTimeout(() => setShakeFields(prev => prev.filter(f => f !== 'startDate')), 600);
+                                }
+                              } else {
+                                setFieldErrors(prev => ({ ...prev, startDate: 'Please enter a valid date' }));
+                                setShakeFields(prev => [...prev, 'startDate']);
+                                setTimeout(() => setShakeFields(prev => prev.filter(f => f !== 'startDate')), 600);
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const value = e.target.value;
+                              if (value) {
+                                const [year, month, day] = value.split('-').map(Number);
+                                const isValidDate = !isNaN(year) && !isNaN(month) && !isNaN(day) &&
+                                  year > 1900 && year < 2100 &&
+                                  month >= 1 && month <= 12 &&
+                                  day >= 1 && day <= 31;
+                                if (!isValidDate) {
+                                  setFieldErrors(prev => ({ ...prev, startDate: 'Please enter a valid date' }));
+                                  setShakeFields(prev => [...prev, 'startDate']);
+                                  setTimeout(() => setShakeFields(prev => prev.filter(f => f !== 'startDate')), 600);
+                                }
+                              }
+                            }}
+                            autoComplete="off"
+                            className={`w-full p-2.5 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium pr-9 transition-all ${isDark
+                              ? 'bg-gray-800 border-gray-600'
+                              : 'bg-white border-gray-200'
+                              } ${fieldErrors?.startDate ? 'border-rose-500' : ''}`}
+                            style={{
+                              color: dateRange.start ? (isDark ? '#FFFFFF' : '#1F2937') : (isDark ? '#9CA3AF' : '#6B7280'),
+                            }}
+                          />
+                          <Calendar
+                            size={18}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 transition-all duration-200 cursor-pointer hover:scale-110"
+                            onClick={() => {
+                              const dateInputs = document.querySelectorAll('.date-input-filter input[type="date"]');
+                              if (dateInputs && dateInputs[0]) {
+                                const input = dateInputs[0];
+                                if (input.showPicker) {
+                                  input.showPicker();
+                                } else {
+                                  input.focus();
+                                  input.click();
+                                }
+                              }
+                            }}
+                            style={{
+                              zIndex: 10,
+                              color: dateRange.start
+                                ? (isDark ? '#FFFFFF' : '#1F2937')
+                                : (isDark ? '#9CA3AF' : '#6B7280'),
+                              filter: 'none',
+                              pointerEvents: 'auto'
+                            }}
+                          />
+                        </div>
+                        {fieldErrors?.startDate && (
+                          <motion.p
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+                          >
+                            <XCircle size={12} />
+                            {fieldErrors.startDate}
+                          </motion.p>
+                        )}
+                      </div>
+
+                      {/* End Date */}
+                      <div style={{ zIndex: 5, position: 'relative', overflow: 'visible' }}>
+                        <div className="date-input-filter relative">
+                          <input
+                            type="date"
+                            value={dateRange.end}
+                            onChange={(e) => {
+                              const newValue = e.target.value;
+                              if (!newValue) {
+                                setDateRange(prev => ({ ...prev, end: '' }));
+                                setFieldErrors(prev => ({ ...prev, endDate: '' }));
+                                setShakeFields(prev => prev.filter(f => f !== 'endDate'));
+                                return;
+                              }
+                              const date = new Date(newValue);
+                              const isValid = !isNaN(date.getTime());
+                              if (isValid) {
+                                const [year, month, day] = newValue.split('-').map(Number);
+                                const isValidDate = year > 1900 && year < 2100 &&
+                                  month >= 1 && month <= 12 &&
+                                  day >= 1 && day <= 31;
+
+                                if (isValidDate) {
+                                  if (dateRange.start && newValue < dateRange.start) {
+                                    setFieldErrors(prev => ({ ...prev, endDate: 'End date cannot be before start date' }));
+                                    setShakeFields(prev => [...prev, 'endDate']);
+                                    setTimeout(() => setShakeFields(prev => prev.filter(f => f !== 'endDate')), 600);
+                                    return;
+                                  }
+                                  setDateRange(prev => ({ ...prev, end: newValue }));
+                                  setFieldErrors(prev => ({ ...prev, endDate: '' }));
+                                  setShakeFields(prev => prev.filter(f => f !== 'endDate'));
+                                } else {
+                                  setFieldErrors(prev => ({ ...prev, endDate: 'Please enter a valid date' }));
+                                  setShakeFields(prev => [...prev, 'endDate']);
+                                  setTimeout(() => setShakeFields(prev => prev.filter(f => f !== 'endDate')), 600);
+                                }
+                              } else {
+                                setFieldErrors(prev => ({ ...prev, endDate: 'Please enter a valid date' }));
+                                setShakeFields(prev => [...prev, 'endDate']);
+                                setTimeout(() => setShakeFields(prev => prev.filter(f => f !== 'endDate')), 600);
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const value = e.target.value;
+                              if (value) {
+                                const [year, month, day] = value.split('-').map(Number);
+                                const isValidDate = !isNaN(year) && !isNaN(month) && !isNaN(day) &&
+                                  year > 1900 && year < 2100 &&
+                                  month >= 1 && month <= 12 &&
+                                  day >= 1 && day <= 31;
+                                if (!isValidDate) {
+                                  setFieldErrors(prev => ({ ...prev, endDate: 'Please enter a valid date' }));
+                                  setShakeFields(prev => [...prev, 'endDate']);
+                                  setTimeout(() => setShakeFields(prev => prev.filter(f => f !== 'endDate')), 600);
+                                } else if (dateRange.start && value < dateRange.start) {
+                                  setFieldErrors(prev => ({ ...prev, endDate: 'End date cannot be before start date' }));
+                                  setShakeFields(prev => [...prev, 'endDate']);
+                                  setTimeout(() => setShakeFields(prev => prev.filter(f => f !== 'endDate')), 600);
+                                }
+                              }
+                            }}
+                            autoComplete="off"
+                            className={`w-full p-2.5 sm:p-3 rounded-2xl border-2 focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none text-sm font-medium pr-9 transition-all ${isDark
+                              ? 'bg-gray-800 border-gray-600'
+                              : 'bg-white border-gray-200'
+                              } ${fieldErrors?.endDate ? 'border-rose-500' : ''}`}
+                            style={{
+                              color: dateRange.end ? (isDark ? '#FFFFFF' : '#1F2937') : (isDark ? '#9CA3AF' : '#6B7280'),
+                            }}
+                          />
+                          <Calendar
+                            size={18}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 transition-all duration-200 cursor-pointer hover:scale-110"
+                            onClick={() => {
+                              const containers = document.querySelectorAll('.date-input-filter');
+                              if (containers.length >= 2) {
+                                const input = containers[1].querySelector('input[type="date"]');
+                                if (input) {
+                                  if (input.showPicker) {
+                                    input.showPicker();
+                                  } else {
+                                    input.focus();
+                                    input.click();
+                                  }
+                                }
+                              }
+                            }}
+                            style={{
+                              zIndex: 10,
+                              color: dateRange.end
+                                ? (isDark ? '#FFFFFF' : '#1F2937')
+                                : (isDark ? '#9CA3AF' : '#6B7280'),
+                              filter: 'none',
+                              pointerEvents: 'auto'
+                            }}
+                          />
+                        </div>
+                        {fieldErrors?.endDate && (
+                          <motion.p
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex items-center gap-1 text-rose-600 text-xs font-medium mt-1"
+                          >
+                            <XCircle size={12} />
+                            {fieldErrors.endDate}
+                          </motion.p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Results count and reset button */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+                    <span className={`text-xs sm:text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Showing {filteredAdmins.length} of {admins.length} admins
+                    </span>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleResetFilters}
+                      className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-2xl text-xs sm:text-sm font-semibold shadow-xl transition-all"
+                    >
+                      <RefreshCw size={16} />
+                      Reset Filters
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* Admins Grid */}
+        {paginatedAdmins.length > 0 ? (
+          <>
+            <div className="admins-grid-container">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"
+              >
+                {paginatedAdmins.map((admin, index) => (
+                  <AdminCard
+                    key={admin.id}
+                    admin={admin}
+                    isDark={isDark}
+                    onView={handleViewAdmin}
+                    onEdit={handleEditAdmin}
+                    onDelete={handleDeleteAdmin}
+                    onApproveAdmin={handleApproveAdmin}
+                    onInvite={(admin) => {
+                      setSelectedAdmin(admin);
+                      setShowInviteModal(true);
+                    }}
+                    index={index}
+                  />
+                ))}
+              </motion.div>
+            </div>
+
+            {totalPages > 1 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                isDark={isDark}
+                totalItems={filteredAdmins.length}
+                itemsPerPage={itemsPerPage}
+              />
+            )}
+          </>
+        ) : (
           <motion.div
-            animate={{
-              y: [0, -10, 0],
-              rotate: [0, 5, -5, 0]
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className={`rounded-3xl p-12 md:p-20 text-center ${isDark
+              ? 'bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900'
+              : 'bg-gradient-to-br from-white via-white to-gray-50'
+              }`}
+            style={{
+              boxShadow: isDark
+                ? '0 10px 40px rgba(0, 0, 0, 0.3)'
+                : '0 10px 40px rgba(0, 0, 0, 0.08)'
             }}
           >
-            <Users size={48} className={`mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-400'
-              }`} />
+            <motion.div
+              animate={{
+                y: [0, -10, 0],
+                rotate: [0, 5, -5, 0]
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity
+              }}
+            >
+              <Users size={48} className={`mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-400'
+                }`} />
+            </motion.div>
+            <p className={`text-base font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'
+              }`}>
+              No admins found matching your criteria
+            </p>
+            <p className={`text-sm font-medium mt-2 ${isDark ? 'text-gray-500' : 'text-gray-500'
+              }`}>
+              Try adjusting your filters or search term
+            </p>
           </motion.div>
-          <p className={`text-base font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'
-            }`}>
-            No admins found matching your criteria
-          </p>
-          <p className={`text-sm font-medium mt-2 ${isDark ? 'text-gray-500' : 'text-gray-500'
-            }`}>
-            Try adjusting your filters or search term
-          </p>
-        </motion.div>
-      )}
-
-      {/* Modals */}
-      <AnimatePresence>
-        {showAdminModal && selectedAdmin && (
-          <AdminDetailModal
-            admin={selectedAdmin}
-            isDark={isDark}
-            onClose={closeModals}
-            availableAdmins={availableAdmins}
-          />
         )}
-      </AnimatePresence>
 
-      <AnimatePresence>
-        {showValidationSubmitDialog && (
-          <ConfirmationDialog
-            isDark={isDark}
-            title="Submit for Validation"
-            message={`Are you sure you want to submit ${adminToSubmitForValidation?.fullName} profile for validation?`}
-            onConfirm={confirmSubmitForValidation}
-            onCancel={() => {
-              setShowValidationSubmitDialog(false);
-              setAdminToSubmitForValidation(null);
-            }}
-            confirmText="Submit"
-            cancelText="Cancel"
-          />
-        )}
-      </AnimatePresence>
+        {/* Modals */}
+        <AnimatePresence>
+          {showAdminModal && selectedAdmin && (
+            <AdminDetailModal
+              admin={selectedAdmin}
+              isDark={isDark}
+              onClose={closeModals}
+              availableAdmins={availableAdmins}
+            />
+          )}
+        </AnimatePresence>
 
-      <AnimatePresence>
-        {showAddAdminModal && (
-          <AddAdminModal
-            isDark={isDark}
-            admin={editingAdmin}
-            onClose={closeModals}
-            onAddAdmin={handleAddAdmin}
-            onUpdateAdmin={handleUpdateAdmin}
-          />
-        )}
-      </AnimatePresence>
+        <AnimatePresence>
+          {showAddAdminModal && (
+            <AddAdminModal
+              isDark={isDark}
+              admin={editingAdmin}
+              onClose={closeModals}
+              onAddAdmin={handleAddAdmin}
+              onUpdateAdmin={handleUpdateAdmin}
+              onSuccess={(message) => {
+                setSuccessMessage(message);
+                setShowSuccessDialog(true);
+              }}
+            />
+          )}
+        </AnimatePresence>
 
-      <AnimatePresence>
-        {showValidationModal && adminToValidate && (
-          <AdminValidationModal
-            isDark={isDark}
-            admin={adminToValidate}
-            onClose={() => {
-              setShowValidationModal(false);
-              setAdminToValidate(null);
-            }}
-            onValidate={handleValidationSubmit}
-          />
-        )}
-      </AnimatePresence>
+        <AnimatePresence>
+          {showApprovalModal && adminToApprove && (
+            <AdminApprovalModal
+              isDark={isDark}
+              admin={adminToApprove}
+              onClose={() => {
+                setShowApprovalModal(false);
+                setAdminToApprove(null);
+              }}
+              onApprove={(adminId, comment) => handleApprovalSubmit(adminId, { approvalType: 'approve', comment })}
+              onReject={(adminId, reason) => handleApprovalSubmit(adminId, { approvalType: 'reject', reason })}
+            />
+          )}
+        </AnimatePresence>
 
-      <AnimatePresence>
-        {showApprovalModal && adminToApprove && (
-          <AdminApprovalModal
-            isDark={isDark}
-            admin={adminToApprove}
-            onClose={() => {
-              setShowApprovalModal(false);
-              setAdminToApprove(null);
-            }}
-            onApprove={(adminId, comment) => handleApprovalSubmit(adminId, { approvalType: 'approve', comment })}
-            onReject={(adminId, reason) => handleApprovalSubmit(adminId, { approvalType: 'reject', reason })}
-          />
-        )}
-      </AnimatePresence>
+        <AnimatePresence>
+          {showDeleteDialog && (
+            <ConfirmationDialog
+              isDark={isDark}
+              title="Delete Admin"
+              message={`Are you sure you want to delete ${adminToDelete?.fullName}? This action cannot be undone.`}
+              onConfirm={confirmDelete}
+              onCancel={() => setShowDeleteDialog(false)}
+              confirmText="Delete"
+              cancelText="Cancel"
+            />
+          )}
+        </AnimatePresence>
 
-      <AnimatePresence>
-        {showForwardModal && adminToForward && (
-          <ForwardModal
-            isDark={isDark}
-            admin={adminToForward}
-            onClose={closeModals}
-            onForward={handleForwardConfirm}
-          />
-        )}
-      </AnimatePresence>
+        <AnimatePresence>
+          {showInviteModal && (
+            <InviteAdminModal
+              isDark={isDark}
+              selectedAdmin={selectedAdmin}
+              onClose={() => setShowInviteModal(false)}
+              onSuccess={(msg) => {
+                setSuccessMessage(msg);
+                setShowSuccessDialog(true);
+              }}
+            />
+          )}
+        </AnimatePresence>
 
-      <AnimatePresence>
-        {showDeleteDialog && (
-          <ConfirmationDialog
-            isDark={isDark}
-            title="Delete Admin"
-            message={`Are you sure you want to delete ${adminToDelete?.fullName}? This action cannot be undone.`}
-            onConfirm={confirmDelete}
-            onCancel={() => setShowDeleteDialog(false)}
-            confirmText="Delete"
-            cancelText="Cancel"
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showForwardConfirmDialog && (
-          <ConfirmationDialog
-            isDark={isDark}
-            title="Forward Admin"
-            message={`Are you sure you want to forward this admin to ${availableAdmins.find(a => a.id === forwardData?.targetAdminId)?.name}?`}
-            onConfirm={confirmForward}
-            onCancel={() => setShowForwardConfirmDialog(false)}
-            confirmText="Forward"
-            cancelText="Cancel"
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showSuccessDialog && (
-          <SuccessDialog
-            isDark={isDark}
-            title="Success"
-            message={successMessage}
-            onClose={() => setShowSuccessDialog(false)}
-          />
-        )}
-      </AnimatePresence>
-    </div>
+        <AnimatePresence>
+          {showSuccessDialog && (
+            <SuccessDialog
+              isDark={isDark}
+              title="Success"
+              message={successMessage}
+              onClose={() => setShowSuccessDialog(false)}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+    </>
   );
 };
 
